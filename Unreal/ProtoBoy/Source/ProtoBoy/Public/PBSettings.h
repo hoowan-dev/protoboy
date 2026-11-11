@@ -59,6 +59,18 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "MCP")
 	TArray<FName> DisabledMCPTools;
 
+	/**
+	 * Trello API key used for "Connect" (from a Power-Up at trello.com/power-ups/admin > API key).
+	 * Empty uses ProtoBoy's built-in key. Not a secret, but never put the Power-Up's secret here.
+	 * The Power-Up must list http://127.0.0.1:<TasksCallbackPort> under allowed origins.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Tasks|Trello")
+	FString TrelloApiKey;
+
+	/** Local port Trello redirects back to while connecting. Must match the allowed origin on the Trello API key. */
+	UPROPERTY(Config, EditAnywhere, Category = "Tasks", meta = (ClampMin = "1024", ClampMax = "65535"))
+	int32 TasksCallbackPort = 47802;
+
 	/** Connect to the ProtoBoy background daemon. */
 	UPROPERTY(Config, EditAnywhere, Category = "Daemon")
 	bool bConnectToDaemon = false;

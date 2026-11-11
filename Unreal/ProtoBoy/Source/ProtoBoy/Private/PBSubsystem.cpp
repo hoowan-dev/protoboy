@@ -1,6 +1,7 @@
 #include "PBSubsystem.h"
 
 #include "Editor.h"
+#include "Framework/Application/SlateApplication.h"
 #include "PBModule.h"
 #include "PBSettings.h"
 
@@ -14,6 +15,7 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	AssetLifecycle = MakeUnique<FProtoBoyAssetLifecycle>();
 	DaemonClient = MakeUnique<FProtoBoyDaemonClient>();
 	MCPServer = MakeUnique<FProtoBoyMCPServer>();
+	TrelloConnector = MakeUnique<FProtoBoyTrelloConnector>();
 
 	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
 	if (Settings->bConnectToDaemon)
@@ -32,9 +34,11 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UProtoBoySubsystem::Deinitialize()
 {
 	UnbindEditorEvents();
+	TrelloConnector->CancelConnect();
 	MCPServer->Stop();
 	DaemonClient->Disconnect();
 
+	TrelloConnector.Reset();
 	MCPServer.Reset();
 	DaemonClient.Reset();
 	AssetLifecycle.Reset();
@@ -52,11 +56,28 @@ UProtoBoySubsystem* UProtoBoySubsystem::Get()
 
 void UProtoBoySubsystem::BindEditorEvents()
 {
+	if (FSlateApplication::IsInitialized())
+	{
+		ModalLoopTickHandle = FSlateApplication::Get().GetOnModalLoopTickEvent().AddUObject(this, &UProtoBoySubsystem::OnModalLoopTick);
+	}
+
 	// TODO: IAssetRegistry::OnAssetAdded/Removed/Renamed, UPackage::PackageSavedWithContextEvent,
 	//       ILiveCodingModule::GetOnPatchCompleteDelegate.
 }
 
 void UProtoBoySubsystem::UnbindEditorEvents()
 {
+	if (ModalLoopTickHandle.IsValid() && FSlateApplication::IsInitialized())
+	{
+		FSlateApplication::Get().GetOnModalLoopTickEvent().Remove(ModalLoopTickHandle);
+	}
+	ModalLoopTickHandle.Reset();
+
 	// TODO: Remove the handles bound in BindEditorEvents.
+}
+
+void UProtoBoySubsystem::OnModalLoopTick(float DeltaTime)
+{
+	MCPServer->TickWhileModal(DeltaTime);
+	TrelloConnector->TickWhileModal(DeltaTime);
 }

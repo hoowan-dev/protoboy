@@ -20,7 +20,7 @@
 
 #define LOCTEXT_NAMESPACE "SProtoBoyMCPServerPanel"
 
-namespace
+namespace ProtoBoyMCPServerPanel
 {
 	/** Edit the committed project settings and write them back to DefaultProtoBoy.ini. */
 	void EditSettings(TFunctionRef<void(UProtoBoySettings&)> Edit)
@@ -87,7 +87,7 @@ void SProtoBoyMCPServerPanel::Construct(const FArguments& InArgs)
 				})
 				.OnCheckStateChanged_Lambda([](ECheckBoxState State)
 				{
-					EditSettings([State](UProtoBoySettings& S) { S.bEnableMCPServer = State == ECheckBoxState::Checked; });
+					ProtoBoyMCPServerPanel::EditSettings([State](UProtoBoySettings& S) { S.bEnableMCPServer = State == ECheckBoxState::Checked; });
 				})
 				.ToolTipText(LOCTEXT("StartWithEditorTip", "Team-wide setting. The server also starts for anyone who has connected an agent."))
 				[
@@ -137,7 +137,7 @@ void SProtoBoyMCPServerPanel::Construct(const FArguments& InArgs)
 				})
 				.OnCheckStateChanged_Lambda([](ECheckBoxState State)
 				{
-					EditSettings([State](UProtoBoySettings& S) { S.bAllowMCPWriteTools = State == ECheckBoxState::Checked; });
+					ProtoBoyMCPServerPanel::EditSettings([State](UProtoBoySettings& S) { S.bAllowMCPWriteTools = State == ECheckBoxState::Checked; });
 				})
 				[
 					SNew(STextBlock).Text(LOCTEXT("AllowWrites", "Allow tools that modify the project"))
@@ -156,7 +156,7 @@ void SProtoBoyMCPServerPanel::Construct(const FArguments& InArgs)
 				})
 				.OnCheckStateChanged_Lambda([](ECheckBoxState State)
 				{
-					EditSettings([State](UProtoBoySettings& S) { S.bConfirmMCPWriteTools = State == ECheckBoxState::Checked; });
+					ProtoBoyMCPServerPanel::EditSettings([State](UProtoBoySettings& S) { S.bConfirmMCPWriteTools = State == ECheckBoxState::Checked; });
 				})
 				[
 					SNew(STextBlock).Text(LOCTEXT("ConfirmWrites", "Ask before each change"))
@@ -282,7 +282,7 @@ TSharedRef<SWidget> SProtoBoyMCPServerPanel::MakeToolRow(const FProtoBoyMCPTool&
 		})
 		.OnCheckStateChanged_Lambda([Name](ECheckBoxState State)
 		{
-			EditSettings([Name, State](UProtoBoySettings& S)
+			ProtoBoyMCPServerPanel::EditSettings([Name, State](UProtoBoySettings& S)
 			{
 				if (State == ECheckBoxState::Checked)
 				{

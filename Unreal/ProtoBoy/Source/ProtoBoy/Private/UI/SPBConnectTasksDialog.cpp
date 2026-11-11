@@ -1,6 +1,8 @@
 #include "UI/SPBConnectTasksDialog.h"
 
 #include "Framework/Application/SlateApplication.h"
+#include "PBSubsystem.h"
+#include "UI/Tasks/Trello/SPBTrelloPanel.h"
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 #include "UI/PBStyle.h"
@@ -17,7 +19,12 @@
 
 void SProtoBoyConnectTasksDialog::Construct(const FArguments& InArgs)
 {
-	// TODO: Open on the connected provider's page once the connection is persisted.
+	// Open on the connected provider's page, if any.
+	if (const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		SelectedProvider = Subsystem->GetTrelloConnector().GetConnection().Provider;
+	}
+
 	ChildSlot
 	[
 		SNew(SHorizontalBox)
@@ -64,8 +71,8 @@ void SProtoBoyConnectTasksDialog::Construct(const FArguments& InArgs)
 				SAssignNew(PanelSwitcher, SWidgetSwitcher)
 				.WidgetIndex(static_cast<int32>(SelectedProvider))
 
-				+ SWidgetSwitcher::Slot() [ MakeEmptyPanel() ]                                                         // None
-				+ SWidgetSwitcher::Slot() [ MakeProviderPanel(LOCTEXT("Trello", "Trello"), "ProtoBoy.Icon.Trello.Large") ] // Trello
+				+ SWidgetSwitcher::Slot() [ MakeEmptyPanel() ]          // EProtoBoyTaskProvider::None
+				+ SWidgetSwitcher::Slot() [ SNew(SProtoBoyTrelloPanel) ] // EProtoBoyTaskProvider::Trello
 			]
 		]
 	];
@@ -130,36 +137,6 @@ TSharedRef<SWidget> SProtoBoyConnectTasksDialog::MakeEmptyPanel()
 			SNew(STextBlock)
 			.Text(LOCTEXT("SelectProvider", "Select a board provider."))
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-		];
-}
-
-TSharedRef<SWidget> SProtoBoyConnectTasksDialog::MakeProviderPanel(const FText& ProviderName, const FName& LargeIconName)
-{
-	// Intentionally blank for now: just the provider header.
-	return SNew(SVerticalBox)
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		[
-			SNew(SHorizontalBox)
-
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			.Padding(0.f, 0.f, 10.f, 0.f)
-			[
-				SNew(SImage)
-				.Image(FProtoBoyStyle::Get().GetBrush(LargeIconName))
-			]
-
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			[
-				SNew(STextBlock)
-				.Text(ProviderName)
-				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 20))
-			]
 		];
 }
 

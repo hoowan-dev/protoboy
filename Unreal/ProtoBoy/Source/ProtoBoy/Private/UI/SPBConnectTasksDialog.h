@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Tasks/PBTasksConnection.h"
 #include "Widgets/SCompoundWidget.h"
 
 class SWidgetSwitcher;
@@ -21,19 +22,12 @@ public:
 	static void Open(const TSharedPtr<SWidget>& ParentWidget);
 
 private:
-	/** Board providers. Values double as PanelSwitcher slot indices. */
-	enum class EProvider : uint8
-	{
-		None,
-		Trello,
-	};
+	/** EProtoBoyTaskProvider values double as PanelSwitcher slot indices. */
+	using EProvider = EProtoBoyTaskProvider;
 
 	TSharedRef<SWidget> MakeProviderEntry(EProvider Provider, const FText& Label, const FName& IconName);
 
 	TSharedRef<SWidget> MakeEmptyPanel();
-
-	/** TODO: Replace with a real setup panel per provider (auth, board picker, list -> status mapping). */
-	TSharedRef<SWidget> MakeProviderPanel(const FText& ProviderName, const FName& LargeIconName);
 
 	void SelectProvider(EProvider Provider);
 

@@ -176,14 +176,28 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 						.AutoWrapText(true)
 					]
 
-					// TODO: Show the connected board once task board connections exist.
+					// TODO: Show the chosen board once board selection exists.
 					+ SVerticalBox::Slot()
 					.AutoHeight()
 					.Padding(0.f, 4.f, 0.f, 0.f)
 					[
 						SNew(STextBlock)
-						.Text(LOCTEXT("TasksNotConnected", "No board connected."))
-						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+						.Text_Lambda([]()
+						{
+							const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+							if (!Subsystem || !Subsystem->GetTrelloConnector().IsConnected())
+							{
+								return LOCTEXT("TasksNotConnected", "No board connected.");
+							}
+							return FText::Format(LOCTEXT("TasksTrelloConnected", "Trello connected (@{0})"),
+								FText::FromString(Subsystem->GetTrelloConnector().GetConnection().TrelloUsername));
+						})
+						.ColorAndOpacity_Lambda([]()
+						{
+							const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+							return Subsystem && Subsystem->GetTrelloConnector().IsConnected()
+								? FSlateColor(FStyleColors::Success) : FSlateColor::UseSubduedForeground();
+						})
 					]
 
 					+ SVerticalBox::Slot()
@@ -192,7 +206,13 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 					.Padding(0.f, 8.f, 0.f, 0.f)
 					[
 						SNew(SButton)
-						.Text(LOCTEXT("TasksSettings", "Connect Task Board..."))
+						.Text_Lambda([]()
+						{
+							const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+							return Subsystem && Subsystem->GetTrelloConnector().IsConnected()
+								? LOCTEXT("TasksSettingsConnected", "Task Board Settings...")
+								: LOCTEXT("TasksSettings", "Connect Task Board...");
+						})
 						.OnClicked(this, &SProtoBoyDashboard::OnTasksSettingsClicked)
 					])
 			]

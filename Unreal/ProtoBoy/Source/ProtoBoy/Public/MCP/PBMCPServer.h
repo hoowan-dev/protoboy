@@ -57,7 +57,7 @@ public:
 
 	/**
 	 * Pump the listener directly. The engine ticks HTTP listeners from the core ticker, which stalls while a modal
-	 * window (like MCP Settings) is open; call this from such a window's Tick so agents still get answers.
+	 * window (like MCP Settings) is open; UProtoBoySubsystem calls this from Slate's modal loop tick.
 	 */
 	void TickWhileModal(float DeltaTime);
 

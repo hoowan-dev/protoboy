@@ -8,6 +8,7 @@
 #include "IHttpRouter.h"
 #include "Interfaces/IPluginManager.h"
 #include "MCP/PBMCPClientConfig.h"
+#include "Net/PBHttpServerUtils.h"
 #include "Misc/Base64.h"
 #include "Misc/Guid.h"
 #include "Modules/ModuleManager.h"
@@ -61,19 +62,6 @@ namespace ProtoBoyMCP
 		for (const TCHAR* V : ModernVersions) { Out.Add(MakeShared<FJsonValueString>(V)); }
 		for (const TCHAR* V : LegacyVersions) { Out.Add(MakeShared<FJsonValueString>(V)); }
 		return Out;
-	}
-
-	/** First value of a header (names are case-insensitive: FString map keys compare case-insensitively). */
-	FString GetHeader(const FHttpServerRequest& Request, const TCHAR* Name)
-	{
-		const TArray<FString>* Values = Request.Headers.Find(Name);
-		return Values && Values->Num() > 0 ? (*Values)[0].TrimStartAndEnd() : FString();
-	}
-
-	bool HasHeader(const FHttpServerRequest& Request, const TCHAR* Name)
-	{
-		const TArray<FString>* Values = Request.Headers.Find(Name);
-		return Values && Values->Num() > 0;
 	}
 
 	/** Decode the `=?base64?...?=` sentinel used for non-ASCII Mcp-Name values. */
@@ -160,8 +148,6 @@ namespace ProtoBoyMCP
 		return Response;
 	}
 }
-
-using namespace ProtoBoyMCP;
 
 FProtoBoyMCPServer::FProtoBoyMCPServer()
 {
@@ -275,7 +261,7 @@ TArray<FString> FProtoBoyMCPServer::GetRecentClients() const
 	TArray<FString> Recent;
 	for (const TPair<FString, double>& Pair : ClientLastSeen)
 	{
-		if (Now - Pair.Value <= RecentClientSeconds)
+		if (Now - Pair.Value <= ProtoBoyMCP::RecentClientSeconds)
 		{
 			Recent.Add(Pair.Key);
 		}
@@ -309,13 +295,13 @@ bool FProtoBoyMCPServer::HandleRequest(const FHttpServerRequest& Request, const 
 	// DNS-rebinding protection: a browser page on another origin must not reach the editor.
 	if (!IsAllowedOrigin(Request))
 	{
-		OnComplete(MakeHttpResponse(403, MakeRpcError(nullptr, InvalidRequest, TEXT("Origin not allowed"))));
+		OnComplete(ProtoBoyMCP::MakeHttpResponse(403, ProtoBoyMCP::MakeRpcError(nullptr, ProtoBoyMCP::InvalidRequest, TEXT("Origin not allowed"))));
 		return true;
 	}
 
 	if (!IsAuthorized(Request))
 	{
-		TUniquePtr<FHttpServerResponse> Response = MakeHttpResponse(401, MakeRpcError(nullptr, InvalidRequest, TEXT("Missing or invalid bearer token")));
+		TUniquePtr<FHttpServerResponse> Response = ProtoBoyMCP::MakeHttpResponse(401, ProtoBoyMCP::MakeRpcError(nullptr, ProtoBoyMCP::InvalidRequest, TEXT("Missing or invalid bearer token")));
 		Response->Headers.Add(TEXT("WWW-Authenticate"), { TEXT("Bearer") });
 		OnComplete(MoveTemp(Response));
 		return true;
@@ -324,28 +310,23 @@ bool FProtoBoyMCPServer::HandleRequest(const FHttpServerRequest& Request, const 
 	// No standalone SSE stream (GET) and no sessions to end (DELETE).
 	if (Request.Verb != EHttpServerRequestVerbs::VERB_POST)
 	{
-		TUniquePtr<FHttpServerResponse> Response = MakeHttpResponse(405, nullptr);
+		TUniquePtr<FHttpServerResponse> Response = ProtoBoyMCP::MakeHttpResponse(405, nullptr);
 		Response->Headers.Add(TEXT("Allow"), { TEXT("POST") });
 		OnComplete(MoveTemp(Response));
 		return true;
 	}
 
-	FString Body;
-	if (Request.Body.Num() > 0)
-	{
-		const FUTF8ToTCHAR Converted(reinterpret_cast<const ANSICHAR*>(Request.Body.GetData()), Request.Body.Num());
-		Body = FString(Converted.Length(), Converted.Get());
-	}
+	const FString Body = ProtoBoyHttp::GetBodyAsString(Request);
 
 	TSharedPtr<FJsonObject> Message;
 	if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Body), Message) || !Message.IsValid())
 	{
-		OnComplete(MakeHttpResponse(400, MakeRpcError(nullptr, ParseError, TEXT("Body must be a single JSON-RPC object"))));
+		OnComplete(ProtoBoyMCP::MakeHttpResponse(400, ProtoBoyMCP::MakeRpcError(nullptr, ProtoBoyMCP::ParseError, TEXT("Body must be a single JSON-RPC object"))));
 		return true;
 	}
 
 	const FReply Reply = HandleMessage(Request, Message);
-	OnComplete(MakeHttpResponse(Reply.HttpStatus, Reply.Body));
+	OnComplete(ProtoBoyMCP::MakeHttpResponse(Reply.HttpStatus, Reply.Body));
 	return true;
 }
 
@@ -356,7 +337,7 @@ FProtoBoyMCPServer::FReply FProtoBoyMCPServer::HandleMessage(const FHttpServerRe
 	if (!Message->TryGetStringField(TEXT("method"), Method))
 	{
 		// Clients don't send responses to servers in any version we speak.
-		return { 400, MakeRpcError(Id, InvalidRequest, TEXT("Expected a JSON-RPC request or notification")) };
+		return { 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidRequest, TEXT("Expected a JSON-RPC request or notification")) };
 	}
 
 	const TSharedPtr<FJsonObject>* ParamsPtr = nullptr;
@@ -372,7 +353,7 @@ FProtoBoyMCPServer::FReply FProtoBoyMCPServer::HandleMessage(const FHttpServerRe
 	const TSharedPtr<FJsonObject>* MetaPtr = nullptr;
 	FString ModernVersion;
 	const bool bModern = Params->TryGetObjectField(TEXT("_meta"), MetaPtr)
-		&& (*MetaPtr)->TryGetStringField(MetaProtocolVersion, ModernVersion);
+		&& (*MetaPtr)->TryGetStringField(ProtoBoyMCP::MetaProtocolVersion, ModernVersion);
 
 	if (bModern)
 	{
@@ -383,7 +364,7 @@ FProtoBoyMCPServer::FReply FProtoBoyMCPServer::HandleMessage(const FHttpServerRe
 
 		const TSharedPtr<FJsonObject>* ClientInfo = nullptr;
 		FString ClientName;
-		if ((*MetaPtr)->TryGetObjectField(MetaClientInfo, ClientInfo) && (*ClientInfo)->TryGetStringField(TEXT("name"), ClientName))
+		if ((*MetaPtr)->TryGetObjectField(ProtoBoyMCP::MetaClientInfo, ClientInfo) && (*ClientInfo)->TryGetStringField(TEXT("name"), ClientName))
 		{
 			NoteClient(ClientName);
 		}
@@ -391,17 +372,17 @@ FProtoBoyMCPServer::FReply FProtoBoyMCPServer::HandleMessage(const FHttpServerRe
 	else
 	{
 		// Legacy: after initialize, requests name their version in the header only (absent = 2025-03-26).
-		const FString HeaderVersion = GetHeader(Request, TEXT("MCP-Protocol-Version"));
-		if (Method != TEXT("initialize") && !HeaderVersion.IsEmpty() && !IsLegacyVersion(HeaderVersion))
+		const FString HeaderVersion = ProtoBoyHttp::GetHeader(Request, TEXT("MCP-Protocol-Version"));
+		if (Method != TEXT("initialize") && !HeaderVersion.IsEmpty() && !ProtoBoyMCP::IsLegacyVersion(HeaderVersion))
 		{
-			if (IsModernVersion(HeaderVersion))
+			if (ProtoBoyMCP::IsModernVersion(HeaderVersion))
 			{
-				return { 400, MakeRpcError(Id, InvalidParams, FString::Printf(TEXT("Missing params._meta[\"%s\"]"), MetaProtocolVersion)) };
+				return { 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidParams, FString::Printf(TEXT("Missing params._meta[\"%s\"]"), ProtoBoyMCP::MetaProtocolVersion)) };
 			}
 			TSharedRef<FJsonObject> Data = MakeShared<FJsonObject>();
-			Data->SetArrayField(TEXT("supported"), AllSupportedVersions());
+			Data->SetArrayField(TEXT("supported"), ProtoBoyMCP::AllSupportedVersions());
 			Data->SetStringField(TEXT("requested"), HeaderVersion);
-			return { 400, MakeRpcError(Id, UnsupportedProtocolVersion, TEXT("Unsupported protocol version"), Data) };
+			return { 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::UnsupportedProtocolVersion, TEXT("Unsupported protocol version"), Data) };
 		}
 		// Legacy requests only name the client in initialize; credit later requests to the last one seen.
 		if (Method != TEXT("initialize"))
@@ -439,65 +420,65 @@ FProtoBoyMCPServer::FReply FProtoBoyMCPServer::HandleMessage(const FHttpServerRe
 	}
 	else
 	{
-		return { bModern ? 404 : 200, MakeRpcError(Id, MethodNotFound, FString::Printf(TEXT("Method not found: %s"), *Method)) };
+		return { bModern ? 404 : 200, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::MethodNotFound, FString::Printf(TEXT("Method not found: %s"), *Method)) };
 	}
 
 	if (bModern)
 	{
 		Result->SetStringField(TEXT("resultType"), TEXT("complete"));
 		TSharedPtr<FJsonObject> ResultMeta = Result->HasField(TEXT("_meta")) ? Result->GetObjectField(TEXT("_meta")) : MakeShared<FJsonObject>();
-		ResultMeta->SetObjectField(MetaServerInfo, MakeServerInfo());
+		ResultMeta->SetObjectField(ProtoBoyMCP::MetaServerInfo, ProtoBoyMCP::MakeServerInfo());
 		Result->SetObjectField(TEXT("_meta"), ResultMeta);
 	}
-	return { 200, MakeResult(Id, Result.ToSharedRef()) };
+	return { 200, ProtoBoyMCP::MakeResult(Id, Result.ToSharedRef()) };
 }
 
 TOptional<FProtoBoyMCPServer::FReply> FProtoBoyMCPServer::ValidateModernRequest(const FHttpServerRequest& Request,
 	const TSharedPtr<FJsonValue>& Id, const FString& Method, const TSharedPtr<FJsonObject>& Params, const FString& Version) const
 {
-	if (!IsModernVersion(Version))
+	if (!ProtoBoyMCP::IsModernVersion(Version))
 	{
 		TSharedRef<FJsonObject> Data = MakeShared<FJsonObject>();
-		Data->SetArrayField(TEXT("supported"), AllSupportedVersions());
+		Data->SetArrayField(TEXT("supported"), ProtoBoyMCP::AllSupportedVersions());
 		Data->SetStringField(TEXT("requested"), Version);
-		return FReply{ 400, MakeRpcError(Id, UnsupportedProtocolVersion, TEXT("Unsupported protocol version"), Data) };
+		return FReply{ 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::UnsupportedProtocolVersion, TEXT("Unsupported protocol version"), Data) };
 	}
 
 	const TSharedPtr<FJsonObject> Meta = Params->GetObjectField(TEXT("_meta"));
-	if (!Meta->HasTypedField<EJson::Object>(MetaClientCapabilities))
+	if (!Meta->HasTypedField<EJson::Object>(ProtoBoyMCP::MetaClientCapabilities))
 	{
-		return FReply{ 400, MakeRpcError(Id, InvalidParams, FString::Printf(TEXT("Missing params._meta[\"%s\"]"), MetaClientCapabilities)) };
+		return FReply{ 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidParams, FString::Printf(TEXT("Missing params._meta[\"%s\"]"), ProtoBoyMCP::MetaClientCapabilities)) };
 	}
 
 	// Mirrored headers must be present and match the body.
 	auto Mismatch = [&Id](const FString& What)
 	{
-		return FReply{ 400, MakeRpcError(Id, HeaderMismatch, FString::Printf(TEXT("Header mismatch: %s"), *What)) };
+		return FReply{ 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::HeaderMismatch, FString::Printf(TEXT("Header mismatch: %s"), *What)) };
 	};
 
-	if (!HasHeader(Request, TEXT("MCP-Protocol-Version")))
+	if (!ProtoBoyHttp::HasHeader(Request, TEXT("MCP-Protocol-Version")))
 	{
 		return Mismatch(TEXT("MCP-Protocol-Version header is missing"));
 	}
-	if (GetHeader(Request, TEXT("MCP-Protocol-Version")) != Version)
+	if (ProtoBoyHttp::GetHeader(Request, TEXT("MCP-Protocol-Version")) != Version)
 	{
 		return Mismatch(TEXT("MCP-Protocol-Version header does not match the body"));
 	}
-	if (!HasHeader(Request, TEXT("Mcp-Method")))
+	if (!ProtoBoyHttp::HasHeader(Request, TEXT("Mcp-Method")))
 	{
 		return Mismatch(TEXT("Mcp-Method header is missing"));
 	}
-	if (!GetHeader(Request, TEXT("Mcp-Method")).Equals(Method, ESearchCase::CaseSensitive))
+	if (!ProtoBoyHttp::GetHeader(Request, TEXT("Mcp-Method")).Equals(Method, ESearchCase::CaseSensitive))
 	{
 		return Mismatch(TEXT("Mcp-Method header does not match the body"));
 	}
 	if (Method == TEXT("tools/call"))
 	{
-		if (!HasHeader(Request, TEXT("Mcp-Name")))
+		if (!ProtoBoyHttp::HasHeader(Request, TEXT("Mcp-Name")))
 		{
 			return Mismatch(TEXT("Mcp-Name header is missing"));
 		}
-		if (!DecodeHeaderValue(GetHeader(Request, TEXT("Mcp-Name"))).Equals(Params->GetStringField(TEXT("name")), ESearchCase::CaseSensitive))
+		if (!ProtoBoyMCP::DecodeHeaderValue(ProtoBoyHttp::GetHeader(Request, TEXT("Mcp-Name"))).Equals(Params->GetStringField(TEXT("name")), ESearchCase::CaseSensitive))
 		{
 			return Mismatch(TEXT("Mcp-Name header does not match the body"));
 		}
@@ -511,7 +492,7 @@ TSharedRef<FJsonObject> FProtoBoyMCPServer::MakeInitializeResult(const TSharedPt
 	// Answer with the client's version if we speak it, otherwise our preferred legacy version.
 	FString Requested;
 	Params->TryGetStringField(TEXT("protocolVersion"), Requested);
-	const FString Version = IsLegacyVersion(Requested) ? Requested : FString(LegacyVersions[0]);
+	const FString Version = ProtoBoyMCP::IsLegacyVersion(Requested) ? Requested : FString(ProtoBoyMCP::LegacyVersions[0]);
 
 	const TSharedPtr<FJsonObject>* ClientInfo = nullptr;
 	FString ClientName;
@@ -530,8 +511,8 @@ TSharedRef<FJsonObject> FProtoBoyMCPServer::MakeInitializeResult(const TSharedPt
 	TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
 	Result->SetStringField(TEXT("protocolVersion"), Version);
 	Result->SetObjectField(TEXT("capabilities"), Capabilities);
-	Result->SetObjectField(TEXT("serverInfo"), MakeServerInfo());
-	Result->SetStringField(TEXT("instructions"), Instructions);
+	Result->SetObjectField(TEXT("serverInfo"), ProtoBoyMCP::MakeServerInfo());
+	Result->SetStringField(TEXT("instructions"), ProtoBoyMCP::Instructions);
 	return Result;
 }
 
@@ -541,9 +522,9 @@ TSharedRef<FJsonObject> FProtoBoyMCPServer::MakeDiscoverResult() const
 	Capabilities->SetObjectField(TEXT("tools"), MakeShared<FJsonObject>());
 
 	TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
-	Result->SetArrayField(TEXT("supportedVersions"), AllSupportedVersions());
+	Result->SetArrayField(TEXT("supportedVersions"), ProtoBoyMCP::AllSupportedVersions());
 	Result->SetObjectField(TEXT("capabilities"), Capabilities);
-	Result->SetStringField(TEXT("instructions"), Instructions);
+	Result->SetStringField(TEXT("instructions"), ProtoBoyMCP::Instructions);
 	return Result;
 }
 
@@ -584,7 +565,7 @@ TSharedPtr<FJsonObject> FProtoBoyMCPServer::CallTool(const TSharedPtr<FJsonObjec
 	const FProtoBoyMCPTool* Tool = Tools.FindByPredicate([&Name](const FProtoBoyMCPTool& T) { return T.Name.ToString() == Name; });
 	if (!Tool || !IsToolEnabled(*Tool))
 	{
-		OutError = { 200, MakeRpcError(Id, InvalidParams, FString::Printf(TEXT("Unknown tool: %s"), *Name)) };
+		OutError = { 200, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidParams, FString::Printf(TEXT("Unknown tool: %s"), *Name)) };
 		return nullptr;
 	}
 
@@ -604,7 +585,7 @@ TSharedPtr<FJsonObject> FProtoBoyMCPServer::CallTool(const TSharedPtr<FJsonObjec
 
 bool FProtoBoyMCPServer::IsAuthorized(const FHttpServerRequest& Request)
 {
-	const FString Header = GetHeader(Request, TEXT("Authorization"));
+	const FString Header = ProtoBoyHttp::GetHeader(Request, TEXT("Authorization"));
 	const FString Prefix = TEXT("Bearer ");
 	if (!Header.StartsWith(Prefix, ESearchCase::IgnoreCase))
 	{
@@ -629,12 +610,12 @@ bool FProtoBoyMCPServer::IsAuthorized(const FHttpServerRequest& Request)
 bool FProtoBoyMCPServer::IsAllowedOrigin(const FHttpServerRequest& Request)
 {
 	// Non-browser clients send no Origin. Browsers always do; only allow pages served from this machine.
-	if (!HasHeader(Request, TEXT("Origin")))
+	if (!ProtoBoyHttp::HasHeader(Request, TEXT("Origin")))
 	{
 		return true;
 	}
 
-	FString Origin = GetHeader(Request, TEXT("Origin")).ToLower();
+	FString Origin = ProtoBoyHttp::GetHeader(Request, TEXT("Origin")).ToLower();
 	if (!Origin.RemoveFromStart(TEXT("http://")) && !Origin.RemoveFromStart(TEXT("https://")))
 	{
 		return false;

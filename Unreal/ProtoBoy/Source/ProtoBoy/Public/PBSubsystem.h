@@ -7,6 +7,7 @@
 #include "EditorSubsystem.h"
 #include "Health/PBHealthChecker.h"
 #include "MCP/PBMCPServer.h"
+#include "Tasks/Trello/PBTrelloConnector.h"
 #include "PBSubsystem.generated.h"
 
 /**
@@ -30,11 +31,19 @@ public:
 	FProtoBoyAssetLifecycle& GetAssetLifecycle() const { return *AssetLifecycle; }
 	FProtoBoyDaemonClient& GetDaemonClient() const { return *DaemonClient; }
 	FProtoBoyMCPServer& GetMCPServer() const { return *MCPServer; }
+	FProtoBoyTrelloConnector& GetTrelloConnector() const { return *TrelloConnector; }
 
 private:
 	// TODO: Bind asset registry / package save / live coding events and route them to the services.
 	void BindEditorEvents();
 	void UnbindEditorEvents();
+
+	/**
+	 * Slate's modal loop (any modal window, including ProtoBoy's settings windows) doesn't tick the core ticker,
+	 * so our local HTTP listeners would stop answering. Pump them from the modal tick instead.
+	 */
+	void OnModalLoopTick(float DeltaTime);
+	FDelegateHandle ModalLoopTickHandle;
 
 	TUniquePtr<FProtoBoyObsidianConnector> ObsidianConnector;
 	TUniquePtr<FProtoBoyDocGenerator> DocGenerator;
@@ -42,4 +51,5 @@ private:
 	TUniquePtr<FProtoBoyAssetLifecycle> AssetLifecycle;
 	TUniquePtr<FProtoBoyDaemonClient> DaemonClient;
 	TUniquePtr<FProtoBoyMCPServer> MCPServer;
+	TUniquePtr<FProtoBoyTrelloConnector> TrelloConnector;
 };

@@ -15,7 +15,7 @@
 
 const TCHAR* FProtoBoyMCPClientConfig::ServerName = TEXT("protoboy");
 
-namespace
+namespace ProtoBoyMCPConfig
 {
 	/** Claude Desktop passes this env var to mcp-remote; see MakeServerEntry. */
 	const TCHAR* DesktopAuthEnvVar = TEXT("AUTH_HEADER");
@@ -189,11 +189,11 @@ TSharedRef<FJsonObject> FProtoBoyMCPClientConfig::MakeServerEntry(EProtoBoyMCPCl
 		Args.Add(MakeShared<FJsonValueString>(TEXT("mcp-remote")));
 		Args.Add(MakeShared<FJsonValueString>(ServerUrl));
 		Args.Add(MakeShared<FJsonValueString>(TEXT("--header")));
-		Args.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("Authorization:${%s}"), DesktopAuthEnvVar)));
+		Args.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("Authorization:${%s}"), ProtoBoyMCPConfig::DesktopAuthEnvVar)));
 		Entry->SetArrayField(TEXT("args"), Args);
 
 		TSharedRef<FJsonObject> Env = MakeShared<FJsonObject>();
-		Env->SetStringField(DesktopAuthEnvVar, Bearer);
+		Env->SetStringField(ProtoBoyMCPConfig::DesktopAuthEnvVar, Bearer);
 		Entry->SetObjectField(TEXT("env"), Env);
 		break;
 	}
@@ -246,7 +246,7 @@ bool FProtoBoyMCPClientConfig::WriteConfig(EProtoBoyMCPClient Client, const FStr
 
 	const FString Path = GetConfigPath(Client);
 	TSharedPtr<FJsonObject> Root;
-	if (!LoadJsonFile(Path, Root, OutError))
+	if (!ProtoBoyMCPConfig::LoadJsonFile(Path, Root, OutError))
 	{
 		return false;
 	}
@@ -260,7 +260,7 @@ bool FProtoBoyMCPClientConfig::WriteConfig(EProtoBoyMCPClient Client, const FStr
 	Root->SetObjectField(TEXT("mcpServers"), Servers);
 
 	IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
-	return SaveJsonFile(Path, Root.ToSharedRef(), OutError);
+	return ProtoBoyMCPConfig::SaveJsonFile(Path, Root.ToSharedRef(), OutError);
 }
 
 bool FProtoBoyMCPClientConfig::RemoveConfig(EProtoBoyMCPClient Client, FText& OutError)
@@ -276,7 +276,7 @@ bool FProtoBoyMCPClientConfig::RemoveConfig(EProtoBoyMCPClient Client, FText& Ou
 
 	const FString Path = GetConfigPath(Client);
 	TSharedPtr<FJsonObject> Root;
-	if (!LoadJsonFile(Path, Root, OutError))
+	if (!ProtoBoyMCPConfig::LoadJsonFile(Path, Root, OutError))
 	{
 		return false;
 	}
@@ -288,14 +288,14 @@ bool FProtoBoyMCPClientConfig::RemoveConfig(EProtoBoyMCPClient Client, FText& Ou
 	}
 
 	(*Servers)->RemoveField(ServerName);
-	return SaveJsonFile(Path, Root.ToSharedRef(), OutError);
+	return ProtoBoyMCPConfig::SaveJsonFile(Path, Root.ToSharedRef(), OutError);
 }
 
 bool FProtoBoyMCPClientConfig::IsConfigured(EProtoBoyMCPClient Client, const FString& ServerUrl)
 {
 	TSharedPtr<FJsonObject> Root;
 	FText Ignored;
-	if (!LoadJsonFile(GetConfigPath(Client), Root, Ignored))
+	if (!ProtoBoyMCPConfig::LoadJsonFile(GetConfigPath(Client), Root, Ignored))
 	{
 		return false;
 	}
@@ -357,12 +357,12 @@ TSharedPtr<FJsonObject> FProtoBoyMCPClientConfig::FindClaudeCodeProjectServers(c
 	}
 
 	// Keys are absolute project paths; compare normalized (FString == is case-insensitive, matching Windows paths).
-	const FString ProjectDir = GetProjectDir();
+	const FString ProjectDir = ProtoBoyMCPConfig::GetProjectDir();
 	for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Projects)->Values)
 	{
 		const TSharedPtr<FJsonObject>* Project = nullptr;
 		const TSharedPtr<FJsonObject>* Servers = nullptr;
-		if (NormalizeDir(Pair.Key) == ProjectDir
+		if (ProtoBoyMCPConfig::NormalizeDir(Pair.Key) == ProjectDir
 			&& Pair.Value.IsValid() && Pair.Value->TryGetObject(Project)
 			&& (*Project)->TryGetObjectField(TEXT("mcpServers"), Servers))
 		{
@@ -387,7 +387,7 @@ bool FProtoBoyMCPClientConfig::RunClaudeCli(const FString& Args, FText& OutError
 	int32 ReturnCode = -1;
 	FString StdOut;
 	FString StdErr;
-	const bool bLaunched = FPlatformProcess::ExecProcess(Shell, *ShellArgs, &ReturnCode, &StdOut, &StdErr, *GetProjectDir());
+	const bool bLaunched = FPlatformProcess::ExecProcess(Shell, *ShellArgs, &ReturnCode, &StdOut, &StdErr, *ProtoBoyMCPConfig::GetProjectDir());
 
 	if (bLaunched && ReturnCode == 0)
 	{

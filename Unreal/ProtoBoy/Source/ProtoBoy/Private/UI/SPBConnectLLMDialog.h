@@ -20,9 +20,6 @@ public:
 	/** Opens the dialog as a modal window parented to ParentWidget's window. */
 	static void Open(const TSharedPtr<SWidget>& ParentWidget);
 
-	/** Keeps the MCP server answering while this modal window stalls the engine's core ticker. */
-	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
-
 private:
 	/** Sidebar pages. Values double as PanelSwitcher slot indices. */
 	enum class EPage : uint8

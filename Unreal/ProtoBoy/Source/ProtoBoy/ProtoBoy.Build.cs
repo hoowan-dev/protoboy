@@ -29,6 +29,7 @@ public class ProtoBoy : ModuleRules
 			"ApplicationCore",
 			"Settings",
 			"HTTPServer",
+			"HTTP",
 		});
 	}
 }
