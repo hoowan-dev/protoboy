@@ -1,9 +1,9 @@
-#include "ProtoBoyModule.h"
+#include "PBModule.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Docking/TabManager.h"
 #include "ToolMenus.h"
-#include "UI/SProtoBoyDashboard.h"
+#include "UI/SPBDashboard.h"
 #include "Widgets/Docking/SDockTab.h"
 
 #define LOCTEXT_NAMESPACE "FProtoBoyModule"

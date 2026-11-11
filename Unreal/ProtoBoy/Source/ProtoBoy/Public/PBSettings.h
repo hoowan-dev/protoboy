@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Engine/DeveloperSettings.h"
-#include "ProtoBoySettings.generated.h"
+#include "PBSettings.generated.h"
 
 /** Project-wide ProtoBoy settings (Project Settings > Plugins > ProtoBoy). Saved to DefaultProtoBoy.ini. */
 UCLASS(Config = ProtoBoy, DefaultConfig, meta = (DisplayName = "ProtoBoy"))

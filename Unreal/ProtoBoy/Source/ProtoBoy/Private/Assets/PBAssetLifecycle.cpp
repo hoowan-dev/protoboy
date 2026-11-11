@@ -1,4 +1,4 @@
-#include "Assets/ProtoBoyAssetLifecycle.h"
+#include "Assets/PBAssetLifecycle.h"
 
 EProtoBoyAssetLifecycle FProtoBoyAssetLifecycle::GetLifecycle(const FSoftObjectPath& AssetPath) const
 {

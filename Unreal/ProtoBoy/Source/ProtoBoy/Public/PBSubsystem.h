@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Assets/ProtoBoyAssetLifecycle.h"
-#include "Daemon/ProtoBoyDaemonClient.h"
-#include "Docs/ProtoBoyDocGenerator.h"
+#include "Assets/PBAssetLifecycle.h"
+#include "Daemon/PBDaemonClient.h"
+#include "Docs/PBDocGenerator.h"
 #include "EditorSubsystem.h"
-#include "Health/ProtoBoyHealthChecker.h"
-#include "ProtoBoySubsystem.generated.h"
+#include "Health/PBHealthChecker.h"
+#include "PBSubsystem.generated.h"
 
 /**
  * Central hub for ProtoBoy in the editor. Owns one service per feature pillar

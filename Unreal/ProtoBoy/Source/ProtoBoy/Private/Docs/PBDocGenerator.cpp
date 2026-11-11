@@ -1,8 +1,8 @@
-#include "Docs/ProtoBoyDocGenerator.h"
+#include "Docs/PBDocGenerator.h"
 
 #include "Misc/Paths.h"
-#include "ProtoBoyModule.h"
-#include "ProtoBoySettings.h"
+#include "PBModule.h"
+#include "PBSettings.h"
 
 FString FProtoBoyDocGenerator::GetDocsRoot() const
 {

@@ -1,8 +1,8 @@
-#include "ProtoBoySubsystem.h"
+#include "PBSubsystem.h"
 
 #include "Editor.h"
-#include "ProtoBoyModule.h"
-#include "ProtoBoySettings.h"
+#include "PBModule.h"
+#include "PBSettings.h"
 
 void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {

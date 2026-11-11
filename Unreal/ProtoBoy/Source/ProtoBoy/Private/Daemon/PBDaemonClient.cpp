@@ -1,6 +1,6 @@
-#include "Daemon/ProtoBoyDaemonClient.h"
+#include "Daemon/PBDaemonClient.h"
 
-#include "ProtoBoyModule.h"
+#include "PBModule.h"
 
 void FProtoBoyDaemonClient::Connect(const FString& Url)
 {

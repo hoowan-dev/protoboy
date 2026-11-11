@@ -24,6 +24,8 @@ There are no tests or lint setup yet.
 
 ## Architecture
 
+Source files use a `PB` prefix (`PBSubsystem.h`, `SPBDashboard.cpp`); class names keep the full `ProtoBoy` prefix. `ProtoBoy.Build.cs` must match the module name and is not renamed.
+
 Single module `ProtoBoy` (Type `Editor`, `PostEngineInit`).
 
 - `FProtoBoyModule` handles only editor UI registration: the `ProtoBoyDashboard` nomad tab and the **Tools > ProtoBoy Dashboard** menu entry (via `UToolMenus` startup callback, owner-scoped so shutdown unregisters it).
@@ -33,5 +35,5 @@ Single module `ProtoBoy` (Type `Editor`, `PostEngineInit`).
   - `FProtoBoyHealthChecker` (Health/): pillar 4, health issues and the Prototype-to-Production Viability Index.
   - `FProtoBoyDaemonClient` (Daemon/): link to the planned engine-agnostic daemon over local WebSocket.
 - `UProtoBoySettings` (`UDeveloperSettings`, `Config=ProtoBoy`, `DefaultConfig`) holds all tunables and saves to the host project's `DefaultProtoBoy.ini`. Add new options here rather than hard-coding them.
-- The service headers are included directly in `ProtoBoySubsystem.h`, not forward-declared. UHT-generated code destroys the `TUniquePtr` members, and forward declarations there fail with C4150 (incomplete type).
+- The service headers are included directly in `PBSubsystem.h`, not forward-declared. UHT-generated code destroys the `TUniquePtr` members, and forward declarations there fail with C4150 (incomplete type).
 - Design intent from the concept doc: docs are human-readable Markdown that must survive human edits (regenerate only auto-generated blocks), and heavy analysis is meant to move to the daemon eventually so the editor stays responsive.
