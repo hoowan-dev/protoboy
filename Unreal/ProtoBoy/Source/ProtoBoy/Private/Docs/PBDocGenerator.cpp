@@ -1,11 +1,21 @@
 #include "Docs/PBDocGenerator.h"
 
+#include "Docs/PBObsidianConnector.h"
 #include "Misc/Paths.h"
 #include "PBModule.h"
 #include "PBSettings.h"
 
+FProtoBoyDocGenerator::FProtoBoyDocGenerator(const FProtoBoyObsidianConnector& InObsidian)
+	: Obsidian(InObsidian)
+{
+}
+
 FString FProtoBoyDocGenerator::GetDocsRoot() const
 {
+	if (Obsidian.IsConnected())
+	{
+		return Obsidian.GetDocsRoot();
+	}
 	return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), GetDefault<UProtoBoySettings>()->DocsDirectory);
 }
 

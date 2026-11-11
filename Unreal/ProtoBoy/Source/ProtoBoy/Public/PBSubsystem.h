@@ -3,6 +3,7 @@
 #include "Assets/PBAssetLifecycle.h"
 #include "Daemon/PBDaemonClient.h"
 #include "Docs/PBDocGenerator.h"
+#include "Docs/PBObsidianConnector.h"
 #include "EditorSubsystem.h"
 #include "Health/PBHealthChecker.h"
 #include "PBSubsystem.generated.h"
@@ -22,6 +23,7 @@ public:
 
 	static UProtoBoySubsystem* Get();
 
+	FProtoBoyObsidianConnector& GetObsidianConnector() const { return *ObsidianConnector; }
 	FProtoBoyDocGenerator& GetDocGenerator() const { return *DocGenerator; }
 	FProtoBoyHealthChecker& GetHealthChecker() const { return *HealthChecker; }
 	FProtoBoyAssetLifecycle& GetAssetLifecycle() const { return *AssetLifecycle; }
@@ -32,6 +34,7 @@ private:
 	void BindEditorEvents();
 	void UnbindEditorEvents();
 
+	TUniquePtr<FProtoBoyObsidianConnector> ObsidianConnector;
 	TUniquePtr<FProtoBoyDocGenerator> DocGenerator;
 	TUniquePtr<FProtoBoyHealthChecker> HealthChecker;
 	TUniquePtr<FProtoBoyAssetLifecycle> AssetLifecycle;

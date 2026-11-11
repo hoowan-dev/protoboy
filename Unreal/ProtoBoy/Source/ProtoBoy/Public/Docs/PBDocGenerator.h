@@ -2,11 +2,15 @@
 
 #include "CoreMinimal.h"
 
+class FProtoBoyObsidianConnector;
+
 /** Pillar 1: living technical & design documentation (Markdown, vault-first). */
 class PROTOBOY_API FProtoBoyDocGenerator
 {
 public:
-	/** Absolute path of the docs root folder from settings. */
+	explicit FProtoBoyDocGenerator(const FProtoBoyObsidianConnector& InObsidian);
+
+	/** Absolute docs root: the Obsidian docs folder when connected, otherwise DocsDirectory from settings. */
 	FString GetDocsRoot() const;
 
 	/** Create or refresh the TDD entry for an asset. Returns the written file path. */
@@ -14,4 +18,7 @@ public:
 
 	/** Create a new Architectural Decision Record. Returns the written file path. */
 	FString CreateADR(const FString& Title, const FString& Why);
+
+private:
+	const FProtoBoyObsidianConnector& Obsidian;
 };

@@ -1,9 +1,11 @@
 #include "UI/SPBConnectDocsDialog.h"
 
 #include "Framework/Application/SlateApplication.h"
+#include "PBSubsystem.h"
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 #include "UI/PBStyle.h"
+#include "UI/SPBObsidianPanel.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Layout/SBorder.h"
@@ -17,6 +19,12 @@
 
 void SProtoBoyConnectDocsDialog::Construct(const FArguments& InArgs)
 {
+	// Open on the connected platform's page, if any.
+	if (const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		SelectedPlatform = Subsystem->GetObsidianConnector().GetConnection().Platform;
+	}
+
 	ChildSlot
 	[
 		SNew(SHorizontalBox)
@@ -136,41 +144,7 @@ TSharedRef<SWidget> SProtoBoyConnectDocsDialog::MakeEmptyPanel()
 
 TSharedRef<SWidget> SProtoBoyConnectDocsDialog::MakeObsidianPanel()
 {
-	return SNew(SVerticalBox)
-
-		// Header: logo + name, centered
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		.HAlign(HAlign_Center)
-		.Padding(0.f, 8.f, 0.f, 16.f)
-		[
-			SNew(SHorizontalBox)
-
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			.Padding(0.f, 0.f, 10.f, 0.f)
-			[
-				SNew(SImage)
-				.Image(FProtoBoyStyle::Get().GetBrush("ProtoBoy.Icon.Obsidian.Large"))
-			]
-
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			[
-				SNew(STextBlock)
-				.Text(LOCTEXT("ObsidianHeader", "Obsidian"))
-				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 20))
-			]
-		]
-
-		// TODO: Obsidian setup settings (vault folder, docs subfolder, connect/test button).
-		+ SVerticalBox::Slot()
-		.FillHeight(1.f)
-		[
-			SNew(SBox)
-		];
+	return SNew(SProtoBoyObsidianPanel);
 }
 
 void SProtoBoyConnectDocsDialog::SelectPlatform(EProtoBoyDocPlatform Platform)

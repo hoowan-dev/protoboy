@@ -16,6 +16,13 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Docs")
 	FString DocsDirectory = TEXT("Docs/ProtoBoy");
 
+	/**
+	 * Team default for the folder inside the Obsidian vault (relative to the vault root); pre-fills the Connect window.
+	 * Empty means "ProtoBoy/<ProjectName>". Each user's actual connection is saved in Saved/ProtoBoy/DocsConnection.json.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Docs|Obsidian")
+	FString ObsidianDocsFolder;
+
 	/** Generate TDD stubs automatically when new gameplay assets are created. */
 	UPROPERTY(Config, EditAnywhere, Category = "Docs")
 	bool bAutoGenerateTDDStubs = true;

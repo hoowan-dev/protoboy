@@ -30,10 +30,12 @@ Single module `ProtoBoy` (Type `Editor`, `PostEngineInit`).
 
 - `FProtoBoyModule` handles only editor UI registration: the `ProtoBoyDashboard` nomad tab and the **Tools > ProtoBoy Dashboard** menu entry (via `UToolMenus` startup callback, owner-scoped so shutdown unregisters it).
 - `UProtoBoySubsystem` (a `UEditorSubsystem`) is the central hub. It owns one plain C++ service per pillar as `TUniquePtr` and is where editor events (asset registry, package save, live coding) should be bound and routed (`BindEditorEvents`, currently a TODO). Access it with `UProtoBoySubsystem::Get()`.
-  - `FProtoBoyDocGenerator` (Docs/): pillar 1, Markdown TDD stubs and ADRs written under the configured docs folder.
+  - `FProtoBoyDocGenerator` (Docs/): pillar 1, Markdown TDD stubs and ADRs written under the docs root (the Obsidian docs folder when connected, otherwise `DocsDirectory`).
+  - `FProtoBoyObsidianConnector` (Docs/): file-system link to an Obsidian vault (a folder with `.obsidian/`). Finds vaults via `%APPDATA%/obsidian/obsidian.json`, validates, creates the docs folder and a `_ProtoBoy.md` marker note, and saves the connection through `FProtoBoyDocsConnectionStore`. UI lives in `SProtoBoyObsidianPanel`.
   - `FProtoBoyAssetLifecycle` (Assets/): pillar 3, Untracked/Prototype/Production tags and the Greybox Replacement Matrix.
   - `FProtoBoyHealthChecker` (Health/): pillar 4, health issues and the Prototype-to-Production Viability Index.
   - `FProtoBoyDaemonClient` (Daemon/): link to the planned engine-agnostic daemon over local WebSocket.
-- `UProtoBoySettings` (`UDeveloperSettings`, `Config=ProtoBoy`, `DefaultConfig`) holds all tunables and saves to the host project's `DefaultProtoBoy.ini`. Add new options here rather than hard-coding them.
+- `UProtoBoySettings` (`UDeveloperSettings`, `Config=ProtoBoy`, `DefaultConfig`) holds all tunables and saves to the host project's `DefaultProtoBoy.ini`. Add new options here rather than hard-coding them. Machine-specific state (absolute paths, per-user connections) does not go here, since that ini is committed.
+- `FProtoBoyDocsConnectionStore` (Docs/PBDocsConnection.h) serializes the user's documentation connection (`FProtoBoyDocsConnection` USTRUCT, via `FJsonObjectConverter`) to `<Project>/Saved/ProtoBoy/DocsConnection.json`. Add fields to the struct; bump `CurrentVersion` only for breaking changes. `FProtoBoyObsidianConnector::OnConnectionChanged` fires after Connect/Disconnect so UI can refresh.
 - The service headers are included directly in `PBSubsystem.h`, not forward-declared. UHT-generated code destroys the `TUniquePtr` members, and forward declarations there fail with C4150 (incomplete type).
 - Design intent from the concept doc: docs are human-readable Markdown that must survive human edits (regenerate only auto-generated blocks), and heavy analysis is meant to move to the daemon eventually so the editor stays responsive.

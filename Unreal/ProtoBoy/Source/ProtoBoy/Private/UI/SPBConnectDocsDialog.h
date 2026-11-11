@@ -1,15 +1,9 @@
 #pragma once
 
+#include "Docs/PBDocsConnection.h"
 #include "Widgets/SCompoundWidget.h"
 
 class SWidgetSwitcher;
-
-/** Documentation platforms ProtoBoy can connect to. Values double as SWidgetSwitcher slot indices. */
-enum class EProtoBoyDocPlatform : uint8
-{
-	None = 0,
-	Obsidian = 1,
-};
 
 /**
  * "Connect to Documentation" window content: a "Documentation Platforms" sidebar on the left,
@@ -34,6 +28,7 @@ private:
 
 	void SelectPlatform(EProtoBoyDocPlatform Platform);
 
+	/** EProtoBoyDocPlatform values double as PanelSwitcher slot indices. */
 	EProtoBoyDocPlatform SelectedPlatform = EProtoBoyDocPlatform::None;
 	TSharedPtr<SWidgetSwitcher> PanelSwitcher;
 };

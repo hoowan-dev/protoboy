@@ -8,7 +8,8 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	DocGenerator = MakeUnique<FProtoBoyDocGenerator>();
+	ObsidianConnector = MakeUnique<FProtoBoyObsidianConnector>();
+	DocGenerator = MakeUnique<FProtoBoyDocGenerator>(*ObsidianConnector);
 	HealthChecker = MakeUnique<FProtoBoyHealthChecker>();
 	AssetLifecycle = MakeUnique<FProtoBoyAssetLifecycle>();
 	DaemonClient = MakeUnique<FProtoBoyDaemonClient>();
@@ -32,6 +33,7 @@ void UProtoBoySubsystem::Deinitialize()
 	AssetLifecycle.Reset();
 	HealthChecker.Reset();
 	DocGenerator.Reset();
+	ObsidianConnector.Reset();
 
 	Super::Deinitialize();
 }

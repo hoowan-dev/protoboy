@@ -19,9 +19,13 @@ public class ProtoBoy : ModuleRules
 		{
 			"Slate",
 			"SlateCore",
+			"InputCore",
 			"UnrealEd",
 			"ToolMenus",
 			"Projects",
+			"Json",
+			"JsonUtilities",
+			"DesktopPlatform",
 		});
 	}
 }

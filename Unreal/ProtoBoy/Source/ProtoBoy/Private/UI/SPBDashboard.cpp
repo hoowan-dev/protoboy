@@ -1,7 +1,11 @@
 #include "UI/SPBDashboard.h"
 
+#include "PBSubsystem.h"
 #include "Styling/CoreStyle.h"
+#include "Styling/StyleColors.h"
+#include "UI/PBStyle.h"
 #include "UI/SPBConnectDocsDialog.h"
+#include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/SBoxPanel.h"
@@ -49,15 +53,100 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 
 			+ SVerticalBox::Slot()
 			.AutoHeight()
-			.HAlign(HAlign_Left)
 			.Padding(0.f, 8.f, 0.f, 0.f)
 			[
-				SNew(SButton)
-				.Text(LOCTEXT("ConnectDocs", "Connect to Documentation..."))
-				.OnClicked(this, &SProtoBoyDashboard::OnConnectDocsClicked)
+				SAssignNew(DocsSection, SBox)
 			]
 		]
 	];
+
+	RebuildDocsSection();
+
+	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		ConnectionChangedHandle = Subsystem->GetObsidianConnector().OnConnectionChanged.AddSP(
+			this, &SProtoBoyDashboard::RebuildDocsSection);
+	}
+}
+
+SProtoBoyDashboard::~SProtoBoyDashboard()
+{
+	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		Subsystem->GetObsidianConnector().OnConnectionChanged.Remove(ConnectionChangedHandle);
+	}
+}
+
+void SProtoBoyDashboard::RebuildDocsSection()
+{
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	const FProtoBoyObsidianConnector* Obsidian = Subsystem ? &Subsystem->GetObsidianConnector() : nullptr;
+
+	TSharedRef<SVerticalBox> Content = SNew(SVerticalBox);
+
+	if (Obsidian && Obsidian->IsConnected())
+	{
+		Content->AddSlot()
+		.AutoHeight()
+		[
+			SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(0.f, 0.f, 6.f, 0.f)
+			[
+				SNew(SImage)
+				.Image(FProtoBoyStyle::Get().GetBrush("ProtoBoy.Icon.Obsidian"))
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(FText::Format(LOCTEXT("ObsidianConnected", "Obsidian connected (vault \"{0}\")"),
+					FText::FromString(Obsidian->GetVaultName())))
+				.ColorAndOpacity(FStyleColors::Success)
+			]
+		];
+
+		Content->AddSlot()
+		.AutoHeight()
+		.Padding(0.f, 4.f, 0.f, 0.f)
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString(Obsidian->GetDocsRoot()))
+			.ToolTipText(LOCTEXT("DocsRootTip", "Folder ProtoBoy writes docs into."))
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true)
+		];
+	}
+	else
+	{
+		Content->AddSlot()
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("NotConnected", "No documentation platform connected."))
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+		];
+	}
+
+	const bool bConnected = Obsidian && Obsidian->IsConnected();
+	Content->AddSlot()
+	.AutoHeight()
+	.HAlign(HAlign_Left)
+	.Padding(0.f, 8.f, 0.f, 0.f)
+	[
+		SNew(SButton)
+		.Text(bConnected
+			? LOCTEXT("ManageDocs", "Documentation Settings...")
+			: LOCTEXT("ConnectDocs", "Connect to Documentation..."))
+		.OnClicked(this, &SProtoBoyDashboard::OnConnectDocsClicked)
+	];
+
+	DocsSection->SetContent(Content);
 }
 
 FReply SProtoBoyDashboard::OnConnectDocsClicked()
