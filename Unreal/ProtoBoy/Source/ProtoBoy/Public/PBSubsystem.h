@@ -1,11 +1,9 @@
 #pragma once
 
-#include "Assets/PBAssetLifecycle.h"
 #include "Daemon/PBDaemonClient.h"
 #include "Docs/PBDocGenerator.h"
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "EditorSubsystem.h"
-#include "Health/PBHealthChecker.h"
 #include "MCP/PBMCPServer.h"
 #include "Tasks/Trello/PBTrelloConnector.h"
 #include "PBSubsystem.generated.h"
@@ -27,8 +25,6 @@ public:
 
 	FProtoBoyObsidianConnector& GetObsidianConnector() const { return *ObsidianConnector; }
 	FProtoBoyDocGenerator& GetDocGenerator() const { return *DocGenerator; }
-	FProtoBoyHealthChecker& GetHealthChecker() const { return *HealthChecker; }
-	FProtoBoyAssetLifecycle& GetAssetLifecycle() const { return *AssetLifecycle; }
 	FProtoBoyDaemonClient& GetDaemonClient() const { return *DaemonClient; }
 	FProtoBoyMCPServer& GetMCPServer() const { return *MCPServer; }
 	FProtoBoyTrelloConnector& GetTrelloConnector() const { return *TrelloConnector; }
@@ -47,8 +43,6 @@ private:
 
 	TUniquePtr<FProtoBoyObsidianConnector> ObsidianConnector;
 	TUniquePtr<FProtoBoyDocGenerator> DocGenerator;
-	TUniquePtr<FProtoBoyHealthChecker> HealthChecker;
-	TUniquePtr<FProtoBoyAssetLifecycle> AssetLifecycle;
 	TUniquePtr<FProtoBoyDaemonClient> DaemonClient;
 	TUniquePtr<FProtoBoyMCPServer> MCPServer;
 	TUniquePtr<FProtoBoyTrelloConnector> TrelloConnector;

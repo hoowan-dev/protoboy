@@ -20,7 +20,7 @@
 
 void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 {
-	// TODO: Status header, Run Health Check, New ADR, issue list.
+	// TODO: Status header, New ADR.
 	ChildSlot
 	[
 		SNew(SBox)

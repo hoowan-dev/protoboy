@@ -2,7 +2,7 @@
 
 #include "Widgets/SCompoundWidget.h"
 
-/** Placeholder dashboard: daemon status, PVI, health issues, docs actions. */
+/** ProtoBoy dashboard: MCP, Documentation and Tasks sections. */
 class SProtoBoyDashboard : public SCompoundWidget
 {
 public:

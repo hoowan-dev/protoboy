@@ -11,8 +11,6 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	ObsidianConnector = MakeUnique<FProtoBoyObsidianConnector>();
 	DocGenerator = MakeUnique<FProtoBoyDocGenerator>(*ObsidianConnector);
-	HealthChecker = MakeUnique<FProtoBoyHealthChecker>();
-	AssetLifecycle = MakeUnique<FProtoBoyAssetLifecycle>();
 	DaemonClient = MakeUnique<FProtoBoyDaemonClient>();
 	MCPServer = MakeUnique<FProtoBoyMCPServer>();
 	TrelloConnector = MakeUnique<FProtoBoyTrelloConnector>();
@@ -41,8 +39,6 @@ void UProtoBoySubsystem::Deinitialize()
 	TrelloConnector.Reset();
 	MCPServer.Reset();
 	DaemonClient.Reset();
-	AssetLifecycle.Reset();
-	HealthChecker.Reset();
 	DocGenerator.Reset();
 	ObsidianConnector.Reset();
 

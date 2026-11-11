@@ -27,18 +27,6 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Docs")
 	bool bAutoGenerateTDDStubs = true;
 
-	/** Tag newly imported assets as Prototype/Temp by default. */
-	UPROPERTY(Config, EditAnywhere, Category = "Assets")
-	bool bTagNewAssetsAsPrototype = true;
-
-	/** Texture dimension above which the health check warns. */
-	UPROPERTY(Config, EditAnywhere, Category = "Health", meta = (ClampMin = "1"))
-	int32 MaxTextureSize = 4096;
-
-	/** Static mesh triangle count above which the health check warns. */
-	UPROPERTY(Config, EditAnywhere, Category = "Health", meta = (ClampMin = "1"))
-	int32 MaxStaticMeshTriangles = 200000;
-
 	/** Start ProtoBoy's MCP server with the editor so agents (Claude, Gemini, ...) can call ProtoBoy tools. */
 	UPROPERTY(Config, EditAnywhere, Category = "MCP")
 	bool bEnableMCPServer = false;

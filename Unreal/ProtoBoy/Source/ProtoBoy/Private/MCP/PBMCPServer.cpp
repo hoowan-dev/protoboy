@@ -129,7 +129,7 @@ namespace ProtoBoyMCP
 
 	const TCHAR* Instructions = TEXT(
 		"ProtoBoy is a game-dev prototyping companion running inside the Unreal Editor. "
-		"Use its tools to check project health, see which assets are still prototype/greybox, and read or write the project's living docs.");
+		"Use its tools to read or write the project's living docs.");
 
 	TUniquePtr<FHttpServerResponse> MakeHttpResponse(int32 Status, const TSharedPtr<FJsonObject>& Body)
 	{
@@ -164,13 +164,8 @@ void FProtoBoyMCPServer::RegisterTools()
 {
 	// TODO: Give each tool a schema + handler that calls into the pillar services via UProtoBoySubsystem.
 	Tools = {
-		{ "get_project_health", LOCTEXT("ToolHealth", "Run the health check and return issues."), false },
-		{ "get_viability_index", LOCTEXT("ToolPVI", "Return the Prototype-to-Production Viability Index."), false },
-		{ "list_assets_by_lifecycle", LOCTEXT("ToolListAssets", "List assets tagged Untracked, Prototype or Production."), false },
-		{ "get_greybox_matrix", LOCTEXT("ToolGreybox", "Return the Greybox Replacement Matrix."), false },
 		{ "read_docs", LOCTEXT("ToolReadDocs", "Read the project's living docs (TDD stubs, ADRs)."), false },
 		{ "write_adr", LOCTEXT("ToolWriteADR", "Create a new Architecture Decision Record."), true },
-		{ "set_asset_lifecycle", LOCTEXT("ToolSetLifecycle", "Change an asset's lifecycle tag."), true },
 	};
 }
 
