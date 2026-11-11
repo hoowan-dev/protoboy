@@ -3,6 +3,7 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Docking/TabManager.h"
 #include "ToolMenus.h"
+#include "UI/PBStyle.h"
 #include "UI/SPBDashboard.h"
 #include "Widgets/Docking/SDockTab.h"
 
@@ -14,6 +15,8 @@ const FName FProtoBoyModule::DashboardTabName(TEXT("ProtoBoyDashboard"));
 
 void FProtoBoyModule::StartupModule()
 {
+	FProtoBoyStyle::Initialize();
+
 	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(DashboardTabName,
 		FOnSpawnTab::CreateLambda([](const FSpawnTabArgs&)
 		{
@@ -39,6 +42,8 @@ void FProtoBoyModule::ShutdownModule()
 	{
 		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(DashboardTabName);
 	}
+
+	FProtoBoyStyle::Shutdown();
 }
 
 void FProtoBoyModule::RegisterMenus()

@@ -1,6 +1,8 @@
 #include "UI/SPBDashboard.h"
 
 #include "Styling/CoreStyle.h"
+#include "UI/SPBConnectDocsDialog.h"
+#include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
@@ -34,8 +36,34 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 				.Font(FCoreStyle::GetDefaultFontStyle("Italic", 14))
 				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 			]
+
+			// Documentation section
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 24.f, 0.f, 0.f)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("DocsHeader", "Documentation"))
+				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 16))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.HAlign(HAlign_Left)
+			.Padding(0.f, 8.f, 0.f, 0.f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("ConnectDocs", "Connect to Documentation..."))
+				.OnClicked(this, &SProtoBoyDashboard::OnConnectDocsClicked)
+			]
 		]
 	];
+}
+
+FReply SProtoBoyDashboard::OnConnectDocsClicked()
+{
+	SProtoBoyConnectDocsDialog::Open(AsShared());
+	return FReply::Handled();
 }
 
 #undef LOCTEXT_NAMESPACE

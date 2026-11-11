@@ -21,6 +21,7 @@ public class ProtoBoy : ModuleRules
 			"SlateCore",
 			"UnrealEd",
 			"ToolMenus",
+			"Projects",
 		});
 	}
 }

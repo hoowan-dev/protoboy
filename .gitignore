@@ -1,8 +1,93 @@
-# Unreal build output
+# ---------------------------------------------------------------
+# Unreal Engine (plugin build output, generated per host project)
+# ---------------------------------------------------------------
 Binaries/
 Intermediate/
 Saved/
 DerivedDataCache/
+**/Plugins/**/Binaries/
+**/Plugins/**/Intermediate/
+
+# Generated project files
 *.sln
+*.slnx
+*.suo
+*.opensdf
+*.sdf
 *.VC.db
+*.VC.opendb
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.xcodeproj
+*.xcworkspace
+compile_commands.json
+
+# Compiled artifacts
+*.dll
+*.exe
+*.pdb
+*.lib
+*.exp
+*.ilk
+*.obj
+*.o
+*.so
+*.dylib
+*.a
+*.patch_*.exe
+*.target
+*.modules
+*.uatbuildrecord
+
+# Packaged plugin output (BuildPlugin should target a temp dir, but just in case)
+Package/
+Packaged/
+
+# ---------------------------------------------------------------
+# Future engines and daemon (see CLAUDE.md)
+# ---------------------------------------------------------------
+# Unity
+Unity/**/[Ll]ibrary/
+Unity/**/[Tt]emp/
+Unity/**/[Oo]bj/
+Unity/**/[Bb]uild/
+Unity/**/[Bb]uilds/
+Unity/**/[Ll]ogs/
+Unity/**/[Uu]ser[Ss]ettings/
+
+# Godot
+.godot/
+.import/
+
+# Node / daemon tooling
+node_modules/
+dist/
+*.log
+
+# ---------------------------------------------------------------
+# IDEs and editors
+# ---------------------------------------------------------------
 .vs/
+.idea/
+*.sln.DotSettings.user
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.code-workspace.local
+*~
+*.un~
+*.swp
+
+# Personal dev scripts (point at a local test project)
+Scripts/Test/BuildAndRelaunchTestProject.ps1
+
+# Claude Code local (per-user) settings
+.claude/settings.local.json
+
+# ---------------------------------------------------------------
+# OS
+# ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
