@@ -5,7 +5,7 @@
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 #include "UI/PBStyle.h"
-#include "UI/SPBObsidianPanel.h"
+#include "UI/Obsidian/SPBObsidianPanel.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Layout/SBorder.h"

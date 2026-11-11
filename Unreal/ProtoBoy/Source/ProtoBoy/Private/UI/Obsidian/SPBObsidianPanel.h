@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Docs/PBObsidianConnector.h"
+#include "Docs/Obsidian/PBObsidianConnector.h"
 #include "Widgets/Input/SComboBox.h"
 #include "Widgets/SCompoundWidget.h"
 

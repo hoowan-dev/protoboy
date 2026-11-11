@@ -1,6 +1,6 @@
 #include "Docs/PBDocGenerator.h"
 
-#include "Docs/PBObsidianConnector.h"
+#include "Docs/Obsidian/PBObsidianConnector.h"
 #include "Misc/Paths.h"
 #include "PBModule.h"
 #include "PBSettings.h"

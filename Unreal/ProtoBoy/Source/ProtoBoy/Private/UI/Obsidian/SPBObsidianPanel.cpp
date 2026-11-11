@@ -1,4 +1,4 @@
-#include "UI/SPBObsidianPanel.h"
+#include "UI/Obsidian/SPBObsidianPanel.h"
 
 #include "DesktopPlatformModule.h"
 #include "Framework/Application/SlateApplication.h"

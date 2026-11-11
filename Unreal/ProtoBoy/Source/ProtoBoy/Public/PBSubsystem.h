@@ -3,7 +3,7 @@
 #include "Assets/PBAssetLifecycle.h"
 #include "Daemon/PBDaemonClient.h"
 #include "Docs/PBDocGenerator.h"
-#include "Docs/PBObsidianConnector.h"
+#include "Docs/Obsidian/PBObsidianConnector.h"
 #include "EditorSubsystem.h"
 #include "Health/PBHealthChecker.h"
 #include "PBSubsystem.generated.h"

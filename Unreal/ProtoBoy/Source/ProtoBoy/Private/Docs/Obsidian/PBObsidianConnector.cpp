@@ -1,4 +1,4 @@
-#include "Docs/PBObsidianConnector.h"
+#include "Docs/Obsidian/PBObsidianConnector.h"
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
