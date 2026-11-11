@@ -1,13 +1,16 @@
 #include "UI/SPBDashboard.h"
 
 #include "PBSubsystem.h"
+#include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
 #include "UI/PBStyle.h"
 #include "UI/SPBConnectDocsDialog.h"
+#include "UI/SPBConnectLLMDialog.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SExpandableArea.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
 
@@ -41,21 +44,38 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 			]
 
-			// Documentation section
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(0.f, 24.f, 0.f, 0.f)
 			[
-				SNew(STextBlock)
-				.Text(LOCTEXT("DocsHeader", "Documentation"))
-				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 16))
+				MakeSection(LOCTEXT("MCPHeader", "MCP"),
+					SNew(SVerticalBox)
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("MCPDescription", "Connect your preferred agent."))
+						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.HAlign(HAlign_Left)
+					.Padding(0.f, 8.f, 0.f, 0.f)
+					[
+						SNew(SButton)
+						.Text(LOCTEXT("MCPSettings", "MCP Settings..."))
+						.OnClicked(this, &SProtoBoyDashboard::OnMCPSettingsClicked)
+					])
 			]
 
 			+ SVerticalBox::Slot()
 			.AutoHeight()
-			.Padding(0.f, 8.f, 0.f, 0.f)
+			.Padding(0.f, 12.f, 0.f, 0.f)
 			[
-				SAssignNew(DocsSection, SBox)
+				MakeSection(LOCTEXT("DocsHeader", "Documentation"),
+					SAssignNew(DocsSection, SBox))
 			]
 		]
 	];
@@ -149,9 +169,31 @@ void SProtoBoyDashboard::RebuildDocsSection()
 	DocsSection->SetContent(Content);
 }
 
+TSharedRef<SWidget> SProtoBoyDashboard::MakeSection(const FText& Title, const TSharedRef<SWidget>& Body)
+{
+	// Collapsible card styled like a Details panel category: tinted header bar, panel-colored body.
+	return SNew(SExpandableArea)
+		.AreaTitle(Title)
+		.AreaTitleFont(FCoreStyle::GetDefaultFontStyle("Bold", 12))
+		.BorderImage(FAppStyle::Get().GetBrush("Brushes.Header"))
+		.BodyBorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
+		.HeaderPadding(FMargin(8.f, 6.f))
+		.Padding(FMargin(12.f, 10.f))
+		.BodyContent()
+		[
+			Body
+		];
+}
+
 FReply SProtoBoyDashboard::OnConnectDocsClicked()
 {
 	SProtoBoyConnectDocsDialog::Open(AsShared());
+	return FReply::Handled();
+}
+
+FReply SProtoBoyDashboard::OnMCPSettingsClicked()
+{
+	SProtoBoyConnectLLMDialog::Open(AsShared());
 	return FReply::Handled();
 }
 
