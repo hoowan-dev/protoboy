@@ -1,0 +1,19 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "ProtoBoy",
+	"Description": "Prototyping companion: living docs, health checks, asset lifecycle, and toolchain integration.",
+	"Category": "Editor",
+	"CreatedBy": "ProtoBoy",
+	"EngineVersion": "5.9.0",
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"Modules": [
+		{
+			"Name": "ProtoBoy",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
+		}
+	]
+}
