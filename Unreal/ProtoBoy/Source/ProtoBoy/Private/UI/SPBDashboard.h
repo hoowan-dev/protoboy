@@ -21,6 +21,7 @@ private:
 
 	FReply OnConnectDocsClicked();
 	FReply OnMCPSettingsClicked();
+	FReply OnTasksSettingsClicked();
 
 	TSharedPtr<class SBox> DocsSection;
 	FDelegateHandle ConnectionChangedHandle;

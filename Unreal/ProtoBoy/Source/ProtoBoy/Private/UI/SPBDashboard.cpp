@@ -6,6 +6,7 @@
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
 #include "UI/PBStyle.h"
+#include "UI/SPBConnectTasksDialog.h"
 #include "UI/SPBConnectDocsDialog.h"
 #include "UI/SPBConnectLLMDialog.h"
 #include "Widgets/Images/SImage.h"
@@ -158,6 +159,43 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 				MakeSection(LOCTEXT("DocsHeader", "Documentation"),
 					SAssignNew(DocsSection, SBox))
 			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 12.f, 0.f, 0.f)
+			[
+				MakeSection(LOCTEXT("TasksHeader", "Tasks"),
+					SNew(SVerticalBox)
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("TasksDescription", "Connect a Kanban-style board (Trello, Jira, Basecamp, ...)."))
+						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+						.AutoWrapText(true)
+					]
+
+					// TODO: Show the connected board once task board connections exist.
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 4.f, 0.f, 0.f)
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("TasksNotConnected", "No board connected."))
+						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.HAlign(HAlign_Left)
+					.Padding(0.f, 8.f, 0.f, 0.f)
+					[
+						SNew(SButton)
+						.Text(LOCTEXT("TasksSettings", "Connect Task Board..."))
+						.OnClicked(this, &SProtoBoyDashboard::OnTasksSettingsClicked)
+					])
+			]
 		]
 	];
 
@@ -269,6 +307,12 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeSection(const FText& Title, const TS
 FReply SProtoBoyDashboard::OnConnectDocsClicked()
 {
 	SProtoBoyConnectDocsDialog::Open(AsShared());
+	return FReply::Handled();
+}
+
+FReply SProtoBoyDashboard::OnTasksSettingsClicked()
+{
+	SProtoBoyConnectTasksDialog::Open(AsShared());
 	return FReply::Handled();
 }
 
