@@ -2,6 +2,7 @@
 
 #include "Framework/Application/SlateApplication.h"
 #include "MCP/PBMCPClientConfig.h"
+#include "PBSubsystem.h"
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 #include "UI/MCP/SPBMCPClientPanel.h"
@@ -109,6 +110,16 @@ void SProtoBoyConnectLLMDialog::Open(const TSharedPtr<SWidget>& ParentWidget)
 		];
 
 	FSlateApplication::Get().AddModalWindow(Window, ParentWidget);
+}
+
+void SProtoBoyConnectLLMDialog::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
+{
+	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+
+	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		Subsystem->GetMCPServer().TickWhileModal(InDeltaTime);
+	}
 }
 
 TSharedRef<SWidget> SProtoBoyConnectLLMDialog::MakeSidebarHeader(const FText& Text)

@@ -1,5 +1,6 @@
 #include "UI/SPBDashboard.h"
 
+#include "MCP/PBMCPClientConfig.h"
 #include "PBSubsystem.h"
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
@@ -80,6 +81,63 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 							return Subsystem && Subsystem->GetMCPServer().IsRunning()
 								? FSlateColor(FStyleColors::Success) : FSlateColor::UseSubduedForeground();
 						})
+					]
+
+					// Agents that have talked to the server recently (names are what each agent reports, e.g. "claude-code").
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 6.f, 0.f, 0.f)
+					[
+						SNew(STextBlock)
+						.Visibility_Lambda([]()
+						{
+							const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+							return Subsystem && Subsystem->GetMCPServer().IsRunning() ? EVisibility::Visible : EVisibility::Collapsed;
+						})
+						.Text_Lambda([]()
+						{
+							const TArray<FString> Agents = UProtoBoySubsystem::Get()->GetMCPServer().GetRecentClients();
+							if (Agents.IsEmpty())
+							{
+								return LOCTEXT("MCPNoAgents", "No agents connected.");
+							}
+
+							FString Lines;
+							for (const FString& Agent : Agents)
+							{
+								Lines += FString::Printf(TEXT("%s• %s"), Lines.IsEmpty() ? TEXT("") : TEXT("\n"), *Agent);
+							}
+							return FText::Format(LOCTEXT("MCPAgents", "Connected agents:\n{0}"), FText::FromString(Lines));
+						})
+						.ColorAndOpacity_Lambda([]()
+						{
+							const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+							return Subsystem && Subsystem->GetMCPServer().GetConnectedClientCount() > 0
+								? FSlateColor::UseForeground() : FSlateColor::UseSubduedForeground();
+						})
+					]
+
+					// Agents this user has set up with Connect (they may not be running right now).
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 4.f, 0.f, 0.f)
+					[
+						SNew(STextBlock)
+						.Visibility_Lambda([]()
+						{
+							const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+							return Subsystem && Subsystem->GetMCPServer().HasConnectedClients() ? EVisibility::Visible : EVisibility::Collapsed;
+						})
+						.Text_Lambda([]()
+						{
+							TArray<FString> Names;
+							for (const EProtoBoyMCPClient Client : UProtoBoySubsystem::Get()->GetMCPServer().GetConnection().ConfiguredClients)
+							{
+								Names.Add(FProtoBoyMCPClientConfig::GetClientName(Client).ToString());
+							}
+							return FText::Format(LOCTEXT("MCPSetUp", "Set up for: {0}"), FText::FromString(FString::Join(Names, TEXT(", "))));
+						})
+						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 					]
 
 					+ SVerticalBox::Slot()

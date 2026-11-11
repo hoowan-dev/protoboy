@@ -28,6 +28,7 @@ public class ProtoBoy : ModuleRules
 			"DesktopPlatform",
 			"ApplicationCore",
 			"Settings",
+			"HTTPServer",
 		});
 	}
 }

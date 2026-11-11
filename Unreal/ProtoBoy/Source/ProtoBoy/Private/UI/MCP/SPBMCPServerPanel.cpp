@@ -350,9 +350,9 @@ FReply SProtoBoyMCPServerPanel::OnStartStopClicked()
 	{
 		Server->Stop();
 	}
-	else if (!Server->Start(GetDefault<UProtoBoySettings>()->MCPPort))
+	else
 	{
-		StartError = LOCTEXT("StartFailed", "Couldn't start the server (not implemented yet).");
+		Server->Start(GetDefault<UProtoBoySettings>()->MCPPort, &StartError);
 	}
 	return FReply::Handled();
 }
@@ -397,8 +397,13 @@ FText SProtoBoyMCPServerPanel::GetStatusText() const
 	{
 		return FText::Format(LOCTEXT("Stopped", "Stopped. Will listen on {0}"), FText::FromString(Server ? Server->GetUrl() : FString()));
 	}
-	return FText::Format(LOCTEXT("Running", "Running on {0} ({1} connected)"),
-		FText::FromString(Server->GetUrl()), FText::AsNumber(Server->GetConnectedClientCount()));
+	const TArray<FString> Clients = Server->GetRecentClients();
+	if (Clients.IsEmpty())
+	{
+		return FText::Format(LOCTEXT("RunningIdle", "Running on {0}. No agents connected yet."), FText::FromString(Server->GetUrl()));
+	}
+	return FText::Format(LOCTEXT("Running", "Running on {0}. Connected: {1}"),
+		FText::FromString(Server->GetUrl()), FText::FromString(FString::Join(Clients, TEXT(", "))));
 }
 
 FSlateColor SProtoBoyMCPServerPanel::GetStatusColor() const
