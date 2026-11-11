@@ -13,11 +13,16 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	HealthChecker = MakeUnique<FProtoBoyHealthChecker>();
 	AssetLifecycle = MakeUnique<FProtoBoyAssetLifecycle>();
 	DaemonClient = MakeUnique<FProtoBoyDaemonClient>();
+	MCPServer = MakeUnique<FProtoBoyMCPServer>();
 
 	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
 	if (Settings->bConnectToDaemon)
 	{
 		DaemonClient->Connect(Settings->DaemonUrl);
+	}
+	if (Settings->bEnableMCPServer)
+	{
+		MCPServer->Start(Settings->MCPPort);
 	}
 
 	BindEditorEvents();
@@ -27,8 +32,10 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UProtoBoySubsystem::Deinitialize()
 {
 	UnbindEditorEvents();
+	MCPServer->Stop();
 	DaemonClient->Disconnect();
 
+	MCPServer.Reset();
 	DaemonClient.Reset();
 	AssetLifecycle.Reset();
 	HealthChecker.Reset();

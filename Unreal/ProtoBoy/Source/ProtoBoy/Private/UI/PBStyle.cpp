@@ -24,10 +24,12 @@ void FProtoBoyStyle::Initialize()
 	StyleSet->Set("ProtoBoy.Icon.Obsidian.Large", new FSlateVectorImageBrush(ObsidianIcon, FVector2D(40.f, 40.f)));
 
 	// LLM provider logos (Connect LLM Provider dialog).
-	StyleSet->Set("ProtoBoy.Icon.Claude",
-		new FSlateVectorImageBrush(StyleSet->RootToContentDir(TEXT("Icons/Claude"), TEXT(".svg")), FVector2D(20.f, 20.f)));
-	StyleSet->Set("ProtoBoy.Icon.Gemini",
-		new FSlateVectorImageBrush(StyleSet->RootToContentDir(TEXT("Icons/Gemini"), TEXT(".svg")), FVector2D(20.f, 20.f)));
+	for (const TCHAR* Provider : { TEXT("Claude"), TEXT("Gemini") })
+	{
+		const FString Icon = StyleSet->RootToContentDir(FString::Printf(TEXT("Icons/%s"), Provider), TEXT(".svg"));
+		StyleSet->Set(*FString::Printf(TEXT("ProtoBoy.Icon.%s"), Provider), new FSlateVectorImageBrush(Icon, FVector2D(20.f, 20.f)));
+		StyleSet->Set(*FString::Printf(TEXT("ProtoBoy.Icon.%s.Large"), Provider), new FSlateVectorImageBrush(Icon, FVector2D(40.f, 40.f)));
+	}
 
 	FSlateStyleRegistry::RegisterSlateStyle(*StyleSet);
 }

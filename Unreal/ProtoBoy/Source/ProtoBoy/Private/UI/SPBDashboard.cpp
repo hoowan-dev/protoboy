@@ -61,6 +61,29 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 
 					+ SVerticalBox::Slot()
 					.AutoHeight()
+					.Padding(0.f, 4.f, 0.f, 0.f)
+					[
+						SNew(STextBlock)
+						.Text_Lambda([]()
+						{
+							const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+							if (!Subsystem || !Subsystem->GetMCPServer().IsRunning())
+							{
+								return LOCTEXT("MCPStopped", "Server stopped.");
+							}
+							return FText::Format(LOCTEXT("MCPRunning", "Server running on {0}"),
+								FText::FromString(Subsystem->GetMCPServer().GetUrl()));
+						})
+						.ColorAndOpacity_Lambda([]()
+						{
+							const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+							return Subsystem && Subsystem->GetMCPServer().IsRunning()
+								? FSlateColor(FStyleColors::Success) : FSlateColor::UseSubduedForeground();
+						})
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
 					.HAlign(HAlign_Left)
 					.Padding(0.f, 8.f, 0.f, 0.f)
 					[

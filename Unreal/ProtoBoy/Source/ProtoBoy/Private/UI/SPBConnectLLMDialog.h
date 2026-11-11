@@ -3,18 +3,11 @@
 #include "Widgets/SCompoundWidget.h"
 
 class SWidgetSwitcher;
-
-/** LLM providers ProtoBoy's MCP integration can connect to. Values double as panel switcher indices. */
-enum class EProtoBoyLLMProvider : uint8
-{
-	None,
-	Claude,
-	Gemini,
-};
+struct FSlateBrush;
 
 /**
- * "Connect LLM Provider" window content (opened from the dashboard's MCP section):
- * an "LLM Providers" sidebar on the left, and a main panel on the right showing setup for the selected provider.
+ * "Connect LLM Provider" window content (opened from the dashboard's MCP section).
+ * Sidebar on the left: the MCP Server page, then one page per LLM provider. The main panel shows the selected page.
  */
 class SProtoBoyConnectLLMDialog : public SCompoundWidget
 {
@@ -28,15 +21,19 @@ public:
 	static void Open(const TSharedPtr<SWidget>& ParentWidget);
 
 private:
-	TSharedRef<SWidget> MakeProviderEntry(EProtoBoyLLMProvider Provider, const FText& Label, const FName& IconName);
+	/** Sidebar pages. Values double as PanelSwitcher slot indices. */
+	enum class EPage : uint8
+	{
+		Server,
+		Claude,
+		Gemini,
+	};
 
-	TSharedRef<SWidget> MakeEmptyPanel();
+	TSharedRef<SWidget> MakePageEntry(EPage Page, const FText& Label, const FSlateBrush* Icon);
+	TSharedRef<SWidget> MakeSidebarHeader(const FText& Text);
 
-	/** TODO: Replace with a real setup panel per provider (MCP server config, auth, etc.). */
-	TSharedRef<SWidget> MakeProviderPanel(const FText& ProviderName);
+	void SelectPage(EPage Page);
 
-	void SelectProvider(EProtoBoyLLMProvider Provider);
-
-	EProtoBoyLLMProvider SelectedProvider = EProtoBoyLLMProvider::None;
+	EPage SelectedPage = EPage::Server;
 	TSharedPtr<SWidgetSwitcher> PanelSwitcher;
 };

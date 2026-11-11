@@ -1,8 +1,11 @@
 #include "UI/SPBConnectLLMDialog.h"
 
 #include "Framework/Application/SlateApplication.h"
+#include "MCP/PBMCPClientConfig.h"
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
+#include "UI/MCP/SPBMCPClientPanel.h"
+#include "UI/MCP/SPBMCPServerPanel.h"
 #include "UI/PBStyle.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SCheckBox.h"
@@ -17,12 +20,17 @@
 
 void SProtoBoyConnectLLMDialog::Construct(const FArguments& InArgs)
 {
-	// TODO: Open on the connected provider's page once the connection is persisted.
+	auto ProviderEntry = [this](EPage Page, EProtoBoyLLMProvider Provider)
+	{
+		return MakePageEntry(Page, FProtoBoyMCPClientConfig::GetProviderName(Provider),
+			FProtoBoyStyle::Get().GetBrush(FProtoBoyMCPClientConfig::GetProviderIcon(Provider)));
+	};
+
 	ChildSlot
 	[
 		SNew(SHorizontalBox)
 
-		// Sidebar: LLM Providers
+		// Sidebar
 		+ SHorizontalBox::Slot()
 		.AutoWidth()
 		[
@@ -37,30 +45,40 @@ void SProtoBoyConnectLLMDialog::Construct(const FArguments& InArgs)
 
 					+ SVerticalBox::Slot()
 					.AutoHeight()
-					.Padding(4.f, 4.f, 4.f, 8.f)
 					[
-						SNew(STextBlock)
-						.Text(LOCTEXT("ProvidersHeader", "LLM Providers"))
-						.Font(FCoreStyle::GetDefaultFontStyle("Bold", 11))
+						MakeSidebarHeader(LOCTEXT("ServerHeader", "MCP"))
 					]
 
 					+ SVerticalBox::Slot()
 					.AutoHeight()
 					[
-						MakeProviderEntry(EProtoBoyLLMProvider::Claude, LOCTEXT("Claude", "Claude"), "ProtoBoy.Icon.Claude")
+						MakePageEntry(EPage::Server, LOCTEXT("Server", "Server"), FAppStyle::Get().GetBrush("Icons.Settings"))
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 12.f, 0.f, 0.f)
+					[
+						MakeSidebarHeader(LOCTEXT("ProvidersHeader", "LLM Providers"))
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
+						ProviderEntry(EPage::Claude, EProtoBoyLLMProvider::Claude)
 					]
 
 					+ SVerticalBox::Slot()
 					.AutoHeight()
 					.Padding(0.f, 2.f, 0.f, 0.f)
 					[
-						MakeProviderEntry(EProtoBoyLLMProvider::Gemini, LOCTEXT("Gemini", "Gemini"), "ProtoBoy.Icon.Gemini")
+						ProviderEntry(EPage::Gemini, EProtoBoyLLMProvider::Gemini)
 					]
 				]
 			]
 		]
 
-		// Main panel: setup for the selected provider
+		// Main panel: the selected page
 		+ SHorizontalBox::Slot()
 		.FillWidth(1.f)
 		[
@@ -69,11 +87,11 @@ void SProtoBoyConnectLLMDialog::Construct(const FArguments& InArgs)
 			.Padding(16.f)
 			[
 				SAssignNew(PanelSwitcher, SWidgetSwitcher)
-				.WidgetIndex(static_cast<int32>(SelectedProvider))
+				.WidgetIndex(static_cast<int32>(SelectedPage))
 
-				+ SWidgetSwitcher::Slot() [ MakeEmptyPanel() ]                                    // None
-				+ SWidgetSwitcher::Slot() [ MakeProviderPanel(LOCTEXT("Claude", "Claude")) ]      // Claude
-				+ SWidgetSwitcher::Slot() [ MakeProviderPanel(LOCTEXT("Gemini", "Gemini")) ]      // Gemini
+				+ SWidgetSwitcher::Slot() [ SNew(SProtoBoyMCPServerPanel) ]                               // Server
+				+ SWidgetSwitcher::Slot() [ SNew(SProtoBoyMCPClientPanel, EProtoBoyLLMProvider::Claude) ] // Claude
+				+ SWidgetSwitcher::Slot() [ SNew(SProtoBoyMCPClientPanel, EProtoBoyLLMProvider::Gemini) ] // Gemini
 			]
 		]
 	];
@@ -83,7 +101,7 @@ void SProtoBoyConnectLLMDialog::Open(const TSharedPtr<SWidget>& ParentWidget)
 {
 	TSharedRef<SWindow> Window = SNew(SWindow)
 		.Title(LOCTEXT("WindowTitle", "Connect LLM Provider"))
-		.ClientSize(FVector2D(720.f, 440.f))
+		.ClientSize(FVector2D(800.f, 560.f))
 		.SupportsMinimize(false)
 		.SupportsMaximize(false)
 		[
@@ -93,19 +111,29 @@ void SProtoBoyConnectLLMDialog::Open(const TSharedPtr<SWidget>& ParentWidget)
 	FSlateApplication::Get().AddModalWindow(Window, ParentWidget);
 }
 
-TSharedRef<SWidget> SProtoBoyConnectLLMDialog::MakeProviderEntry(
-	EProtoBoyLLMProvider Provider, const FText& Label, const FName& IconName)
+TSharedRef<SWidget> SProtoBoyConnectLLMDialog::MakeSidebarHeader(const FText& Text)
 {
-	// Toggle-style checkbox so the selected provider stays highlighted, like a sidebar tab.
+	return SNew(SBox)
+		.Padding(4.f, 4.f, 4.f, 8.f)
+		[
+			SNew(STextBlock)
+			.Text(Text)
+			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 11))
+		];
+}
+
+TSharedRef<SWidget> SProtoBoyConnectLLMDialog::MakePageEntry(EPage Page, const FText& Label, const FSlateBrush* Icon)
+{
+	// Toggle-style checkbox so the selected page stays highlighted, like a sidebar tab.
 	return SNew(SCheckBox)
 		.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
-		.IsChecked_Lambda([this, Provider]()
+		.IsChecked_Lambda([this, Page]()
 		{
-			return SelectedProvider == Provider ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+			return SelectedPage == Page ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 		})
-		.OnCheckStateChanged_Lambda([this, Provider](ECheckBoxState)
+		.OnCheckStateChanged_Lambda([this, Page](ECheckBoxState)
 		{
-			SelectProvider(Provider);
+			SelectPage(Page);
 		})
 		[
 			SNew(SHorizontalBox)
@@ -115,8 +143,15 @@ TSharedRef<SWidget> SProtoBoyConnectLLMDialog::MakeProviderEntry(
 			.VAlign(VAlign_Center)
 			.Padding(6.f, 4.f)
 			[
-				SNew(SImage)
-				.Image(FProtoBoyStyle::Get().GetBrush(IconName))
+				SNew(SBox)
+				.WidthOverride(20.f)
+				.HeightOverride(20.f)
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				[
+					SNew(SImage)
+					.Image(Icon)
+				]
 			]
 
 			+ SHorizontalBox::Slot()
@@ -130,36 +165,10 @@ TSharedRef<SWidget> SProtoBoyConnectLLMDialog::MakeProviderEntry(
 		];
 }
 
-TSharedRef<SWidget> SProtoBoyConnectLLMDialog::MakeEmptyPanel()
+void SProtoBoyConnectLLMDialog::SelectPage(EPage Page)
 {
-	return SNew(SBox)
-		.HAlign(HAlign_Center)
-		.VAlign(VAlign_Center)
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("SelectProvider", "Select an LLM provider."))
-			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-		];
-}
-
-TSharedRef<SWidget> SProtoBoyConnectLLMDialog::MakeProviderPanel(const FText& ProviderName)
-{
-	// Intentionally blank for now: just the provider name as a header.
-	return SNew(SVerticalBox)
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		[
-			SNew(STextBlock)
-			.Text(ProviderName)
-			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 16))
-		];
-}
-
-void SProtoBoyConnectLLMDialog::SelectProvider(EProtoBoyLLMProvider Provider)
-{
-	SelectedProvider = Provider;
-	PanelSwitcher->SetActiveWidgetIndex(static_cast<int32>(Provider));
+	SelectedPage = Page;
+	PanelSwitcher->SetActiveWidgetIndex(static_cast<int32>(Page));
 }
 
 #undef LOCTEXT_NAMESPACE

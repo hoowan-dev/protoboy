@@ -39,6 +39,26 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Health", meta = (ClampMin = "1"))
 	int32 MaxStaticMeshTriangles = 200000;
 
+	/** Start ProtoBoy's MCP server with the editor so agents (Claude, Gemini, ...) can call ProtoBoy tools. */
+	UPROPERTY(Config, EditAnywhere, Category = "MCP")
+	bool bEnableMCPServer = false;
+
+	/** Local port for the MCP server. It only listens on 127.0.0.1. */
+	UPROPERTY(Config, EditAnywhere, Category = "MCP", meta = (ClampMin = "1024", ClampMax = "65535"))
+	int32 MCPPort = 47801;
+
+	/** Let agents call tools that modify the project (write ADRs, retag assets). Read-only tools are always allowed. */
+	UPROPERTY(Config, EditAnywhere, Category = "MCP")
+	bool bAllowMCPWriteTools = false;
+
+	/** Ask in the editor before running each write tool call. */
+	UPROPERTY(Config, EditAnywhere, Category = "MCP", meta = (EditCondition = "bAllowMCPWriteTools"))
+	bool bConfirmMCPWriteTools = true;
+
+	/** MCP tools turned off for this project (by tool name). Edited from the MCP Settings window. */
+	UPROPERTY(Config, EditAnywhere, Category = "MCP")
+	TArray<FName> DisabledMCPTools;
+
 	/** Connect to the ProtoBoy background daemon. */
 	UPROPERTY(Config, EditAnywhere, Category = "Daemon")
 	bool bConnectToDaemon = false;

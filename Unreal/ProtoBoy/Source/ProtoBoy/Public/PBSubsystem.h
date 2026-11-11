@@ -6,6 +6,7 @@
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "EditorSubsystem.h"
 #include "Health/PBHealthChecker.h"
+#include "MCP/PBMCPServer.h"
 #include "PBSubsystem.generated.h"
 
 /**
@@ -28,6 +29,7 @@ public:
 	FProtoBoyHealthChecker& GetHealthChecker() const { return *HealthChecker; }
 	FProtoBoyAssetLifecycle& GetAssetLifecycle() const { return *AssetLifecycle; }
 	FProtoBoyDaemonClient& GetDaemonClient() const { return *DaemonClient; }
+	FProtoBoyMCPServer& GetMCPServer() const { return *MCPServer; }
 
 private:
 	// TODO: Bind asset registry / package save / live coding events and route them to the services.
@@ -39,4 +41,5 @@ private:
 	TUniquePtr<FProtoBoyHealthChecker> HealthChecker;
 	TUniquePtr<FProtoBoyAssetLifecycle> AssetLifecycle;
 	TUniquePtr<FProtoBoyDaemonClient> DaemonClient;
+	TUniquePtr<FProtoBoyMCPServer> MCPServer;
 };

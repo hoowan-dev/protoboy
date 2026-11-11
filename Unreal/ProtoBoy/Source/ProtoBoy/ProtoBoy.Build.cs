@@ -26,6 +26,8 @@ public class ProtoBoy : ModuleRules
 			"Json",
 			"JsonUtilities",
 			"DesktopPlatform",
+			"ApplicationCore",
+			"Settings",
 		});
 	}
 }
