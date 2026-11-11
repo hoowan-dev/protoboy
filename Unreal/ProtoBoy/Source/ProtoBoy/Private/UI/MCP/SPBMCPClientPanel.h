@@ -4,8 +4,8 @@
 #include "Widgets/SCompoundWidget.h"
 
 /**
- * Provider page of the Connect LLM Provider window (Claude, Gemini, ...):
- * one card per agent app with its config location, setup snippet, and Write Config / Copy / Test actions.
+ * Provider page of the Connect LLM Provider window (Claude, Gemini, ...): one card per agent app.
+ * Connect writes ProtoBoy's entry (URL + token) into the agent's config in one click; Copy is the manual fallback.
  */
 class SProtoBoyMCPClientPanel : public SCompoundWidget
 {
@@ -19,13 +19,19 @@ private:
 	TSharedRef<SWidget> MakeHeader();
 	TSharedRef<SWidget> MakeClientCard(EProtoBoyMCPClient Client);
 
-	FReply OnWriteConfigClicked(EProtoBoyMCPClient Client);
+	FReply OnConnectClicked(EProtoBoyMCPClient Client);
+	FReply OnDisconnectClicked(EProtoBoyMCPClient Client);
 	FReply OnCopyClicked(EProtoBoyMCPClient Client);
-	FReply OnTestClicked(EProtoBoyMCPClient Client);
+
+	/** Re-read each client's config. Reading files isn't free, so this runs on open and after actions, not per frame. */
+	void RefreshStatus();
+	bool IsConfigured(EProtoBoyMCPClient Client) const;
 
 	FString GetSnippet(EProtoBoyMCPClient Client, bool bRevealToken) const;
 
 	EProtoBoyLLMProvider Provider = EProtoBoyLLMProvider::Claude;
+	TMap<EProtoBoyMCPClient, bool> Configured;
 	/** Last action result per client, shown under its buttons. */
 	TMap<EProtoBoyMCPClient, FText> Messages;
+	TMap<EProtoBoyMCPClient, bool> MessageIsError;
 };

@@ -1,5 +1,6 @@
 #include "MCP/PBMCPServer.h"
 
+#include "MCP/PBMCPClientConfig.h"
 #include "Misc/Guid.h"
 #include "PBModule.h"
 #include "PBSettings.h"
@@ -87,8 +88,50 @@ void FProtoBoyMCPServer::RegenerateAuthToken()
 		+ FGuid::NewGuid().ToString(EGuidFormats::Digits).ToLower();
 	FProtoBoyMCPConnectionStore::Save(Connection);
 
-	// TODO: Clients already configured with the old token stop working; re-write their configs.
+	// Clients still holding the old token would be rejected, so re-write their entries.
+	for (const EProtoBoyMCPClient Client : Connection.ConfiguredClients)
+	{
+		FText Error;
+		if (!FProtoBoyMCPClientConfig::WriteConfig(Client, GetUrl(), Connection.AuthToken, Error))
+		{
+			UE_LOG(LogProtoBoy, Warning, TEXT("Couldn't update %s with the new MCP token: %s"),
+				*FProtoBoyMCPClientConfig::GetClientName(Client).ToString(), *Error.ToString());
+		}
+	}
+
 	OnStatusChanged.Broadcast();
+}
+
+bool FProtoBoyMCPServer::ConnectClient(EProtoBoyMCPClient Client, FText& OutError)
+{
+	if (!FProtoBoyMCPClientConfig::WriteConfig(Client, GetUrl(), GetAuthToken(), OutError))
+	{
+		return false;
+	}
+
+	Connection.ConfiguredClients.AddUnique(Client);
+	FProtoBoyMCPConnectionStore::Save(Connection);
+
+	if (!bRunning)
+	{
+		Start(GetDefault<UProtoBoySettings>()->MCPPort);
+	}
+
+	OnStatusChanged.Broadcast();
+	return true;
+}
+
+bool FProtoBoyMCPServer::DisconnectClient(EProtoBoyMCPClient Client, FText& OutError)
+{
+	if (!FProtoBoyMCPClientConfig::RemoveConfig(Client, OutError))
+	{
+		return false;
+	}
+
+	Connection.ConfiguredClients.Remove(Client);
+	FProtoBoyMCPConnectionStore::Save(Connection);
+	OnStatusChanged.Broadcast();
+	return true;
 }
 
 #undef LOCTEXT_NAMESPACE

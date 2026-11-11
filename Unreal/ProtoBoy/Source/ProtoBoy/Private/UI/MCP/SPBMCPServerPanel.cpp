@@ -89,8 +89,9 @@ void SProtoBoyMCPServerPanel::Construct(const FArguments& InArgs)
 				{
 					EditSettings([State](UProtoBoySettings& S) { S.bEnableMCPServer = State == ECheckBoxState::Checked; });
 				})
+				.ToolTipText(LOCTEXT("StartWithEditorTip", "Team-wide setting. The server also starts for anyone who has connected an agent."))
 				[
-					SNew(STextBlock).Text(LOCTEXT("StartWithEditor", "Start with the editor"))
+					SNew(STextBlock).Text(LOCTEXT("StartWithEditor", "Start with the editor for everyone"))
 				]
 			]
 
@@ -113,7 +114,7 @@ void SProtoBoyMCPServerPanel::Construct(const FArguments& InArgs)
 			.Padding(0.f, 4.f, 0.f, 0.f)
 			[
 				SNew(STextBlock)
-				.Text(LOCTEXT("TokenHint", "Stored per user in Saved/ProtoBoy. Regenerating it disconnects every configured agent."))
+				.Text(LOCTEXT("TokenHint", "Stored per user in Saved/ProtoBoy. Connected agents are updated automatically when it's regenerated (restart them afterwards)."))
 				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 				.AutoWrapText(true)
 			]

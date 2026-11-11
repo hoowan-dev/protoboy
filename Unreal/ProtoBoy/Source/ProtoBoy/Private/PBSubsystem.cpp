@@ -20,7 +20,7 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		DaemonClient->Connect(Settings->DaemonUrl);
 	}
-	if (Settings->bEnableMCPServer)
+	if (Settings->bEnableMCPServer || MCPServer->HasConnectedClients())
 	{
 		MCPServer->Start(Settings->MCPPort);
 	}

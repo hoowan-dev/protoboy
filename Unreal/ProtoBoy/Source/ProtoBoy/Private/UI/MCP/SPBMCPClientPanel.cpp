@@ -11,6 +11,7 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SExpandableArea.h"
 #include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
@@ -20,6 +21,7 @@
 void SProtoBoyMCPClientPanel::Construct(const FArguments& InArgs, EProtoBoyLLMProvider InProvider)
 {
 	Provider = InProvider;
+	RefreshStatus();
 
 	TSharedRef<SVerticalBox> Content = SNew(SVerticalBox);
 
@@ -34,7 +36,7 @@ void SProtoBoyMCPClientPanel::Construct(const FArguments& InArgs, EProtoBoyLLMPr
 	.Padding(0.f, 8.f, 0.f, 0.f)
 	[
 		SNew(STextBlock)
-		.Text(LOCTEXT("Intro", "Point an agent at ProtoBoy's MCP server. Write Config edits the agent's settings for you; or copy the setup and add it yourself."))
+		.Text(LOCTEXT("Intro", "Connect sets up the agent to use ProtoBoy's tools. Restart the agent afterwards."))
 		.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 		.AutoWrapText(true)
 	];
@@ -90,7 +92,7 @@ TSharedRef<SWidget> SProtoBoyMCPClientPanel::MakeClientCard(EProtoBoyMCPClient C
 		[
 			SNew(SVerticalBox)
 
-			// Name + configured status
+			// Name + status
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			[
@@ -110,14 +112,14 @@ TSharedRef<SWidget> SProtoBoyMCPClientPanel::MakeClientCard(EProtoBoyMCPClient C
 				.VAlign(VAlign_Center)
 				[
 					SNew(STextBlock)
-					.Text_Lambda([Client]()
+					.Text_Lambda([this, Client]()
 					{
-						const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-						const bool bConfigured = Subsystem
-							&& FProtoBoyMCPClientConfig::IsConfigured(Client, Subsystem->GetMCPServer().GetUrl());
-						return bConfigured ? LOCTEXT("Configured", "Configured") : LOCTEXT("NotConfigured", "Not configured");
+						return IsConfigured(Client) ? LOCTEXT("Connected", "Connected") : LOCTEXT("NotConnected", "Not connected");
 					})
-					.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+					.ColorAndOpacity_Lambda([this, Client]()
+					{
+						return IsConfigured(Client) ? FSlateColor(FStyleColors::Success) : FSlateColor::UseSubduedForeground();
+					})
 				]
 			]
 
@@ -131,38 +133,10 @@ TSharedRef<SWidget> SProtoBoyMCPClientPanel::MakeClientCard(EProtoBoyMCPClient C
 				.AutoWrapText(true)
 			]
 
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			.Padding(0.f, 4.f, 0.f, 0.f)
-			[
-				SNew(STextBlock)
-				.Text(FText::FromString(FProtoBoyMCPClientConfig::GetConfigPath(Client)))
-				.ToolTipText(LOCTEXT("ConfigPathTip", "Config file Write Config edits."))
-				.Font(FCoreStyle::GetDefaultFontStyle("Mono", 9))
-				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-				.AutoWrapText(true)
-			]
-
-			// Setup snippet (token masked; Copy puts the real one on the clipboard)
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			.Padding(0.f, 8.f, 0.f, 0.f)
-			[
-				SNew(SBorder)
-				.BorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"))
-				.Padding(8.f)
-				[
-					SNew(STextBlock)
-					.Text_Lambda([this, Client]() { return FText::FromString(GetSnippet(Client, false)); })
-					.Font(FCoreStyle::GetDefaultFontStyle("Mono", 9))
-					.AutoWrapText(true)
-				]
-			]
-
 			// Actions
 			+ SVerticalBox::Slot()
 			.AutoHeight()
-			.Padding(0.f, 8.f, 0.f, 0.f)
+			.Padding(0.f, 10.f, 0.f, 0.f)
 			[
 				SNew(SHorizontalBox)
 
@@ -170,8 +144,14 @@ TSharedRef<SWidget> SProtoBoyMCPClientPanel::MakeClientCard(EProtoBoyMCPClient C
 				.AutoWidth()
 				[
 					SNew(SButton)
-					.Text(LOCTEXT("WriteConfig", "Write Config"))
-					.OnClicked(this, &SProtoBoyMCPClientPanel::OnWriteConfigClicked, Client)
+					.ButtonStyle(FAppStyle::Get(), "PrimaryButton")
+					.Text_Lambda([this, Client]()
+					{
+						return IsConfigured(Client) ? LOCTEXT("Reconnect", "Reconnect") : LOCTEXT("Connect", "Connect");
+					})
+					.ToolTipText(FText::Format(LOCTEXT("ConnectTip", "Add ProtoBoy to {0}"),
+						FText::FromString(FProtoBoyMCPClientConfig::GetConfigPath(Client))))
+					.OnClicked(this, &SProtoBoyMCPClientPanel::OnConnectClicked, Client)
 				]
 
 				+ SHorizontalBox::Slot()
@@ -179,18 +159,9 @@ TSharedRef<SWidget> SProtoBoyMCPClientPanel::MakeClientCard(EProtoBoyMCPClient C
 				.Padding(4.f, 0.f, 0.f, 0.f)
 				[
 					SNew(SButton)
-					.Text(LOCTEXT("Copy", "Copy"))
-					.ToolTipText(LOCTEXT("CopyTip", "Copy the setup, including the auth token."))
-					.OnClicked(this, &SProtoBoyMCPClientPanel::OnCopyClicked, Client)
-				]
-
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.Padding(4.f, 0.f, 0.f, 0.f)
-				[
-					SNew(SButton)
-					.Text(LOCTEXT("Test", "Test"))
-					.OnClicked(this, &SProtoBoyMCPClientPanel::OnTestClicked, Client)
+					.Visibility_Lambda([this, Client]() { return IsConfigured(Client) ? EVisibility::Visible : EVisibility::Collapsed; })
+					.Text(LOCTEXT("Disconnect", "Disconnect"))
+					.OnClicked(this, &SProtoBoyMCPClientPanel::OnDisconnectClicked, Client)
 				]
 			]
 
@@ -199,17 +170,77 @@ TSharedRef<SWidget> SProtoBoyMCPClientPanel::MakeClientCard(EProtoBoyMCPClient C
 			.Padding(0.f, 4.f, 0.f, 0.f)
 			[
 				SNew(STextBlock)
+				.Visibility_Lambda([this, Client]() { return Messages.Contains(Client) ? EVisibility::Visible : EVisibility::Collapsed; })
 				.Text_Lambda([this, Client]()
 				{
 					const FText* Message = Messages.Find(Client);
 					return Message ? *Message : FText::GetEmpty();
 				})
+				.ColorAndOpacity_Lambda([this, Client]()
+				{
+					return MessageIsError.FindRef(Client) ? FSlateColor(FStyleColors::Error) : FSlateColor::UseForeground();
+				})
 				.AutoWrapText(true)
+			]
+
+			// Manual setup, tucked away
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 10.f, 0.f, 0.f)
+			[
+				SNew(SExpandableArea)
+				.InitiallyCollapsed(true)
+				.AreaTitle(LOCTEXT("ManualSetup", "Manual setup"))
+				.BorderImage(FAppStyle::Get().GetBrush("NoBorder"))
+				.BodyBorderImage(FAppStyle::Get().GetBrush("NoBorder"))
+				.HeaderPadding(FMargin(0.f, 2.f))
+				.Padding(FMargin(0.f, 6.f, 0.f, 0.f))
+				.BodyContent()
+				[
+					SNew(SVerticalBox)
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
+						SNew(STextBlock)
+						.Text(FText::FromString(FProtoBoyMCPClientConfig::GetConfigPath(Client)))
+						.Font(FCoreStyle::GetDefaultFontStyle("Mono", 9))
+						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+						.AutoWrapText(true)
+					]
+
+					// Token masked; Copy puts the real one on the clipboard.
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 6.f, 0.f, 0.f)
+					[
+						SNew(SBorder)
+						.BorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"))
+						.Padding(8.f)
+						[
+							SNew(STextBlock)
+							.Text_Lambda([this, Client]() { return FText::FromString(GetSnippet(Client, false)); })
+							.Font(FCoreStyle::GetDefaultFontStyle("Mono", 9))
+							.AutoWrapText(true)
+						]
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.HAlign(HAlign_Left)
+					.Padding(0.f, 6.f, 0.f, 0.f)
+					[
+						SNew(SButton)
+						.Text(LOCTEXT("Copy", "Copy"))
+						.ToolTipText(LOCTEXT("CopyTip", "Copy the setup, including the auth token."))
+						.OnClicked(this, &SProtoBoyMCPClientPanel::OnCopyClicked, Client)
+					]
+				]
 			]
 		];
 }
 
-FReply SProtoBoyMCPClientPanel::OnWriteConfigClicked(EProtoBoyMCPClient Client)
+FReply SProtoBoyMCPClientPanel::OnConnectClicked(EProtoBoyMCPClient Client)
 {
 	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 	if (!Subsystem)
@@ -219,9 +250,40 @@ FReply SProtoBoyMCPClientPanel::OnWriteConfigClicked(EProtoBoyMCPClient Client)
 
 	FProtoBoyMCPServer& Server = Subsystem->GetMCPServer();
 	FText Error;
-	Messages.Add(Client, FProtoBoyMCPClientConfig::WriteConfig(Client, Server.GetUrl(), Server.GetAuthToken(), Error)
-		? LOCTEXT("Written", "Config written. Restart the agent to pick it up.")
-		: Error);
+	const bool bOk = Server.ConnectClient(Client, Error);
+	RefreshStatus();
+
+	if (!bOk)
+	{
+		Messages.Add(Client, Error);
+	}
+	else if (!Server.IsRunning())
+	{
+		Messages.Add(Client, LOCTEXT("ConnectedServerDown", "Connected, but ProtoBoy's MCP server isn't running yet, so the agent can't reach it."));
+	}
+	else
+	{
+		Messages.Add(Client, FText::Format(LOCTEXT("ConnectedOk", "Connected. Restart {0} to load ProtoBoy's tools."),
+			FProtoBoyMCPClientConfig::GetClientName(Client)));
+	}
+	MessageIsError.Add(Client, !bOk);
+	return FReply::Handled();
+}
+
+FReply SProtoBoyMCPClientPanel::OnDisconnectClicked(EProtoBoyMCPClient Client)
+{
+	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	if (!Subsystem)
+	{
+		return FReply::Handled();
+	}
+
+	FText Error;
+	const bool bOk = Subsystem->GetMCPServer().DisconnectClient(Client, Error);
+	RefreshStatus();
+
+	Messages.Add(Client, bOk ? LOCTEXT("Disconnected", "Disconnected.") : Error);
+	MessageIsError.Add(Client, !bOk);
 	return FReply::Handled();
 }
 
@@ -229,15 +291,24 @@ FReply SProtoBoyMCPClientPanel::OnCopyClicked(EProtoBoyMCPClient Client)
 {
 	FPlatformApplicationMisc::ClipboardCopy(*GetSnippet(Client, true));
 	Messages.Add(Client, LOCTEXT("Copied", "Copied to clipboard."));
+	MessageIsError.Add(Client, false);
 	return FReply::Handled();
 }
 
-FReply SProtoBoyMCPClientPanel::OnTestClicked(EProtoBoyMCPClient Client)
+void SProtoBoyMCPClientPanel::RefreshStatus()
 {
-	// TODO: Check the server is running, the client config has a matching entry, and (once the server tracks
-	//       client names from the MCP initialize request) whether this client has connected recently.
-	Messages.Add(Client, LOCTEXT("TestNotImplemented", "Testing isn't implemented yet."));
-	return FReply::Handled();
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	const FString Url = Subsystem ? Subsystem->GetMCPServer().GetUrl() : FString();
+
+	for (const EProtoBoyMCPClient Client : FProtoBoyMCPClientConfig::GetClients(Provider))
+	{
+		Configured.Add(Client, Subsystem && FProtoBoyMCPClientConfig::IsConfigured(Client, Url));
+	}
+}
+
+bool SProtoBoyMCPClientPanel::IsConfigured(EProtoBoyMCPClient Client) const
+{
+	return Configured.FindRef(Client);
 }
 
 FString SProtoBoyMCPClientPanel::GetSnippet(EProtoBoyMCPClient Client, bool bRevealToken) const

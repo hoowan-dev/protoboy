@@ -40,7 +40,19 @@ public:
 
 	/** Returns the saved token, generating and saving one if there is none. */
 	const FString& GetAuthToken();
+	/** New token; re-writes the config of every connected client so they keep working. */
 	void RegenerateAuthToken();
+
+	/**
+	 * One-click setup: write ProtoBoy's entry (URL + token) into the client's config, remember the client,
+	 * and start the server if it isn't running.
+	 */
+	bool ConnectClient(EProtoBoyMCPClient Client, FText& OutError);
+	/** Remove ProtoBoy's entry from the client's config and forget the client. */
+	bool DisconnectClient(EProtoBoyMCPClient Client, FText& OutError);
+
+	/** Any client connected by this user. The server then starts with the editor for them even if the team setting is off. */
+	bool HasConnectedClients() const { return Connection.ConfiguredClients.Num() > 0; }
 
 	const FProtoBoyMCPConnection& GetConnection() const { return Connection; }
 

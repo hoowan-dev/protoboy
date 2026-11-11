@@ -2,9 +2,14 @@
 
 #include "MCP/PBMCPConnection.h"
 
+class FJsonObject;
+
 /**
  * Knows how each agent application (MCP client) is configured to reach ProtoBoy's server:
- * where its config lives and what entry to add. Used by the per-provider panels.
+ * where its config lives, what entry to add, and how to add/remove it.
+ *
+ * Only ProtoBoy's own entry (ServerName) is ever touched. JSON configs are backed up to <file>.protoboy.bak
+ * before each write, and a file that fails to parse is left alone.
  */
 class PROTOBOY_API FProtoBoyMCPClientConfig
 {
@@ -21,7 +26,7 @@ public:
 	/** One line on how this client is set up (shown under the client name). */
 	static FText GetClientHint(EProtoBoyMCPClient Client);
 
-	/** Absolute path of the config file ProtoBoy would edit for this client. */
+	/** Absolute path of the config file that holds this client's ProtoBoy entry. */
 	static FString GetConfigPath(EProtoBoyMCPClient Client);
 
 	/**
@@ -30,9 +35,26 @@ public:
 	 */
 	static FString BuildSetupSnippet(EProtoBoyMCPClient Client, const FString& ServerUrl, const FString& AuthToken);
 
-	/** TODO: Merge the ProtoBoy entry into GetConfigPath(Client) without touching other entries; back the file up first. */
+	/**
+	 * Add or replace ProtoBoy's entry in the client's config.
+	 * Claude Code goes through its CLI (`claude mcp add`, local scope); the others are JSON merges.
+	 * Blocks while the Claude Code CLI runs.
+	 */
 	static bool WriteConfig(EProtoBoyMCPClient Client, const FString& ServerUrl, const FString& AuthToken, FText& OutError);
 
-	/** TODO: Parse GetConfigPath(Client) and check for a ProtoBoy entry pointing at ServerUrl. */
+	/** Remove ProtoBoy's entry from the client's config. Succeeds if there was no entry. */
+	static bool RemoveConfig(EProtoBoyMCPClient Client, FText& OutError);
+
+	/** True if the client's config has a ProtoBoy entry pointing at ServerUrl. Reads the file; don't call per frame. */
 	static bool IsConfigured(EProtoBoyMCPClient Client, const FString& ServerUrl);
+
+private:
+	/** The value stored under mcpServers.<ServerName> for JSON-configured clients (and for Claude Code's file). */
+	static TSharedRef<FJsonObject> MakeServerEntry(EProtoBoyMCPClient Client, const FString& ServerUrl, const FString& AuthToken);
+
+	/** The project's mcpServers object inside ~/.claude.json, if any. */
+	static TSharedPtr<FJsonObject> FindClaudeCodeProjectServers(const TSharedPtr<FJsonObject>& Root);
+
+	/** Run `claude <Args>` in the project directory. */
+	static bool RunClaudeCli(const FString& Args, FText& OutError);
 };
