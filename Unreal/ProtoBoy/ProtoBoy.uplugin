@@ -3,7 +3,7 @@
 	"Version": 1,
 	"VersionName": "0.1.0",
 	"FriendlyName": "ProtoBoy",
-	"Description": "Prototyping companion: living docs, health checks, asset lifecycle, and toolchain integration.",
+	"Description": "Keeps AI-assisted game development aligned with your architecture: connects agents (via MCP) to your architecture doc, design docs and task board.",
 	"Category": "Editor",
 	"CreatedBy": "ProtoBoy",
 	"EngineVersion": "5.9.0",
