@@ -1,10 +1,12 @@
 #include "MCP/PBMCPTools.h"
 
-#include "Assets/PBAssetSourcing.h"
 #include "Docs/PBDocGenerator.h"
 #include "Docs/PBMarkdown.h"
 #include "Dom/JsonObject.h"
+#include "MCP/PBMCPToolHelpers.h"
 #include "PBSubsystem.h"
+#include "Sourcing/PBAssetSourcing.h"
+#include "Sourcing/PBSourcingMCP.h"
 #include "Tasks/PBTaskProvider.h"
 
 #define LOCTEXT_NAMESPACE "ProtoBoyMCPTools"
@@ -12,87 +14,7 @@
 namespace ProtoBoyMCPTools
 {
 	// -----------------------------------------------------------------------------------------------------------------
-	// Schema and argument helpers
-
-	struct FParam
-	{
-		const TCHAR* Name;
-		const TCHAR* Type; // "string", "integer" or "boolean"
-		const TCHAR* Description;
-		bool bRequired = false;
-		TArray<FString> Enum;
-	};
-
-	TSharedPtr<FJsonObject> MakeSchema(const TArray<FParam>& Params)
-	{
-		TSharedRef<FJsonObject> Properties = MakeShared<FJsonObject>();
-		TArray<TSharedPtr<FJsonValue>> Required;
-		for (const FParam& Param : Params)
-		{
-			TSharedRef<FJsonObject> Property = MakeShared<FJsonObject>();
-			Property->SetStringField(TEXT("type"), Param.Type);
-			Property->SetStringField(TEXT("description"), Param.Description);
-			if (!Param.Enum.IsEmpty())
-			{
-				TArray<TSharedPtr<FJsonValue>> Values;
-				for (const FString& Value : Param.Enum)
-				{
-					Values.Add(MakeShared<FJsonValueString>(Value));
-				}
-				Property->SetArrayField(TEXT("enum"), Values);
-			}
-			Properties->SetObjectField(Param.Name, Property);
-			if (Param.bRequired)
-			{
-				Required.Add(MakeShared<FJsonValueString>(Param.Name));
-			}
-		}
-
-		TSharedRef<FJsonObject> Schema = MakeShared<FJsonObject>();
-		Schema->SetStringField(TEXT("type"), TEXT("object"));
-		Schema->SetObjectField(TEXT("properties"), Properties);
-		if (!Required.IsEmpty())
-		{
-			Schema->SetArrayField(TEXT("required"), Required);
-		}
-		Schema->SetBoolField(TEXT("additionalProperties"), false);
-		return Schema;
-	}
-
-	FString GetString(const FProtoBoyMCPToolCall& Call, const TCHAR* Name)
-	{
-		FString Value;
-		Call.Args->TryGetStringField(Name, Value);
-		return Value.TrimStartAndEnd();
-	}
-
-	bool GetBool(const FProtoBoyMCPToolCall& Call, const TCHAR* Name, bool bDefault)
-	{
-		bool bValue = bDefault;
-		Call.Args->TryGetBoolField(Name, bValue);
-		return bValue;
-	}
-
-	int32 GetInt(const FProtoBoyMCPToolCall& Call, const TCHAR* Name, int32 Default, int32 Min, int32 Max)
-	{
-		int32 Value = Default;
-		Call.Args->TryGetNumberField(Name, Value);
-		return FMath::Clamp(Value, Min, Max);
-	}
-
-	/** Returns false (and finishes the call with an error) if a required string argument is missing. */
-	bool Require(const FProtoBoyMCPToolCall& Call, const FProtoBoyMCPToolDone& Done, std::initializer_list<const TCHAR*> Names)
-	{
-		for (const TCHAR* Name : Names)
-		{
-			if (GetString(Call, Name).IsEmpty())
-			{
-				Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("Missing required argument \"%s\"."), Name)));
-				return false;
-			}
-		}
-		return true;
-	}
+	// Subsystem access (schema and argument helpers are in MCP/PBMCPToolHelpers.h)
 
 	UProtoBoySubsystem* GetSubsystemOrFail(const FProtoBoyMCPToolDone& Done)
 	{
@@ -687,43 +609,6 @@ namespace ProtoBoyMCPTools
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
-	// Assets
-
-	void FabSearch(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
-	{
-		if (!Require(Call, Done, { TEXT("query") }))
-		{
-			return;
-		}
-
-		ProtoBoyAssetSourcing::FFabSearch Search;
-		Search.Query = GetString(Call, TEXT("query"));
-		Search.ListingType = GetString(Call, TEXT("listing_type"));
-		Search.bFreeOnly = GetBool(Call, TEXT("free_only"), false);
-
-		FString Url;
-		FText Error;
-		if (!GetBool(Call, TEXT("open"), true))
-		{
-			Url = ProtoBoyAssetSourcing::BuildFabSearchUrl(Search);
-			Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Fab search URL (not opened): %s"), *Url)));
-			return;
-		}
-		if (!ProtoBoyAssetSourcing::OpenFabSearch(Search, Url, Error))
-		{
-			Done(FProtoBoyMCPToolResult::Error(Error));
-			return;
-		}
-
-		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT(
-			"Opened a Fab search in the user's browser: %s\n\n"
-			"ProtoBoy can't see Fab results (Fab has no public search API). Tell the user what to look for (style, scale, "
-			"poly budget, license) based on the design doc and art direction, and ask which listings they pick. "
-			"Then record the choices (listing name and link, what each is for) in the relevant design doc with docs_update_section. "
-			"Don't substitute AI-generated assets if nothing fits; use a marked placeholder and ask the user."), *Url)));
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------
 	// Registration
 
 	void RegisterTools(TArray<FProtoBoyMCPTool>& OutTools)
@@ -773,16 +658,6 @@ namespace ProtoBoyMCPTools
 		Add(TEXT("task_get"), LOCTEXT("TaskGetTitle", "Get task"),
 			LOCTEXT("TaskGetDesc", "Gets a task's description, status, linked design doc and recent comments."),
 			false, { { TEXT("id"), TEXT("string"), TEXT("Task id from tasks_list."), true } }, &TaskGet);
-
-		Add(TEXT("fab_search"), LOCTEXT("FabTitle", "Search Fab"),
-			LOCTEXT("FabDesc", "Opens a Fab (fab.com) asset search in the user's browser, for assets that fit the design and art direction. You get the URL, not results: the user browses and picks. Use instead of generating assets."),
-			false, {
-				{ TEXT("query"), TEXT("string"), TEXT("Search terms derived from the design need and art style, e.g. \"stylized low poly medieval crates\"."), true },
-				{ TEXT("listing_type"), TEXT("string"), TEXT("Optional Fab listing type filter, e.g. \"3d-model\", \"material\", \"audio\".") },
-				{ TEXT("free_only"), TEXT("boolean"), TEXT("Only free listings.") },
-				{ TEXT("open"), TEXT("boolean"), TEXT("Open it in the user's browser (default true). False returns the URL only.") },
-			}, &FabSearch);
-		OutTools.Last().IsAvailable = &ProtoBoyAssetSourcing::IsFabEnabled;
 
 		// Write
 		Add(TEXT("docs_create"), LOCTEXT("CreateTitle", "Create doc"),
@@ -834,6 +709,9 @@ namespace ProtoBoyMCPTools
 				{ TEXT("id"), TEXT("string"), TEXT("Task id."), true },
 				{ TEXT("text"), TEXT("string"), TEXT("Comment text (Markdown)."), true },
 			}, &TaskComment);
+
+		// Feature areas register their own tools.
+		ProtoBoySourcingMCP::RegisterTools(OutTools);
 	}
 }
 

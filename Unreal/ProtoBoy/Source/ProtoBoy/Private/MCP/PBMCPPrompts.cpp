@@ -1,6 +1,7 @@
 #include "MCP/PBMCPPrompts.h"
 
 #include "Docs/PBDocGenerator.h"
+#include "Sourcing/PBSourcingMCP.h"
 
 namespace ProtoBoyMCPPrompts
 {
@@ -71,30 +72,6 @@ Feature: %s
 		});
 
 		OutPrompts.Add({
-			TEXT("source-assets"),
-			TEXT("Source assets"),
-			TEXT("Find assets for a need from the project's enabled sources (e.g. Fab) that fit the design and art direction, instead of generating them."),
-			{ { TEXT("need"), TEXT("What the assets are for, e.g. \"props for the tavern level\"."), true } },
-			[](const TMap<FString, FString>& Args)
-			{
-				return WithArchitecturePath(FString::Printf(TEXT(R"MD(Find assets for this need using ProtoBoy's asset sourcing. Don't generate assets with AI.
-
-Need: %s
-
-1. Call `get_project_context` and read its Asset sourcing section: the policy, the enabled sources, and the art
-   direction doc. Read the art direction doc (`docs_read`) and the design doc for this feature, if there is one.
-2. Write down what fits: style, scale, level of detail or poly budget, palette, mood, license, and anything to avoid.
-   Check it against the art direction; if they conflict, ask me.
-3. If Fab is enabled, call `fab_search` with search terms built from that (one search per distinct asset type). You
-   only get the URL, not results: tell me what to look for on each search.
-4. Ask which listings I pick. Record them in the design doc (`docs_update_section`, mode "append"): name, link, what
-   each is for, license.
-5. Where nothing fits, propose a clearly marked placeholder and a follow-up task (`task_create`), never an
-   AI-generated asset.)MD"), *ArgOr(Args, TEXT("need"), TEXT(""))));
-			}
-		});
-
-		OutPrompts.Add({
 			TEXT("record-decision"),
 			TEXT("Record a decision"),
 			TEXT("Write an Architecture Decision Record for a design or architecture choice."),
@@ -118,5 +95,8 @@ Context: %s
    with `docs_update_section` if I ask you to.)MD"), *ArgOr(Args, TEXT("decision"), TEXT("")), *ArgOr(Args, TEXT("context"), TEXT("(not given)"))));
 			}
 		});
+
+		// Feature areas register their own prompts.
+		ProtoBoySourcingMCP::RegisterPrompts(OutPrompts);
 	}
 }

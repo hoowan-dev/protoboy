@@ -195,11 +195,12 @@ Unreal/ProtoBoy/                 Unreal Engine 5.9 editor plugin
         Obsidian/                Obsidian vault connector and provider
       Tasks/                     Task provider interface, task board connection store
         Trello/                  Trello connect flow and REST client
-      Assets/                    Asset sourcing policy and sources (Fab)
+      Sourcing/                  Asset sourcing policy, its MCP tools and prompts
+        Fab/                     Fab source (opens fab.com searches)
       MCP/                       MCP server, tools, prompts, approvals, agent guide, client config
       Net/                       Shared HTTP helpers
       Daemon/                    Client for the future daemon (stub)
-      UI/                        Dashboard and setup windows (Slate)
+      UI/                        Dashboard and style; each feature's windows and panels in UI/<Feature>/
 ```
 
 Unity, Godot and the daemon will get their own top-level folders (`Unity/`, `Godot/`, `Daemon/`).

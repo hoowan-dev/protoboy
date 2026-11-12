@@ -22,13 +22,6 @@ private:
 	 */
 	TSharedRef<SWidget> MakeSection(const FText& Title, const TSharedRef<SWidget>& Body, bool bTopLevel = false);
 
-	/** Setup > Asset Sourcing (optional): where agents get assets from instead of generating them. */
-	TSharedRef<SWidget> MakeAssetSourcingSection();
-	/** Saves a team-wide asset sourcing setting and refreshes the agent guide (which states the policy). */
-	void OnAssetSourcingChanged();
-	/** Whether the art direction doc exists (a file check, so cached; refreshed on change and with the docs section). */
-	void RefreshArtDirectionStatus();
-	FText ArtDirectionStatus;
 
 	/** Planning: a checklist of the setup steps, then (later) planning tools. */
 	TSharedRef<SWidget> MakePlanningSection();
@@ -49,5 +42,7 @@ private:
 	FReply OnTasksSettingsClicked();
 
 	TSharedPtr<class SBox> DocsSection;
+	/** Setup > Asset Sourcing; refreshed with the docs section. */
+	TSharedPtr<class SProtoBoyAssetSourcingPanel> AssetSourcingPanel;
 	FDelegateHandle ConnectionChangedHandle;
 };

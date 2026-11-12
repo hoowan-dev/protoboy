@@ -1,4 +1,4 @@
-#include "UI/SPBConnectLLMDialog.h"
+#include "UI/MCP/SPBConnectLLMDialog.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "MCP/PBMCPClientConfig.h"

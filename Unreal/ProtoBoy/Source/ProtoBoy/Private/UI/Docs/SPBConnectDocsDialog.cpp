@@ -1,11 +1,11 @@
-#include "UI/SPBConnectTasksDialog.h"
+#include "UI/Docs/SPBConnectDocsDialog.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "PBSubsystem.h"
-#include "UI/Tasks/Trello/SPBTrelloPanel.h"
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 #include "UI/PBStyle.h"
+#include "UI/Docs/Obsidian/SPBObsidianPanel.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Layout/SBorder.h"
@@ -15,21 +15,21 @@
 #include "Widgets/SWindow.h"
 #include "Widgets/Text/STextBlock.h"
 
-#define LOCTEXT_NAMESPACE "SProtoBoyConnectTasksDialog"
+#define LOCTEXT_NAMESPACE "SProtoBoyConnectDocsDialog"
 
-void SProtoBoyConnectTasksDialog::Construct(const FArguments& InArgs)
+void SProtoBoyConnectDocsDialog::Construct(const FArguments& InArgs)
 {
-	// Open on the connected provider's page, if any.
+	// Open on the connected platform's page, if any.
 	if (const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
 	{
-		SelectedProvider = Subsystem->GetTrelloConnector().GetConnection().Provider;
+		SelectedPlatform = Subsystem->GetObsidianConnector().GetConnection().Platform;
 	}
 
 	ChildSlot
 	[
 		SNew(SHorizontalBox)
 
-		// Sidebar: Board Providers
+		// Sidebar: Documentation Platforms
 		+ SHorizontalBox::Slot()
 		.AutoWidth()
 		[
@@ -47,20 +47,21 @@ void SProtoBoyConnectTasksDialog::Construct(const FArguments& InArgs)
 					.Padding(4.f, 4.f, 4.f, 8.f)
 					[
 						SNew(STextBlock)
-						.Text(LOCTEXT("ProvidersHeader", "Board Providers"))
+						.Text(LOCTEXT("PlatformsHeader", "Documentation Platforms"))
 						.Font(FCoreStyle::GetDefaultFontStyle("Bold", 11))
 					]
 
 					+ SVerticalBox::Slot()
 					.AutoHeight()
 					[
-						MakeProviderEntry(EProvider::Trello, LOCTEXT("Trello", "Trello"), "ProtoBoy.Icon.Trello")
+						MakePlatformEntry(EProtoBoyDocPlatform::Obsidian,
+							LOCTEXT("Obsidian", "Obsidian"), "ProtoBoy.Icon.Obsidian")
 					]
 				]
 			]
 		]
 
-		// Main panel: setup for the selected provider
+		// Main panel: settings for the selected platform
 		+ SHorizontalBox::Slot()
 		.FillWidth(1.f)
 		[
@@ -69,41 +70,42 @@ void SProtoBoyConnectTasksDialog::Construct(const FArguments& InArgs)
 			.Padding(16.f)
 			[
 				SAssignNew(PanelSwitcher, SWidgetSwitcher)
-				.WidgetIndex(static_cast<int32>(SelectedProvider))
+				.WidgetIndex(static_cast<int32>(SelectedPlatform))
 
-				+ SWidgetSwitcher::Slot() [ MakeEmptyPanel() ]          // EProtoBoyTaskProvider::None
-				+ SWidgetSwitcher::Slot() [ SNew(SProtoBoyTrelloPanel) ] // EProtoBoyTaskProvider::Trello
+				+ SWidgetSwitcher::Slot() [ MakeEmptyPanel() ]     // EProtoBoyDocPlatform::None
+				+ SWidgetSwitcher::Slot() [ MakeObsidianPanel() ]  // EProtoBoyDocPlatform::Obsidian
 			]
 		]
 	];
 }
 
-void SProtoBoyConnectTasksDialog::Open(const TSharedPtr<SWidget>& ParentWidget)
+void SProtoBoyConnectDocsDialog::Open(const TSharedPtr<SWidget>& ParentWidget)
 {
 	TSharedRef<SWindow> Window = SNew(SWindow)
-		.Title(LOCTEXT("WindowTitle", "Connect Task Board"))
+		.Title(LOCTEXT("WindowTitle", "Connect to Documentation"))
 		.ClientSize(FVector2D(720.f, 440.f))
 		.SupportsMinimize(false)
 		.SupportsMaximize(false)
 		[
-			SNew(SProtoBoyConnectTasksDialog)
+			SNew(SProtoBoyConnectDocsDialog)
 		];
 
 	FSlateApplication::Get().AddModalWindow(Window, ParentWidget);
 }
 
-TSharedRef<SWidget> SProtoBoyConnectTasksDialog::MakeProviderEntry(EProvider Provider, const FText& Label, const FName& IconName)
+TSharedRef<SWidget> SProtoBoyConnectDocsDialog::MakePlatformEntry(
+	EProtoBoyDocPlatform Platform, const FText& Label, const FName& IconName)
 {
-	// Toggle-style checkbox so the selected provider stays highlighted, like a sidebar tab.
+	// Toggle-style checkbox so the selected platform stays highlighted, like a sidebar tab.
 	return SNew(SCheckBox)
 		.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
-		.IsChecked_Lambda([this, Provider]()
+		.IsChecked_Lambda([this, Platform]()
 		{
-			return SelectedProvider == Provider ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+			return SelectedPlatform == Platform ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 		})
-		.OnCheckStateChanged_Lambda([this, Provider](ECheckBoxState)
+		.OnCheckStateChanged_Lambda([this, Platform](ECheckBoxState)
 		{
-			SelectProvider(Provider);
+			SelectPlatform(Platform);
 		})
 		[
 			SNew(SHorizontalBox)
@@ -128,22 +130,27 @@ TSharedRef<SWidget> SProtoBoyConnectTasksDialog::MakeProviderEntry(EProvider Pro
 		];
 }
 
-TSharedRef<SWidget> SProtoBoyConnectTasksDialog::MakeEmptyPanel()
+TSharedRef<SWidget> SProtoBoyConnectDocsDialog::MakeEmptyPanel()
 {
 	return SNew(SBox)
 		.HAlign(HAlign_Center)
 		.VAlign(VAlign_Center)
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("SelectProvider", "Select a board provider."))
+			.Text(LOCTEXT("SelectPlatform", "Select a documentation platform."))
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 		];
 }
 
-void SProtoBoyConnectTasksDialog::SelectProvider(EProvider Provider)
+TSharedRef<SWidget> SProtoBoyConnectDocsDialog::MakeObsidianPanel()
 {
-	SelectedProvider = Provider;
-	PanelSwitcher->SetActiveWidgetIndex(static_cast<int32>(Provider));
+	return SNew(SProtoBoyObsidianPanel);
+}
+
+void SProtoBoyConnectDocsDialog::SelectPlatform(EProtoBoyDocPlatform Platform)
+{
+	SelectedPlatform = Platform;
+	PanelSwitcher->SetActiveWidgetIndex(static_cast<int32>(Platform));
 }
 
 #undef LOCTEXT_NAMESPACE
