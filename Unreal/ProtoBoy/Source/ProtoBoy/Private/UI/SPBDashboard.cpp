@@ -12,7 +12,7 @@
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
 #include "UI/PBStyle.h"
-#include "UI/Planning/SPBPillarTreeEditor.h"
+#include "UI/Architecture/SPBPillarTreeEditor.h"
 #include "UI/Sourcing/SPBAssetSourcingPanel.h"
 #include "UI/Tasks/SPBConnectTasksDialog.h"
 #include "UI/Docs/SPBConnectDocsDialog.h"
@@ -28,6 +28,7 @@
 #include "Widgets/Layout/SSeparator.h"
 #include "Widgets/Layout/SWidgetSwitcher.h"
 #include "Widgets/Layout/SWrapBox.h"
+#include "Widgets/SNullWidget.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Views/SListView.h"
@@ -60,7 +61,9 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 	// TODO: Status header, New ADR.
 	Pages = {
 		MakeShared<FPage>(FPage{ LOCTEXT("SetupPage", "Setup"), LOCTEXT("SetupPageTip", "Plugin settings and connections to agents, docs, task boards and asset sources."), "Icons.Settings" }),
-		MakeShared<FPage>(FPage{ LOCTEXT("PlanningPage", "Planning"), LOCTEXT("PlanningPageTip", "Setup checklist and the game's pillar tree."), "Icons.Layout" }),
+		MakeShared<FPage>(FPage{ LOCTEXT("ArchitecturePage", "Architecture"), LOCTEXT("ArchitecturePageTip", "Setup checklist and the game's pillar tree."), "Icons.Layout" }),
+		MakeShared<FPage>(FPage{ LOCTEXT("DocumentationPage", "Documentation"), LOCTEXT("DocumentationPageTip", "The game's design docs and ADRs."), "Icons.Documentation" }),
+		MakeShared<FPage>(FPage{ LOCTEXT("TasksPage", "Tasks"), LOCTEXT("TasksPageTip", "The team's task board."), "Icons.Clipboard" }),
 	};
 	BuildSetupSteps();
 
@@ -180,7 +183,17 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 
 			+ SWidgetSwitcher::Slot()
 			[
-				MakePage(1, MakePlanningSection())
+				MakePage(1, MakeArchitectureSection())
+			]
+
+			+ SWidgetSwitcher::Slot()
+			[
+				MakePage(2, MakeDocumentationSection())
+			]
+
+			+ SWidgetSwitcher::Slot()
+			[
+				MakePage(3, MakeTasksSection())
 			]
 		]
 	];
@@ -702,7 +715,7 @@ void SProtoBoyDashboard::BuildSetupSteps()
 	SetupSteps = { AgentStep, DocsStep, TasksStep, SourcingStep };
 }
 
-TSharedRef<SWidget> SProtoBoyDashboard::MakePlanningSection()
+TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
 {
 	const TSharedRef<SWidget> Checks = SNew(SVerticalBox)
 
@@ -806,6 +819,18 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakePlanningSection()
 		[
 			MakeSection(LOCTEXT("PillarsHeader", "Pillars"), Pillars)
 		];
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakeDocumentationSection()
+{
+	// TODO: Browse and search design docs and ADRs.
+	return SNullWidget::NullWidget;
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
+{
+	// TODO: Show the task board's lists and the tasks linked to design docs.
+	return SNullWidget::NullWidget;
 }
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupStep(const FText& Title, FSetupStepState GetState, FReply (SProtoBoyDashboard::*OnSetUp)(), const FText& ChangeText)

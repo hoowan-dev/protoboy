@@ -1,4 +1,4 @@
-#include "UI/Planning/SPBPillarDocsPreview.h"
+#include "UI/Architecture/SPBPillarDocsPreview.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "PBSubsystem.h"
@@ -62,7 +62,7 @@ void SProtoBoyPillarDocsPreview::Construct(const FArguments& InArgs)
 		List->AddSlot().AutoHeight()
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("Empty", "The pillar tree is empty. Add pillars in the Planning section first."))
+			.Text(LOCTEXT("Empty", "The pillar tree is empty. Add pillars in the Architecture section first."))
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 		];
 	}

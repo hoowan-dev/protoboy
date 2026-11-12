@@ -32,13 +32,13 @@ public:
 
 	/**
 	 * The pillar tree file, relative to the project folder. Commit it: it's the team's shared definition of the game's
-	 * architecture. Edited in the dashboard's Planning section.
+	 * architecture. Edited in the dashboard's Architecture section.
 	 */
-	UPROPERTY(Config, EditAnywhere, Category = "Planning")
+	UPROPERTY(Config, EditAnywhere, Category = "Architecture")
 	FString PillarsFilePath = TEXT("ProtoBoy/Pillars.json");
 
 	/** Folder (relative to the docs folder) where each pillar's doc is generated, nested like the tree. */
-	UPROPERTY(Config, EditAnywhere, Category = "Planning")
+	UPROPERTY(Config, EditAnywhere, Category = "Architecture")
 	FString PillarDocsFolder = TEXT("Pillars");
 
 	/** Generate TDD stubs automatically when new gameplay assets are created. */

@@ -6,7 +6,7 @@
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "EditorSubsystem.h"
 #include "MCP/PBMCPServer.h"
-#include "Planning/PBPillars.h"
+#include "Architecture/PBPillars.h"
 #include "Tasks/Trello/PBTrelloClient.h"
 #include "Tasks/Trello/PBTrelloConnector.h"
 #include "PBSubsystem.generated.h"

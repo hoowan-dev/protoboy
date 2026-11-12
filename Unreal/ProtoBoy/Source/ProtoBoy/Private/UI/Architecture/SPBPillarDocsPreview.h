@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Planning/PBPillarDocs.h"
+#include "Architecture/PBPillarDocs.h"
 #include "Widgets/SCompoundWidget.h"
 
 class SWindow;

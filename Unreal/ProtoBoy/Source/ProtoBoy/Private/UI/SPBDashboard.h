@@ -7,7 +7,8 @@ class SWidgetSwitcher;
 
 /**
  * ProtoBoy dashboard: a sidebar listing the pages, and the selected page beside it. Pages: Setup (plugin settings, MCP,
- * Documentation, Tasks, Asset Sourcing) and Planning (setup checklist, pillar tree). The open page is remembered per user.
+ * Documentation, Tasks, Asset Sourcing), Architecture (setup checklist, pillar tree), Documentation and Tasks (both blank
+ * for now). The open page is remembered per user.
  */
 class SProtoBoyDashboard : public SCompoundWidget
 {
@@ -43,7 +44,7 @@ private:
 	using FSetupStepState = TFunction<bool(FText& OutDetail)>;
 
 	/**
-	 * The setup checks, shared by the Setup page's card headers and the Planning page's checklist so both always agree.
+	 * The setup checks, shared by the Setup page's card headers and the Architecture page's checklist so both always agree.
 	 * Built once in Construct.
 	 */
 	void BuildSetupSteps();
@@ -64,8 +65,14 @@ private:
 	/** Setup > MCP: a logo chip for each agent app this user has set up (Claude Code, Claude Desktop, Gemini CLI). */
 	TSharedRef<SWidget> MakeEnabledAgents();
 
-	/** Planning: a checklist of the setup steps, then the pillar tree editor. */
-	TSharedRef<SWidget> MakePlanningSection();
+	/** Architecture: a checklist of the setup steps, then the pillar tree editor. */
+	TSharedRef<SWidget> MakeArchitectureSection();
+
+	/** Documentation: blank for now. */
+	TSharedRef<SWidget> MakeDocumentationSection();
+
+	/** Tasks: blank for now. */
+	TSharedRef<SWidget> MakeTasksSection();
 
 	/**
 	 * One checklist row. GetState returns true when done and fills Detail; OnSetUp opens the window to finish it.

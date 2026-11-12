@@ -12,7 +12,7 @@ class UProtoBoyPillarGraph;
 class UProtoBoyPillarGraphNode;
 
 /**
- * Planning > Pillars: the pillar tree as a Behavior Tree style graph. The game is the root node at the top, each
+ * Architecture > Pillars: the pillar tree as a Behavior Tree style graph. The game is the root node at the top, each
  * pillar a node below its parent, laid out automatically. Wire a node's bottom bar to another's top bar to nest it,
  * drag off a bottom bar into empty space to add a child, F2 to rename, Delete to remove, right-click for more.
  * The selected pillar's details are edited below the graph, and docs are generated from the tree (with a preview).

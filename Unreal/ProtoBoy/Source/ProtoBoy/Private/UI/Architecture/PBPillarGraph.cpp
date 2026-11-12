@@ -1,10 +1,10 @@
-#include "UI/Planning/PBPillarGraph.h"
+#include "UI/Architecture/PBPillarGraph.h"
 
 #include "AIGraphConnectionDrawingPolicy.h"
 #include "PBSubsystem.h"
-#include "Planning/PBPillars.h"
-#include "UI/Planning/SPBPillarGraphNode.h"
-#include "UI/Planning/SPBPillarTreeEditor.h"
+#include "Architecture/PBPillars.h"
+#include "UI/Architecture/SPBPillarGraphNode.h"
+#include "UI/Architecture/SPBPillarTreeEditor.h"
 
 #define LOCTEXT_NAMESPACE "ProtoBoyPillarGraph"
 

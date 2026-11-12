@@ -4,7 +4,7 @@
 
 class SWindow;
 
-/** "Setup Pillars" window, opened from Planning > Pillars. Blank for now. */
+/** "Setup Pillars" window, opened from Architecture > Pillars. Blank for now. */
 class SProtoBoySetupPillarsDialog : public SCompoundWidget
 {
 public:

@@ -1,4 +1,4 @@
-#include "UI/Planning/SPBSetupPillarsDialog.h"
+#include "UI/Architecture/SPBSetupPillarsDialog.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/SWindow.h"
