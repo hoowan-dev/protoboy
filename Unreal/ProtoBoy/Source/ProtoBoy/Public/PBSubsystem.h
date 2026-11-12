@@ -1,10 +1,12 @@
 #pragma once
 
+#include "Containers/Ticker.h"
 #include "Daemon/PBDaemonClient.h"
 #include "Docs/PBDocGenerator.h"
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "EditorSubsystem.h"
 #include "MCP/PBMCPServer.h"
+#include "Tasks/Trello/PBTrelloClient.h"
 #include "Tasks/Trello/PBTrelloConnector.h"
 #include "PBSubsystem.generated.h"
 
@@ -28,6 +30,13 @@ public:
 	FProtoBoyDaemonClient& GetDaemonClient() const { return *DaemonClient; }
 	FProtoBoyMCPServer& GetMCPServer() const { return *MCPServer; }
 	FProtoBoyTrelloConnector& GetTrelloConnector() const { return *TrelloConnector; }
+	FProtoBoyTrelloClient& GetTrelloClient() const { return *TrelloClient; }
+
+	/** The docs platform in use (Obsidian when connected, else the project's DocsDirectory). */
+	IProtoBoyDocsProvider& GetDocsProvider() const { return DocGenerator->GetProvider(); }
+
+	/** The task board in use, or null if none is connected. Check IsReady before use. */
+	IProtoBoyTaskProvider* GetTaskProvider() const;
 
 private:
 	// TODO: Bind asset registry / package save / live coding events and route them to the services.
@@ -41,9 +50,14 @@ private:
 	void OnModalLoopTick(float DeltaTime);
 	FDelegateHandle ModalLoopTickHandle;
 
+	/** Runs queued HTTP callbacks (ProtoBoyHttp) outside modal loops. */
+	bool OnCoreTick(float DeltaTime);
+	FTSTicker::FDelegateHandle CoreTickHandle;
+
 	TUniquePtr<FProtoBoyObsidianConnector> ObsidianConnector;
 	TUniquePtr<FProtoBoyDocGenerator> DocGenerator;
 	TUniquePtr<FProtoBoyDaemonClient> DaemonClient;
 	TUniquePtr<FProtoBoyMCPServer> MCPServer;
 	TUniquePtr<FProtoBoyTrelloConnector> TrelloConnector;
+	TUniquePtr<FProtoBoyTrelloClient> TrelloClient;
 };

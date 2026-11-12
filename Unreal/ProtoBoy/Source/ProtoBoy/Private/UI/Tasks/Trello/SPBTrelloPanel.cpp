@@ -9,6 +9,7 @@
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
+#include "Tasks/Trello/PBTrelloClient.h"
 #include "Tasks/Trello/PBTrelloConnector.h"
 #include "UI/PBStyle.h"
 #include "Widgets/Images/SImage.h"
@@ -112,7 +113,17 @@ void SProtoBoyTrelloPanel::Construct(const FArguments& InArgs)
 				]
 			]
 
-			// TODO: Board picker and list -> To Do / In Progress / Done mapping (team-wide, in UProtoBoySettings).
+			// Board and list mapping (team-wide)
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 20.f, 0.f, 0.f)
+			[
+				SNew(SBox)
+				.Visibility_Lambda([]() { return ProtoBoyTrelloPanel::IsConnected() ? EVisibility::Visible : EVisibility::Collapsed; })
+				[
+					MakeBoardSection()
+				]
+			]
 
 			+ SVerticalBox::Slot()
 			.AutoHeight()
@@ -122,6 +133,395 @@ void SProtoBoyTrelloPanel::Construct(const FArguments& InArgs)
 			]
 		]
 	];
+
+	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		ConnectionChangedHandle = Subsystem->GetTrelloConnector().OnConnectionChanged.AddSP(this, &SProtoBoyTrelloPanel::OnConnectionChanged);
+	}
+	OnConnectionChanged();
+}
+
+SProtoBoyTrelloPanel::~SProtoBoyTrelloPanel()
+{
+	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		Subsystem->GetTrelloConnector().OnConnectionChanged.Remove(ConnectionChangedHandle);
+	}
+}
+
+void SProtoBoyTrelloPanel::OnConnectionChanged()
+{
+	if (!ProtoBoyTrelloPanel::IsConnected())
+	{
+		BoardOptions.Reset();
+		ListOptions.Reset();
+		BoardError = FText::GetEmpty();
+		return;
+	}
+	if (BoardOptions.IsEmpty() && !bLoadingBoards)
+	{
+		RefreshBoards();
+	}
+	const FString& BoardId = GetDefault<UProtoBoySettings>()->TrelloBoardId;
+	if (!BoardId.IsEmpty() && ListOptions.IsEmpty() && !bLoadingLists)
+	{
+		RefreshLists(BoardId);
+	}
+}
+
+TSharedRef<SWidget> SProtoBoyTrelloPanel::MakeBoardSection()
+{
+	return SNew(SBorder)
+		.BorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
+		.Padding(12.f)
+		[
+			SNew(SVerticalBox)
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("BoardHeader", "Project board"))
+				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 11))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 4.f, 0.f, 0.f)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("BoardIntro", "Shared by the whole team (saved to DefaultProtoBoy.ini). Agents can only see and change cards on this board."))
+				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+				.AutoWrapText(true)
+			]
+
+			// Board
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 10.f, 0.f, 0.f)
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				[
+					SNew(SBox)
+					.WidthOverride(100.f)
+					[
+						SNew(STextBlock).Text(LOCTEXT("BoardLabel", "Board"))
+					]
+				]
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.f)
+				[
+					SAssignNew(BoardCombo, SComboBox<FItemPtr>)
+					.OptionsSource(&BoardOptions)
+					.OnGenerateWidget_Lambda([](FItemPtr Item) -> TSharedRef<SWidget>
+					{
+						return SNew(STextBlock).Text(FText::FromString(Item.IsValid() ? Item->Name : FString()));
+					})
+					.OnSelectionChanged(this, &SProtoBoyTrelloPanel::OnBoardPicked)
+					[
+						SNew(STextBlock)
+						.Text_Lambda([this]()
+						{
+							if (bLoadingBoards)
+							{
+								return LOCTEXT("LoadingBoards", "Loading boards...");
+							}
+							const FString& Name = GetDefault<UProtoBoySettings>()->TrelloBoardName;
+							return Name.IsEmpty() ? LOCTEXT("PickBoard", "Choose a board") : FText::FromString(Name);
+						})
+					]
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.Padding(6.f, 0.f, 0.f, 0.f)
+				[
+					SNew(SButton)
+					.Text(LOCTEXT("Refresh", "Refresh"))
+					.ToolTipText(LOCTEXT("RefreshTip", "Reload your boards and the chosen board's lists from Trello."))
+					.OnClicked_Lambda([this]()
+					{
+						RefreshBoards();
+						const FString& BoardId = GetDefault<UProtoBoySettings>()->TrelloBoardId;
+						if (!BoardId.IsEmpty())
+						{
+							RefreshLists(BoardId);
+						}
+						return FReply::Handled();
+					})
+				]
+			]
+
+			// List mapping
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 10.f, 0.f, 0.f)
+			[
+				SNew(SVerticalBox)
+				.Visibility_Lambda([]() { return GetDefault<UProtoBoySettings>()->TrelloBoardId.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible; })
+
+				+ SVerticalBox::Slot().AutoHeight()[ MakeListRow(LOCTEXT("ToDo", "To Do"), &UProtoBoySettings::TrelloToDoListId) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)[ MakeListRow(LOCTEXT("InProgress", "In Progress"), &UProtoBoySettings::TrelloInProgressListId) ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)[ MakeListRow(LOCTEXT("Done", "Done"), &UProtoBoySettings::TrelloDoneListId) ]
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 10.f, 0.f, 0.f)
+			[
+				SNew(STextBlock)
+				.Text(this, &SProtoBoyTrelloPanel::GetBoardStatusText)
+				.ColorAndOpacity(this, &SProtoBoyTrelloPanel::GetBoardStatusColor)
+				.AutoWrapText(true)
+			]
+		];
+}
+
+TSharedRef<SWidget> SProtoBoyTrelloPanel::MakeListRow(const FText& Label, FListField Field)
+{
+	TSharedPtr<SComboBox<FItemPtr>> Combo;
+
+	TSharedRef<SWidget> Row = SNew(SHorizontalBox)
+
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		[
+			SNew(SBox)
+			.WidthOverride(100.f)
+			[
+				SNew(STextBlock).Text(Label)
+			]
+		]
+
+		+ SHorizontalBox::Slot()
+		.FillWidth(1.f)
+		[
+			SAssignNew(Combo, SComboBox<FItemPtr>)
+			.OptionsSource(&ListOptions)
+			.OnGenerateWidget_Lambda([](FItemPtr Item) -> TSharedRef<SWidget>
+			{
+				return SNew(STextBlock).Text(FText::FromString(Item.IsValid() ? Item->Name : FString()));
+			})
+			.OnSelectionChanged_Lambda([Field](FItemPtr Item, ESelectInfo::Type SelectInfo)
+			{
+				if (!Item.IsValid() || SelectInfo == ESelectInfo::Direct)
+				{
+					return;
+				}
+				UProtoBoySettings* Settings = GetMutableDefault<UProtoBoySettings>();
+				Settings->*Field = Item->Id;
+				Settings->TryUpdateDefaultConfigFile();
+			})
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this, Field]()
+				{
+					if (bLoadingLists)
+					{
+						return LOCTEXT("LoadingLists", "Loading lists...");
+					}
+					return GetListName(GetDefault<UProtoBoySettings>()->*Field);
+				})
+			]
+		];
+
+	ListCombos.Add(Combo);
+	return Row;
+}
+
+void SProtoBoyTrelloPanel::RefreshBoards()
+{
+	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	if (!Subsystem)
+	{
+		return;
+	}
+
+	bLoadingBoards = true;
+	BoardError = FText::GetEmpty();
+	const TWeakPtr<SProtoBoyTrelloPanel> WeakThis = StaticCastSharedRef<SProtoBoyTrelloPanel>(AsShared());
+	Subsystem->GetTrelloClient().FetchBoards([WeakThis](const TProtoBoyTaskResult<TArray<FProtoBoyTrelloItem>>& Result)
+	{
+		const TSharedPtr<SProtoBoyTrelloPanel> This = WeakThis.Pin();
+		if (!This.IsValid())
+		{
+			return;
+		}
+		This->bLoadingBoards = false;
+		This->BoardOptions.Reset();
+		if (!Result.bOk)
+		{
+			This->BoardError = Result.Error;
+		}
+		for (const FProtoBoyTrelloItem& Board : Result.Value)
+		{
+			This->BoardOptions.Add(MakeShared<FProtoBoyTrelloItem>(Board));
+		}
+		if (This->BoardCombo.IsValid())
+		{
+			This->BoardCombo->RefreshOptions();
+		}
+	});
+}
+
+void SProtoBoyTrelloPanel::RefreshLists(const FString& BoardId)
+{
+	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	if (!Subsystem)
+	{
+		return;
+	}
+
+	bLoadingLists = true;
+	BoardError = FText::GetEmpty();
+	const TWeakPtr<SProtoBoyTrelloPanel> WeakThis = StaticCastSharedRef<SProtoBoyTrelloPanel>(AsShared());
+	Subsystem->GetTrelloClient().FetchLists(BoardId, [WeakThis](const TProtoBoyTaskResult<TArray<FProtoBoyTrelloItem>>& Result)
+	{
+		const TSharedPtr<SProtoBoyTrelloPanel> This = WeakThis.Pin();
+		if (!This.IsValid())
+		{
+			return;
+		}
+		This->bLoadingLists = false;
+		This->ListOptions.Reset();
+		if (!Result.bOk)
+		{
+			This->BoardError = Result.Error;
+		}
+		for (const FProtoBoyTrelloItem& List : Result.Value)
+		{
+			This->ListOptions.Add(MakeShared<FProtoBoyTrelloItem>(List));
+		}
+		for (const TSharedPtr<SComboBox<FItemPtr>>& Combo : This->ListCombos)
+		{
+			if (Combo.IsValid())
+			{
+				Combo->RefreshOptions();
+			}
+		}
+		This->AutoMapLists();
+	});
+}
+
+void SProtoBoyTrelloPanel::OnBoardPicked(FItemPtr Board, ESelectInfo::Type SelectInfo)
+{
+	if (!Board.IsValid() || SelectInfo == ESelectInfo::Direct)
+	{
+		return;
+	}
+
+	UProtoBoySettings* Settings = GetMutableDefault<UProtoBoySettings>();
+	if (Settings->TrelloBoardId == Board->Id)
+	{
+		return;
+	}
+
+	// A different board means different lists.
+	Settings->TrelloBoardId = Board->Id;
+	Settings->TrelloBoardName = Board->Name;
+	Settings->TrelloToDoListId.Reset();
+	Settings->TrelloInProgressListId.Reset();
+	Settings->TrelloDoneListId.Reset();
+	Settings->TryUpdateDefaultConfigFile();
+
+	RefreshLists(Board->Id);
+}
+
+void SProtoBoyTrelloPanel::AutoMapLists()
+{
+	UProtoBoySettings* Settings = GetMutableDefault<UProtoBoySettings>();
+
+	auto IsKnown = [this](const FString& Id)
+	{
+		return ListOptions.ContainsByPredicate([&Id](const FItemPtr& Item) { return Item->Id == Id; });
+	};
+	auto Guess = [this](std::initializer_list<const TCHAR*> Names) -> FString
+	{
+		for (const TCHAR* Name : Names)
+		{
+			for (const FItemPtr& Item : ListOptions)
+			{
+				if (Item->Name.TrimStartAndEnd().Equals(Name, ESearchCase::IgnoreCase))
+				{
+					return Item->Id;
+				}
+			}
+		}
+		return FString();
+	};
+
+	bool bChanged = false;
+	auto Fill = [&](FString& Field, std::initializer_list<const TCHAR*> Names)
+	{
+		if (Field.IsEmpty() || !IsKnown(Field))
+		{
+			const FString Guessed = Guess(Names);
+			if (Guessed != Field)
+			{
+				Field = Guessed;
+				bChanged = true;
+			}
+		}
+	};
+
+	Fill(Settings->TrelloToDoListId, { TEXT("To Do"), TEXT("ToDo"), TEXT("Todo"), TEXT("Backlog"), TEXT("Next"), TEXT("Up Next") });
+	Fill(Settings->TrelloInProgressListId, { TEXT("In Progress"), TEXT("Doing"), TEXT("WIP"), TEXT("In Development") });
+	Fill(Settings->TrelloDoneListId, { TEXT("Done"), TEXT("Complete"), TEXT("Completed"), TEXT("Finished") });
+
+	if (bChanged)
+	{
+		Settings->TryUpdateDefaultConfigFile();
+	}
+}
+
+FText SProtoBoyTrelloPanel::GetListName(const FString& ListId) const
+{
+	if (ListId.IsEmpty())
+	{
+		return LOCTEXT("PickList", "Choose a list");
+	}
+	for (const FItemPtr& Item : ListOptions)
+	{
+		if (Item->Id == ListId)
+		{
+			return FText::FromString(Item->Name);
+		}
+	}
+	return LOCTEXT("UnknownList", "(list not found on this board)");
+}
+
+FText SProtoBoyTrelloPanel::GetBoardStatusText() const
+{
+	if (!BoardError.IsEmpty())
+	{
+		return BoardError;
+	}
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	if (!Subsystem)
+	{
+		return FText::GetEmpty();
+	}
+	FText WhyNot;
+	return Subsystem->GetTrelloClient().IsReady(WhyNot)
+		? LOCTEXT("BoardReady", "Ready: agents can read and update tasks on this board through ProtoBoy.")
+		: WhyNot;
+}
+
+FSlateColor SProtoBoyTrelloPanel::GetBoardStatusColor() const
+{
+	if (!BoardError.IsEmpty())
+	{
+		return FStyleColors::Error;
+	}
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	FText WhyNot;
+	return Subsystem && Subsystem->GetTrelloClient().IsReady(WhyNot) ? FSlateColor(FStyleColors::Success) : FSlateColor(FStyleColors::Warning);
 }
 
 TSharedRef<SWidget> SProtoBoyTrelloPanel::MakeHeader()

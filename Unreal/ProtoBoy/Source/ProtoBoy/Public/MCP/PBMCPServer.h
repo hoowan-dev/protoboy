@@ -9,16 +9,60 @@ struct FHttpRouteHandleInternal;
 struct FHttpServerRequest;
 struct FHttpServerResponse;
 
-/** A tool ProtoBoy exposes to agents over MCP. */
+/** What a tool returns to the agent. Text is Markdown the model reads; bIsError marks a tool execution error. */
+struct FProtoBoyMCPToolResult
+{
+	FString Text;
+	bool bIsError = false;
+
+	static FProtoBoyMCPToolResult Ok(const FString& InText) { return { InText, false }; }
+	static FProtoBoyMCPToolResult Error(const FString& InText) { return { InText, true }; }
+	static FProtoBoyMCPToolResult Error(const FText& InText) { return { InText.ToString(), true }; }
+};
+
+/** One tools/call. */
+struct FProtoBoyMCPToolCall
+{
+	/** The call's "arguments" object (never null). */
+	TSharedPtr<FJsonObject> Args;
+	/** Self-reported agent name, for provenance in ADRs, comments and the activity log. */
+	FString ClientName;
+};
+
+/** Called exactly once, on the game thread, when the tool finishes (possibly after async work). */
+using FProtoBoyMCPToolDone = TFunction<void(const FProtoBoyMCPToolResult&)>;
+using FProtoBoyMCPToolHandler = TFunction<void(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)>;
+
+/** A tool ProtoBoy exposes to agents over MCP. Registered in MCP/PBMCPTools.cpp. */
 struct FProtoBoyMCPTool
 {
 	/** MCP tool name (snake_case). Also the key used in UProtoBoySettings::DisabledMCPTools. */
 	FName Name;
+	FText Title;
 	FText Description;
-	/** Modifies the project (docs, assets). Write tools are gated by UProtoBoySettings::bAllowMCPWriteTools. */
+	/** Changes docs or tasks. Write tools are gated by bAllowMCPWriteTools and, if set, per-call approval. */
 	bool bWrites = false;
+	/** JSON Schema for the arguments object. */
+	TSharedPtr<FJsonObject> InputSchema;
+	FProtoBoyMCPToolHandler Handler;
+};
 
-	// TODO: Input JSON schema and a handler, e.g. TFunction<TSharedPtr<FJsonObject>(const TSharedPtr<FJsonObject>& Args)>.
+/** A workflow prompt (shown by agents as a slash command). Registered in MCP/PBMCPPrompts.cpp. */
+struct FProtoBoyMCPPrompt
+{
+	struct FArgument
+	{
+		FString Name;
+		FString Description;
+		bool bRequired = false;
+	};
+
+	FString Name;
+	FString Title;
+	FString Description;
+	TArray<FArgument> Arguments;
+	/** Builds the prompt text from the given arguments. */
+	TFunction<FString(const TMap<FString, FString>& Args)> Build;
 };
 
 /**
@@ -62,6 +106,7 @@ public:
 	void TickWhileModal(float DeltaTime);
 
 	const TArray<FProtoBoyMCPTool>& GetTools() const { return Tools; }
+	const TArray<FProtoBoyMCPPrompt>& GetPrompts() const { return Prompts; }
 	/** Enabled in settings, and allowed by the write-tools setting. */
 	bool IsToolEnabled(const FProtoBoyMCPTool& Tool) const;
 
@@ -93,11 +138,11 @@ private:
 		int32 HttpStatus = 200;
 		TSharedPtr<FJsonObject> Body;
 	};
-
-	void RegisterTools();
+	using FReplyCallback = TFunction<void(const FReply&)>;
 
 	bool HandleRequest(const FHttpServerRequest& Request, const TFunction<void(TUniquePtr<FHttpServerResponse>&&)>& OnComplete);
-	FReply HandleMessage(const FHttpServerRequest& Request, const TSharedPtr<FJsonObject>& Message);
+	/** Replies through OnReply, immediately or (for tools) once the tool finishes. */
+	void HandleMessage(const FHttpServerRequest& Request, const TSharedPtr<FJsonObject>& Message, FReplyCallback OnReply);
 
 	/** Validate a modern (2026-07-28+) request's _meta and mirrored headers. Returns an error reply, or unset if valid. */
 	TOptional<FReply> ValidateModernRequest(const FHttpServerRequest& Request, const TSharedPtr<FJsonValue>& Id,
@@ -106,8 +151,15 @@ private:
 	TSharedRef<FJsonObject> MakeInitializeResult(const TSharedPtr<FJsonObject>& Params);
 	TSharedRef<FJsonObject> MakeDiscoverResult() const;
 	TSharedRef<FJsonObject> MakeToolsListResult() const;
-	/** Returns unset with an error reply in OutError for an unknown/disabled tool. */
-	TSharedPtr<FJsonObject> CallTool(const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id, FReply& OutError);
+	TSharedRef<FJsonObject> MakePromptsListResult() const;
+	/** Null with an error message for an unknown prompt or a missing required argument. */
+	TSharedPtr<FJsonObject> MakePromptResult(const TSharedPtr<FJsonObject>& Params, FString& OutError) const;
+
+	/**
+	 * Run a tool (after approval, for write tools when confirmation is on). False with OutError for an unknown or
+	 * disabled tool; otherwise OnResult is called once with the tool's result.
+	 */
+	bool CallTool(const TSharedPtr<FJsonObject>& Params, const FString& ClientName, FProtoBoyMCPToolDone OnResult, FString& OutError);
 
 	bool IsAuthorized(const FHttpServerRequest& Request);
 	static bool IsAllowedOrigin(const FHttpServerRequest& Request);
@@ -115,7 +167,11 @@ private:
 	void NoteClient(const FString& ClientName);
 
 	TArray<FProtoBoyMCPTool> Tools;
+	TArray<FProtoBoyMCPPrompt> Prompts;
 	FProtoBoyMCPConnection Connection;
+
+	/** Cleared on destruction so tool callbacks that finish late don't touch a dead server. */
+	TSharedRef<bool> AliveToken = MakeShared<bool>(true);
 
 	TSharedPtr<IHttpRouter> Router;
 	/** FHttpRouteHandle, spelled out so this header doesn't need the HTTPServer module. */

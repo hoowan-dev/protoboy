@@ -7,7 +7,12 @@
 #include "HttpServerResponse.h"
 #include "IHttpRouter.h"
 #include "Interfaces/IPluginManager.h"
+#include "MCP/PBAgentActivityLog.h"
+#include "MCP/PBAgentGuide.h"
+#include "MCP/PBMCPApprovals.h"
 #include "MCP/PBMCPClientConfig.h"
+#include "MCP/PBMCPPrompts.h"
+#include "MCP/PBMCPTools.h"
 #include "Net/PBHttpServerUtils.h"
 #include "Misc/Base64.h"
 #include "Misc/Guid.h"
@@ -128,8 +133,25 @@ namespace ProtoBoyMCP
 	}
 
 	const TCHAR* Instructions = TEXT(
-		"ProtoBoy is a game-dev prototyping companion running inside the Unreal Editor. "
-		"Use its tools to read or write the project's living docs.");
+		"ProtoBoy connects you to this game project's architecture, design docs and task board, from inside the Unreal Editor. "
+		"Before designing or implementing anything, call get_project_context, then locate_feature to find the system that should own the work. "
+		"Follow the architecture's dependency rules and conventions. A new system or module, or an exception to a rule, needs an ADR (adr_create) and the user's agreement first. "
+		"Work from tasks: task_get for details and the linked design doc, task_update_status as you start and finish, task_comment to report what changed. "
+		"Put out-of-scope work into new tasks (task_create) instead of growing the current one. "
+		"Keep docs current by appending to design docs (docs_update_section). Humans own Architecture.md and existing text: never rewrite it. "
+		"Write tools can require the user's approval in the editor; if a change is denied, don't retry it, ask the user. "
+		"Workflow prompts: plan-feature, implement-task, record-decision.");
+
+	/** Compact JSON of a tool's arguments, cut to a readable length (approvals, activity log). */
+	FString SummarizeArgs(const TSharedPtr<FJsonObject>& Args)
+	{
+		FString Text;
+		if (Args.IsValid())
+		{
+			FJsonSerializer::Serialize(Args.ToSharedRef(), TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Text));
+		}
+		return Text.Len() > 400 ? Text.Left(400) + TEXT("...") : Text;
+	}
 
 	TUniquePtr<FHttpServerResponse> MakeHttpResponse(int32 Status, const TSharedPtr<FJsonObject>& Body)
 	{
@@ -152,21 +174,15 @@ namespace ProtoBoyMCP
 FProtoBoyMCPServer::FProtoBoyMCPServer()
 {
 	FProtoBoyMCPConnectionStore::Load(Connection);
-	RegisterTools();
+	ProtoBoyMCPTools::RegisterTools(Tools);
+	ProtoBoyMCPPrompts::RegisterPrompts(Prompts);
 }
 
 FProtoBoyMCPServer::~FProtoBoyMCPServer()
 {
+	*AliveToken = false;
+	AliveToken = MakeShared<bool>(false);
 	Stop();
-}
-
-void FProtoBoyMCPServer::RegisterTools()
-{
-	// TODO: Give each tool a schema + handler that calls into the pillar services via UProtoBoySubsystem.
-	Tools = {
-		{ "read_docs", LOCTEXT("ToolReadDocs", "Read the project's living docs (TDD stubs, ADRs)."), false },
-		{ "write_adr", LOCTEXT("ToolWriteADR", "Create a new Architecture Decision Record."), true },
-	};
 }
 
 bool FProtoBoyMCPServer::Start(int32 InPort, FText* OutError)
@@ -320,19 +336,23 @@ bool FProtoBoyMCPServer::HandleRequest(const FHttpServerRequest& Request, const 
 		return true;
 	}
 
-	const FReply Reply = HandleMessage(Request, Message);
-	OnComplete(ProtoBoyMCP::MakeHttpResponse(Reply.HttpStatus, Reply.Body));
+	// The reply may come later (tools that call Trello, or wait for the user's approval).
+	HandleMessage(Request, Message, [OnComplete](const FReply& Reply)
+	{
+		OnComplete(ProtoBoyMCP::MakeHttpResponse(Reply.HttpStatus, Reply.Body));
+	});
 	return true;
 }
 
-FProtoBoyMCPServer::FReply FProtoBoyMCPServer::HandleMessage(const FHttpServerRequest& Request, const TSharedPtr<FJsonObject>& Message)
+void FProtoBoyMCPServer::HandleMessage(const FHttpServerRequest& Request, const TSharedPtr<FJsonObject>& Message, FReplyCallback OnReply)
 {
 	const TSharedPtr<FJsonValue> Id = Message->TryGetField(TEXT("id"));
 	FString Method;
 	if (!Message->TryGetStringField(TEXT("method"), Method))
 	{
 		// Clients don't send responses to servers in any version we speak.
-		return { 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidRequest, TEXT("Expected a JSON-RPC request or notification")) };
+		OnReply({ 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidRequest, TEXT("Expected a JSON-RPC request or notification")) });
+		return;
 	}
 
 	const TSharedPtr<FJsonObject>* ParamsPtr = nullptr;
@@ -341,7 +361,8 @@ FProtoBoyMCPServer::FReply FProtoBoyMCPServer::HandleMessage(const FHttpServerRe
 	// Notifications (e.g. legacy notifications/initialized) need no reply.
 	if (!Id.IsValid() || Id->IsNull())
 	{
-		return { 202, nullptr };
+		OnReply({ 202, nullptr });
+		return;
 	}
 
 	// Era detection: modern requests carry their protocol version in params._meta.
@@ -350,19 +371,21 @@ FProtoBoyMCPServer::FReply FProtoBoyMCPServer::HandleMessage(const FHttpServerRe
 	const bool bModern = Params->TryGetObjectField(TEXT("_meta"), MetaPtr)
 		&& (*MetaPtr)->TryGetStringField(ProtoBoyMCP::MetaProtocolVersion, ModernVersion);
 
+	FString ClientName;
 	if (bModern)
 	{
 		if (TOptional<FReply> Invalid = ValidateModernRequest(Request, Id, Method, Params, ModernVersion))
 		{
-			return Invalid.GetValue();
+			OnReply(Invalid.GetValue());
+			return;
 		}
 
 		const TSharedPtr<FJsonObject>* ClientInfo = nullptr;
-		FString ClientName;
-		if ((*MetaPtr)->TryGetObjectField(ProtoBoyMCP::MetaClientInfo, ClientInfo) && (*ClientInfo)->TryGetStringField(TEXT("name"), ClientName))
+		if (!(*MetaPtr)->TryGetObjectField(ProtoBoyMCP::MetaClientInfo, ClientInfo) || !(*ClientInfo)->TryGetStringField(TEXT("name"), ClientName))
 		{
-			NoteClient(ClientName);
+			ClientName = TEXT("Unknown client");
 		}
+		NoteClient(ClientName);
 	}
 	else
 	{
@@ -372,60 +395,98 @@ FProtoBoyMCPServer::FReply FProtoBoyMCPServer::HandleMessage(const FHttpServerRe
 		{
 			if (ProtoBoyMCP::IsModernVersion(HeaderVersion))
 			{
-				return { 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidParams, FString::Printf(TEXT("Missing params._meta[\"%s\"]"), ProtoBoyMCP::MetaProtocolVersion)) };
+				OnReply({ 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidParams, FString::Printf(TEXT("Missing params._meta[\"%s\"]"), ProtoBoyMCP::MetaProtocolVersion)) });
+				return;
 			}
 			TSharedRef<FJsonObject> Data = MakeShared<FJsonObject>();
 			Data->SetArrayField(TEXT("supported"), ProtoBoyMCP::AllSupportedVersions());
 			Data->SetStringField(TEXT("requested"), HeaderVersion);
-			return { 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::UnsupportedProtocolVersion, TEXT("Unsupported protocol version"), Data) };
+			OnReply({ 400, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::UnsupportedProtocolVersion, TEXT("Unsupported protocol version"), Data) });
+			return;
 		}
 		// Legacy requests only name the client in initialize; credit later requests to the last one seen.
+		ClientName = LastLegacyClient.IsEmpty() ? FString(TEXT("Unknown client")) : LastLegacyClient;
 		if (Method != TEXT("initialize"))
 		{
-			NoteClient(LastLegacyClient.IsEmpty() ? FString(TEXT("Unknown client")) : LastLegacyClient);
+			NoteClient(ClientName);
 		}
 	}
 
-	// Dispatch.
-	TSharedPtr<FJsonObject> Result;
+	// Wraps a result object in a JSON-RPC response (modern results also carry resultType and serverInfo).
+	auto Complete = [Id, bModern](const TSharedRef<FJsonObject>& Result) -> FReply
+	{
+		if (bModern)
+		{
+			Result->SetStringField(TEXT("resultType"), TEXT("complete"));
+			TSharedRef<FJsonObject> ResultMeta = MakeShared<FJsonObject>();
+			ResultMeta->SetObjectField(ProtoBoyMCP::MetaServerInfo, ProtoBoyMCP::MakeServerInfo());
+			Result->SetObjectField(TEXT("_meta"), ResultMeta);
+		}
+		return { 200, ProtoBoyMCP::MakeResult(Id, Result) };
+	};
+
 	if (Method == TEXT("initialize") && !bModern)
 	{
-		Result = MakeInitializeResult(Params);
+		OnReply(Complete(MakeInitializeResult(Params)));
 	}
 	else if (Method == TEXT("server/discover") && bModern)
 	{
-		Result = MakeDiscoverResult();
+		OnReply(Complete(MakeDiscoverResult()));
 	}
 	else if (Method == TEXT("ping"))
 	{
-		Result = MakeShared<FJsonObject>();
+		OnReply(Complete(MakeShared<FJsonObject>()));
 	}
 	else if (Method == TEXT("tools/list"))
 	{
-		Result = MakeToolsListResult();
+		OnReply(Complete(MakeToolsListResult()));
+	}
+	else if (Method == TEXT("prompts/list"))
+	{
+		OnReply(Complete(MakePromptsListResult()));
+	}
+	else if (Method == TEXT("prompts/get"))
+	{
+		FString Error;
+		const TSharedPtr<FJsonObject> Result = MakePromptResult(Params, Error);
+		OnReply(Result.IsValid()
+			? Complete(Result.ToSharedRef())
+			: FReply{ bModern ? 400 : 200, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidParams, Error) });
 	}
 	else if (Method == TEXT("tools/call"))
 	{
-		FReply Error;
-		Result = CallTool(Params, Id, Error);
-		if (!Result.IsValid())
+		FString Error;
+		const TWeakPtr<bool> Alive = AliveToken;
+		const bool bStarted = CallTool(Params, ClientName,
+			[Alive, Complete, OnReply](const FProtoBoyMCPToolResult& ToolResult)
+			{
+				if (!Alive.IsValid())
+				{
+					return;
+				}
+
+				TSharedRef<FJsonObject> Text = MakeShared<FJsonObject>();
+				Text->SetStringField(TEXT("type"), TEXT("text"));
+				Text->SetStringField(TEXT("text"), ToolResult.Text);
+				TArray<TSharedPtr<FJsonValue>> Content;
+				Content.Add(MakeShared<FJsonValueObject>(Text));
+
+				TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
+				Result->SetArrayField(TEXT("content"), Content);
+				Result->SetBoolField(TEXT("isError"), ToolResult.bIsError);
+				OnReply(Complete(Result));
+			},
+			Error);
+
+		if (!bStarted)
 		{
-			return Error;
+			OnReply({ 200, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidParams, Error) });
 		}
 	}
 	else
 	{
-		return { bModern ? 404 : 200, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::MethodNotFound, FString::Printf(TEXT("Method not found: %s"), *Method)) };
+		OnReply({ bModern ? 404 : 200, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::MethodNotFound, FString::Printf(TEXT("Method not found: %s"), *Method)) });
 	}
-
-	if (bModern)
-	{
-		Result->SetStringField(TEXT("resultType"), TEXT("complete"));
-		TSharedPtr<FJsonObject> ResultMeta = Result->HasField(TEXT("_meta")) ? Result->GetObjectField(TEXT("_meta")) : MakeShared<FJsonObject>();
-		ResultMeta->SetObjectField(ProtoBoyMCP::MetaServerInfo, ProtoBoyMCP::MakeServerInfo());
-		Result->SetObjectField(TEXT("_meta"), ResultMeta);
-	}
-	return { 200, ProtoBoyMCP::MakeResult(Id, Result.ToSharedRef()) };
 }
 
 TOptional<FProtoBoyMCPServer::FReply> FProtoBoyMCPServer::ValidateModernRequest(const FHttpServerRequest& Request,
@@ -467,13 +528,15 @@ TOptional<FProtoBoyMCPServer::FReply> FProtoBoyMCPServer::ValidateModernRequest(
 	{
 		return Mismatch(TEXT("Mcp-Method header does not match the body"));
 	}
-	if (Method == TEXT("tools/call"))
+	if (Method == TEXT("tools/call") || Method == TEXT("prompts/get"))
 	{
 		if (!ProtoBoyHttp::HasHeader(Request, TEXT("Mcp-Name")))
 		{
 			return Mismatch(TEXT("Mcp-Name header is missing"));
 		}
-		if (!ProtoBoyMCP::DecodeHeaderValue(ProtoBoyHttp::GetHeader(Request, TEXT("Mcp-Name"))).Equals(Params->GetStringField(TEXT("name")), ESearchCase::CaseSensitive))
+		FString BodyName;
+		Params->TryGetStringField(TEXT("name"), BodyName);
+		if (!ProtoBoyMCP::DecodeHeaderValue(ProtoBoyHttp::GetHeader(Request, TEXT("Mcp-Name"))).Equals(BodyName, ESearchCase::CaseSensitive))
 		{
 			return Mismatch(TEXT("Mcp-Name header does not match the body"));
 		}
@@ -500,8 +563,11 @@ TSharedRef<FJsonObject> FProtoBoyMCPServer::MakeInitializeResult(const TSharedPt
 
 	TSharedRef<FJsonObject> ToolsCapability = MakeShared<FJsonObject>();
 	ToolsCapability->SetBoolField(TEXT("listChanged"), false);
+	TSharedRef<FJsonObject> PromptsCapability = MakeShared<FJsonObject>();
+	PromptsCapability->SetBoolField(TEXT("listChanged"), false);
 	TSharedRef<FJsonObject> Capabilities = MakeShared<FJsonObject>();
 	Capabilities->SetObjectField(TEXT("tools"), ToolsCapability);
+	Capabilities->SetObjectField(TEXT("prompts"), PromptsCapability);
 
 	TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
 	Result->SetStringField(TEXT("protocolVersion"), Version);
@@ -515,6 +581,7 @@ TSharedRef<FJsonObject> FProtoBoyMCPServer::MakeDiscoverResult() const
 {
 	TSharedRef<FJsonObject> Capabilities = MakeShared<FJsonObject>();
 	Capabilities->SetObjectField(TEXT("tools"), MakeShared<FJsonObject>());
+	Capabilities->SetObjectField(TEXT("prompts"), MakeShared<FJsonObject>());
 
 	TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
 	Result->SetArrayField(TEXT("supportedVersions"), ProtoBoyMCP::AllSupportedVersions());
@@ -533,16 +600,21 @@ TSharedRef<FJsonObject> FProtoBoyMCPServer::MakeToolsListResult() const
 			continue;
 		}
 
-		// TODO: Per-tool input schemas. For now every tool takes no arguments.
-		TSharedRef<FJsonObject> Schema = MakeShared<FJsonObject>();
-		Schema->SetStringField(TEXT("type"), TEXT("object"));
-		Schema->SetBoolField(TEXT("additionalProperties"), false);
-
 		TSharedRef<FJsonObject> Annotations = MakeShared<FJsonObject>();
 		Annotations->SetBoolField(TEXT("readOnlyHint"), !Tool.bWrites);
+		Annotations->SetBoolField(TEXT("destructiveHint"), false);
+
+		TSharedPtr<FJsonObject> Schema = Tool.InputSchema;
+		if (!Schema.IsValid())
+		{
+			Schema = MakeShared<FJsonObject>();
+			Schema->SetStringField(TEXT("type"), TEXT("object"));
+			Schema->SetBoolField(TEXT("additionalProperties"), false);
+		}
 
 		TSharedRef<FJsonObject> Entry = MakeShared<FJsonObject>();
 		Entry->SetStringField(TEXT("name"), Tool.Name.ToString());
+		Entry->SetStringField(TEXT("title"), Tool.Title.ToString());
 		Entry->SetStringField(TEXT("description"), Tool.Description.ToString());
 		Entry->SetObjectField(TEXT("inputSchema"), Schema);
 		Entry->SetObjectField(TEXT("annotations"), Annotations);
@@ -554,28 +626,142 @@ TSharedRef<FJsonObject> FProtoBoyMCPServer::MakeToolsListResult() const
 	return Result;
 }
 
-TSharedPtr<FJsonObject> FProtoBoyMCPServer::CallTool(const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id, FReply& OutError)
+TSharedRef<FJsonObject> FProtoBoyMCPServer::MakePromptsListResult() const
 {
-	const FString Name = Params->GetStringField(TEXT("name"));
-	const FProtoBoyMCPTool* Tool = Tools.FindByPredicate([&Name](const FProtoBoyMCPTool& T) { return T.Name.ToString() == Name; });
-	if (!Tool || !IsToolEnabled(*Tool))
+	TArray<TSharedPtr<FJsonValue>> PromptArray;
+	for (const FProtoBoyMCPPrompt& Prompt : Prompts)
 	{
-		OutError = { 200, ProtoBoyMCP::MakeRpcError(Id, ProtoBoyMCP::InvalidParams, FString::Printf(TEXT("Unknown tool: %s"), *Name)) };
+		TArray<TSharedPtr<FJsonValue>> Args;
+		for (const FProtoBoyMCPPrompt::FArgument& Arg : Prompt.Arguments)
+		{
+			TSharedRef<FJsonObject> ArgObject = MakeShared<FJsonObject>();
+			ArgObject->SetStringField(TEXT("name"), Arg.Name);
+			ArgObject->SetStringField(TEXT("description"), Arg.Description);
+			ArgObject->SetBoolField(TEXT("required"), Arg.bRequired);
+			Args.Add(MakeShared<FJsonValueObject>(ArgObject));
+		}
+
+		TSharedRef<FJsonObject> Entry = MakeShared<FJsonObject>();
+		Entry->SetStringField(TEXT("name"), Prompt.Name);
+		Entry->SetStringField(TEXT("title"), Prompt.Title);
+		Entry->SetStringField(TEXT("description"), Prompt.Description);
+		Entry->SetArrayField(TEXT("arguments"), Args);
+		PromptArray.Add(MakeShared<FJsonValueObject>(Entry));
+	}
+
+	TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetArrayField(TEXT("prompts"), PromptArray);
+	return Result;
+}
+
+TSharedPtr<FJsonObject> FProtoBoyMCPServer::MakePromptResult(const TSharedPtr<FJsonObject>& Params, FString& OutError) const
+{
+	FString Name;
+	Params->TryGetStringField(TEXT("name"), Name);
+	const FProtoBoyMCPPrompt* Prompt = Prompts.FindByPredicate([&Name](const FProtoBoyMCPPrompt& P) { return P.Name == Name; });
+	if (!Prompt)
+	{
+		OutError = FString::Printf(TEXT("Unknown prompt: %s"), *Name);
 		return nullptr;
 	}
 
-	// TODO: Run the tool's handler. Write tools ask the user first when UProtoBoySettings::bConfirmMCPWriteTools is set.
-	TSharedRef<FJsonObject> Text = MakeShared<FJsonObject>();
-	Text->SetStringField(TEXT("type"), TEXT("text"));
-	Text->SetStringField(TEXT("text"), FString::Printf(TEXT("ProtoBoy's %s tool isn't implemented yet."), *Name));
+	TMap<FString, FString> Args;
+	const TSharedPtr<FJsonObject>* ArgsObject = nullptr;
+	if (Params->TryGetObjectField(TEXT("arguments"), ArgsObject))
+	{
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*ArgsObject)->Values)
+		{
+			FString Value;
+			if (Pair.Value.IsValid() && Pair.Value->TryGetString(Value))
+			{
+				Args.Add(Pair.Key, Value);
+			}
+		}
+	}
 
-	TArray<TSharedPtr<FJsonValue>> Content;
-	Content.Add(MakeShared<FJsonValueObject>(Text));
+	for (const FProtoBoyMCPPrompt::FArgument& Arg : Prompt->Arguments)
+	{
+		if (Arg.bRequired && Args.FindRef(Arg.Name).TrimStartAndEnd().IsEmpty())
+		{
+			OutError = FString::Printf(TEXT("Prompt %s needs the \"%s\" argument."), *Name, *Arg.Name);
+			return nullptr;
+		}
+	}
+
+	TSharedRef<FJsonObject> Content = MakeShared<FJsonObject>();
+	Content->SetStringField(TEXT("type"), TEXT("text"));
+	Content->SetStringField(TEXT("text"), Prompt->Build(Args));
+
+	TSharedRef<FJsonObject> UserMessage = MakeShared<FJsonObject>();
+	UserMessage->SetStringField(TEXT("role"), TEXT("user"));
+	UserMessage->SetObjectField(TEXT("content"), Content);
+
+	TArray<TSharedPtr<FJsonValue>> Messages;
+	Messages.Add(MakeShared<FJsonValueObject>(UserMessage));
 
 	TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
-	Result->SetArrayField(TEXT("content"), Content);
-	Result->SetBoolField(TEXT("isError"), true);
+	Result->SetStringField(TEXT("description"), Prompt->Description);
+	Result->SetArrayField(TEXT("messages"), Messages);
 	return Result;
+}
+
+bool FProtoBoyMCPServer::CallTool(const TSharedPtr<FJsonObject>& Params, const FString& ClientName, FProtoBoyMCPToolDone OnResult, FString& OutError)
+{
+	FString Name;
+	Params->TryGetStringField(TEXT("name"), Name);
+	const FProtoBoyMCPTool* Tool = Tools.FindByPredicate([&Name](const FProtoBoyMCPTool& T) { return T.Name.ToString() == Name; });
+	if (!Tool || !Tool->Handler)
+	{
+		OutError = FString::Printf(TEXT("Unknown tool: %s"), *Name);
+		return false;
+	}
+	if (!IsToolEnabled(*Tool))
+	{
+		OutError = Tool->bWrites && !GetDefault<UProtoBoySettings>()->bAllowMCPWriteTools
+			? FString::Printf(TEXT("%s changes the project, and this project doesn't allow agent changes (ProtoBoy > MCP Settings > Server). Ask the user to allow them, or make the change yourself."), *Name)
+			: FString::Printf(TEXT("%s is turned off in ProtoBoy's MCP settings."), *Name);
+		return false;
+	}
+
+	FProtoBoyMCPToolCall Call;
+	const TSharedPtr<FJsonObject>* ArgsObject = nullptr;
+	Call.Args = Params->TryGetObjectField(TEXT("arguments"), ArgsObject) ? *ArgsObject : MakeShared<FJsonObject>();
+	Call.ClientName = ClientName;
+
+	// Copy what the async path needs; the Tools array could change while waiting for approval.
+	const FProtoBoyMCPToolHandler Handler = Tool->Handler;
+	const FText Title = Tool->Title;
+	const bool bWrites = Tool->bWrites;
+	const FString ArgsSummary = ProtoBoyMCP::SummarizeArgs(Call.Args);
+
+	// Write tools: log the outcome.
+	FProtoBoyMCPToolDone Done = [OnResult = MoveTemp(OnResult), bWrites, Name, ClientName, ArgsSummary](const FProtoBoyMCPToolResult& Result)
+	{
+		if (bWrites)
+		{
+			FProtoBoyAgentActivityLog::Append(ClientName, Name, ArgsSummary, Result.bIsError ? FString(TEXT("error: ")) + Result.Text.Left(300) : FString(TEXT("ok")));
+		}
+		OnResult(Result);
+	};
+
+	if (bWrites && GetDefault<UProtoBoySettings>()->bConfirmMCPWriteTools)
+	{
+		FProtoBoyMCPApprovals::Request(ClientName, Title, ArgsSummary,
+			[Handler, Call, Done = MoveTemp(Done), Name, ClientName, ArgsSummary](bool bApproved) mutable
+			{
+				if (!bApproved)
+				{
+					FProtoBoyAgentActivityLog::Append(ClientName, Name, ArgsSummary, TEXT("denied by user"));
+					Done(FProtoBoyMCPToolResult::Error(TEXT("The user denied this change in the Unreal Editor. Don't retry it; ask the user how to proceed.")));
+					return;
+				}
+				Handler(Call, MoveTemp(Done));
+			});
+		return true;
+	}
+
+	Handler(Call, MoveTemp(Done));
+	return true;
 }
 
 bool FProtoBoyMCPServer::IsAuthorized(const FHttpServerRequest& Request)
@@ -688,6 +874,14 @@ bool FProtoBoyMCPServer::ConnectClient(EProtoBoyMCPClient Client, FText& OutErro
 
 	Connection.ConfiguredClients.AddUnique(Client);
 	FProtoBoyMCPConnectionStore::Save(Connection);
+
+	// Not fatal: the agent still has the tools and server instructions without it.
+	FText GuideError;
+	if (!ProtoBoyAgentGuide::WriteForClient(Client, GuideError))
+	{
+		UE_LOG(LogProtoBoy, Warning, TEXT("Couldn't update the agent guide for %s: %s"),
+			*FProtoBoyMCPClientConfig::GetClientName(Client).ToString(), *GuideError.ToString());
+	}
 
 	if (!bRunning)
 	{

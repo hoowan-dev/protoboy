@@ -20,6 +20,7 @@ private:
 	TSharedRef<SWidget> MakeSection(const FText& Title, const TSharedRef<SWidget>& Body);
 
 	FReply OnConnectDocsClicked();
+	FReply OnCreateArchitectureClicked();
 	FReply OnMCPSettingsClicked();
 	FReply OnTasksSettingsClicked();
 

@@ -1,6 +1,7 @@
 #include "UI/SPBDashboard.h"
 
 #include "MCP/PBMCPClientConfig.h"
+#include "Misc/MessageDialog.h"
 #include "PBSubsystem.h"
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
@@ -292,6 +293,41 @@ void SProtoBoyDashboard::RebuildDocsSection()
 		];
 	}
 
+	// Architecture doc: what agents use to decide where work belongs.
+	const bool bHasArchitecture = Subsystem && Subsystem->GetDocGenerator().HasArchitectureDoc();
+	Content->AddSlot()
+	.AutoHeight()
+	.Padding(0.f, 10.f, 0.f, 0.f)
+	[
+		SNew(SHorizontalBox)
+
+		+ SHorizontalBox::Slot()
+		.FillWidth(1.f)
+		.VAlign(VAlign_Center)
+		[
+			SNew(STextBlock)
+			.Text(bHasArchitecture
+				? FText::Format(LOCTEXT("ArchitectureFound", "Architecture doc: {0}"), FText::FromString(FProtoBoyDocGenerator::ArchitectureDocPath))
+				: LOCTEXT("ArchitectureMissing", "No Architecture doc yet. Agents use it to know which system owns new work."))
+			.ColorAndOpacity(bHasArchitecture ? FSlateColor::UseForeground() : FSlateColor(FStyleColors::Warning))
+			.AutoWrapText(true)
+		]
+
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		.Padding(8.f, 0.f, 0.f, 0.f)
+		[
+			SNew(SButton)
+			.Visibility(bHasArchitecture ? EVisibility::Collapsed : EVisibility::Visible)
+			.Text(LOCTEXT("CreateArchitecture", "Create Architecture Doc"))
+			.ToolTipText(FText::Format(LOCTEXT("CreateArchitectureTip", "Writes {0} from a template (end goal, milestone, systems, rules) into {1}."),
+				FText::FromString(FProtoBoyDocGenerator::ArchitectureDocPath),
+				Subsystem ? Subsystem->GetDocsProvider().GetDisplayName() : FText::GetEmpty()))
+			.OnClicked(this, &SProtoBoyDashboard::OnCreateArchitectureClicked)
+		]
+	];
+
 	const bool bConnected = Obsidian && Obsidian->IsConnected();
 	Content->AddSlot()
 	.AutoHeight()
@@ -322,6 +358,20 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeSection(const FText& Title, const TS
 		[
 			Body
 		];
+}
+
+FReply SProtoBoyDashboard::OnCreateArchitectureClicked()
+{
+	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		FText Error;
+		if (!Subsystem->GetDocGenerator().CreateArchitectureDoc(Error))
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, Error, LOCTEXT("CreateArchitectureFailed", "Couldn't create the Architecture doc"));
+		}
+	}
+	RebuildDocsSection();
+	return FReply::Handled();
 }
 
 FReply SProtoBoyDashboard::OnConnectDocsClicked()

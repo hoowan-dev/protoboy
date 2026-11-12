@@ -2,6 +2,7 @@
 
 #include "Editor.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Net/PBHttpClient.h"
 #include "PBModule.h"
 #include "PBSettings.h"
 
@@ -14,6 +15,7 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	DaemonClient = MakeUnique<FProtoBoyDaemonClient>();
 	MCPServer = MakeUnique<FProtoBoyMCPServer>();
 	TrelloConnector = MakeUnique<FProtoBoyTrelloConnector>();
+	TrelloClient = MakeUnique<FProtoBoyTrelloClient>(*TrelloConnector);
 
 	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
 	if (Settings->bConnectToDaemon)
@@ -36,6 +38,7 @@ void UProtoBoySubsystem::Deinitialize()
 	MCPServer->Stop();
 	DaemonClient->Disconnect();
 
+	TrelloClient.Reset();
 	TrelloConnector.Reset();
 	MCPServer.Reset();
 	DaemonClient.Reset();
@@ -50,12 +53,18 @@ UProtoBoySubsystem* UProtoBoySubsystem::Get()
 	return GEditor ? GEditor->GetEditorSubsystem<UProtoBoySubsystem>() : nullptr;
 }
 
+IProtoBoyTaskProvider* UProtoBoySubsystem::GetTaskProvider() const
+{
+	return TrelloConnector->IsConnected() ? TrelloClient.Get() : nullptr;
+}
+
 void UProtoBoySubsystem::BindEditorEvents()
 {
 	if (FSlateApplication::IsInitialized())
 	{
 		ModalLoopTickHandle = FSlateApplication::Get().GetOnModalLoopTickEvent().AddUObject(this, &UProtoBoySubsystem::OnModalLoopTick);
 	}
+	CoreTickHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this, &UProtoBoySubsystem::OnCoreTick));
 
 	// TODO: IAssetRegistry::OnAssetAdded/Removed/Renamed, UPackage::PackageSavedWithContextEvent,
 	//       ILiveCodingModule::GetOnPatchCompleteDelegate.
@@ -69,11 +78,24 @@ void UProtoBoySubsystem::UnbindEditorEvents()
 	}
 	ModalLoopTickHandle.Reset();
 
+	if (CoreTickHandle.IsValid())
+	{
+		FTSTicker::GetCoreTicker().RemoveTicker(CoreTickHandle);
+		CoreTickHandle.Reset();
+	}
+
 	// TODO: Remove the handles bound in BindEditorEvents.
+}
+
+bool UProtoBoySubsystem::OnCoreTick(float DeltaTime)
+{
+	ProtoBoyHttp::PumpGameThreadQueue();
+	return true;
 }
 
 void UProtoBoySubsystem::OnModalLoopTick(float DeltaTime)
 {
+	ProtoBoyHttp::PumpGameThreadQueue();
 	MCPServer->TickWhileModal(DeltaTime);
 	TrelloConnector->TickWhileModal(DeltaTime);
 }

@@ -35,11 +35,11 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "MCP", meta = (ClampMin = "1024", ClampMax = "65535"))
 	int32 MCPPort = 47801;
 
-	/** Let agents call tools that modify the project (write ADRs, retag assets). Read-only tools are always allowed. */
+	/** Let agents call tools that change docs or tasks (create docs, append sections, write ADRs, create/move/comment tasks). Read-only tools are always allowed. */
 	UPROPERTY(Config, EditAnywhere, Category = "MCP")
 	bool bAllowMCPWriteTools = false;
 
-	/** Ask in the editor before running each write tool call. */
+	/** Ask in the editor (a notification with Allow / Deny) before running each write tool call. */
 	UPROPERTY(Config, EditAnywhere, Category = "MCP", meta = (EditCondition = "bAllowMCPWriteTools"))
 	bool bConfirmMCPWriteTools = true;
 
@@ -54,6 +54,26 @@ public:
 	 */
 	UPROPERTY(Config, EditAnywhere, Category = "Tasks|Trello")
 	FString TrelloApiKey;
+
+	/** The team's Trello board. Agents can only see and change cards on this board. Picked in Connect Task Board > Trello. */
+	UPROPERTY(Config, EditAnywhere, Category = "Tasks|Trello")
+	FString TrelloBoardId;
+
+	/** Display name of TrelloBoardId (set by the board picker). */
+	UPROPERTY(Config, EditAnywhere, Category = "Tasks|Trello")
+	FString TrelloBoardName;
+
+	/** Trello list that means "To Do". */
+	UPROPERTY(Config, EditAnywhere, Category = "Tasks|Trello")
+	FString TrelloToDoListId;
+
+	/** Trello list that means "In Progress". */
+	UPROPERTY(Config, EditAnywhere, Category = "Tasks|Trello")
+	FString TrelloInProgressListId;
+
+	/** Trello list that means "Done". */
+	UPROPERTY(Config, EditAnywhere, Category = "Tasks|Trello")
+	FString TrelloDoneListId;
 
 	/** Local port Trello redirects back to while connecting. Must match the allowed origin on the Trello API key. */
 	UPROPERTY(Config, EditAnywhere, Category = "Tasks", meta = (ClampMin = "1024", ClampMax = "65535"))
