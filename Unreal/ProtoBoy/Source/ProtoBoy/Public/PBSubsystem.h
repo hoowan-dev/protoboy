@@ -6,6 +6,7 @@
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "EditorSubsystem.h"
 #include "MCP/PBMCPServer.h"
+#include "Planning/PBPillars.h"
 #include "Tasks/Trello/PBTrelloClient.h"
 #include "Tasks/Trello/PBTrelloConnector.h"
 #include "PBSubsystem.generated.h"
@@ -31,6 +32,7 @@ public:
 	FProtoBoyMCPServer& GetMCPServer() const { return *MCPServer; }
 	FProtoBoyTrelloConnector& GetTrelloConnector() const { return *TrelloConnector; }
 	FProtoBoyTrelloClient& GetTrelloClient() const { return *TrelloClient; }
+	FProtoBoyPillarService& GetPillars() const { return *Pillars; }
 
 	/** The docs platform in use (Obsidian when connected, else the project's DocsDirectory). */
 	IProtoBoyDocsProvider& GetDocsProvider() const { return DocGenerator->GetProvider(); }
@@ -60,4 +62,5 @@ private:
 	TUniquePtr<FProtoBoyMCPServer> MCPServer;
 	TUniquePtr<FProtoBoyTrelloConnector> TrelloConnector;
 	TUniquePtr<FProtoBoyTrelloClient> TrelloClient;
+	TUniquePtr<FProtoBoyPillarService> Pillars;
 };

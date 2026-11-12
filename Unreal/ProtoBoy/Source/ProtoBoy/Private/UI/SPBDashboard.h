@@ -2,7 +2,7 @@
 
 #include "Widgets/SCompoundWidget.h"
 
-/** ProtoBoy dashboard: Setup (plugin settings, MCP, Documentation, Tasks, Asset Sourcing) and Planning (setup checklist, ...) sections. */
+/** ProtoBoy dashboard: Setup (plugin settings, MCP, Documentation, Tasks, Asset Sourcing) and Planning (setup checklist, pillar tree) sections. */
 class SProtoBoyDashboard : public SCompoundWidget
 {
 public:
@@ -23,7 +23,7 @@ private:
 	TSharedRef<SWidget> MakeSection(const FText& Title, const TSharedRef<SWidget>& Body, bool bTopLevel = false);
 
 
-	/** Planning: a checklist of the setup steps, then (later) planning tools. */
+	/** Planning: a checklist of the setup steps, then the pillar tree editor. */
 	TSharedRef<SWidget> MakePlanningSection();
 
 	/** One checklist row. GetState returns true when done and fills Detail; OnSetUp opens the window to finish it. */

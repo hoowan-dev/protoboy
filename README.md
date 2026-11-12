@@ -44,7 +44,7 @@ come later (see [Roadmap](#roadmap)).
   **Asset Sourcing** sections. Each shows its connection status and what's left to set up.
 - **Planning**: a setup checklist, with a check or warning for connecting an agent (MCP), documentation (Obsidian and
   the Architecture doc) and a task board (Trello, with lists mapped). Each step has a **Set Up...** shortcut until it's
-  done. Planning tools come next.
+  done. Below it is the **pillar tree** editor (see [Pillars](#pillars)).
 
 ### MCP server and one-click agent setup
 
@@ -98,6 +98,21 @@ come later (see [Roadmap](#roadmap)).
 Trello needs an API key from a Trello Power-Up. The Trello page of **Connect Task Board** walks you through creating
 one and adding ProtoBoy's local address under **Allowed origins**.
 
+### Pillars
+
+The team's architecture as a tree of **pillars**: mechanics, domains, disciplines, or whatever fits the game, nested as
+deep as needed. Edit it in **Planning > Pillars**:
+
+- **Tree editor:** add, nest, reorder and remove pillars, or start from a common set (Gameplay, Animation, Art, Audio,
+  Content, UI). Each pillar has a name, a free-form kind, a one-line vision, a parent and the pillars it depends on.
+- **Stable IDs:** each pillar keeps its ID when renamed or moved, so docs and (later) tasks keep pointing at it.
+- **Saved to a file:** `ProtoBoy/Pillars.json` in the project (configurable), meant to be committed and shared.
+- **Generate Docs...:** previews, then writes, a doc per pillar under `Pillars/` in the docs folder, nested like the
+  tree. Each doc starts from a template (Vision, Goals, Non-goals, Design, Rules, Interfaces, Art & assets, Open
+  questions). ProtoBoy only owns a header block with the kind, vision, and links to the parent, children and
+  dependencies (Obsidian wikilinks, so the graph mirrors the tree). The Architecture doc gets a generated pillar
+  overview. Renamed pillars keep their doc; removed ones have their doc marked archived, never deleted.
+
 ### Asset sourcing (optional)
 
 Stops agents from defaulting to AI-generated assets. In **Setup > Asset Sourcing** you choose:
@@ -137,6 +152,7 @@ Copy or symlink `Unreal/ProtoBoy` into your project's `Plugins/` folder and buil
 | What | Where | Shared? |
 |---|---|---|
 | Team settings (ports, board and list mapping, Architecture doc path, write gating, Trello API key) | `Config/DefaultProtoBoy.ini` | Yes, committed |
+| Pillar tree | `ProtoBoy/Pillars.json` (configurable) | Yes, committed |
 | Agent guide section | `CLAUDE.md`, `GEMINI.md` in the project root (managed block only) | Yes, committed |
 | Your docs connection | `Saved/ProtoBoy/DocsConnection.json` | No |
 | Your MCP token and connected agents | `Saved/ProtoBoy/MCPConnection.json` | No |
@@ -159,7 +175,8 @@ Power-Up's secret is, and ProtoBoy never needs it.
 
 ## Vision: the pillar tree
 
-> Planned, not built yet. The design below is the direction; some decisions are still open.
+> Partly built: the pillar tree and doc generation (step 1 below) are in. The rest is the direction; some decisions
+> are still open.
 
 Today, the Architecture doc's list of systems is what anchors agents. The plan is to replace it with a **tree of
 architectural pillars** that the team defines: gameplay, animation, art, content, or whatever fits the game. Pillars
@@ -200,8 +217,8 @@ visible and checked.
 
 **Next: the pillar tree**
 
-1. Pillar model and editor: a committed pillar file with stable IDs, a tree editor in **Planning**, and doc generation
-   with a preview.
+1. ~~Pillar model and editor: a committed pillar file with stable IDs, a tree editor in **Planning**, and doc
+   generation with a preview.~~ Done.
 2. Pillar-aware agents: a `get_context` tool for a task or pillar, a required pillar on task and design writes, and a
    "define the vision" interview prompt.
 3. Task projection: pillar labels and `Pillar:` lines on the board, with a preview.
@@ -237,6 +254,7 @@ Unreal/ProtoBoy/                 Unreal Engine 5.9 editor plugin
         Obsidian/                Obsidian vault connector and provider
       Tasks/                     Task provider interface, task board connection store
         Trello/                  Trello connect flow and REST client
+      Planning/                  Pillar tree and pillar doc generation
       Sourcing/                  Asset sourcing policy, its MCP tools and prompts
         Fab/                     Fab source (opens fab.com searches)
       MCP/                       MCP server, tools, prompts, approvals, agent guide, client config

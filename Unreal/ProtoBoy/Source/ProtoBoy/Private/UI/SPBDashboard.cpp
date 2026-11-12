@@ -10,6 +10,7 @@
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
 #include "UI/PBStyle.h"
+#include "UI/Planning/SPBPillarTreeEditor.h"
 #include "UI/Sourcing/SPBAssetSourcingPanel.h"
 #include "UI/Tasks/SPBConnectTasksDialog.h"
 #include "UI/Docs/SPBConnectDocsDialog.h"
@@ -549,6 +550,14 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakePlanningSection()
 		.Padding(0.f, 6.f, 0.f, 0.f)
 		[
 			MakeSetupStep(LOCTEXT("StepTasks", "Connect a task board"), TasksStep, &SProtoBoyDashboard::OnTasksSettingsClicked)
+		]
+
+		// Pillar tree
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 14.f, 0.f, 0.f)
+		[
+			MakeSection(LOCTEXT("PillarsHeader", "Pillars"), SNew(SProtoBoyPillarTreeEditor))
 		];
 }
 
