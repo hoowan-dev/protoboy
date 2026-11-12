@@ -157,27 +157,69 @@ Power-Up's secret is, and ProtoBoy never needs it.
 - **Claude Code setup briefly freezes the editor.** Connecting Claude Code runs the `claude` CLI on the editor's main
   thread for a second or two.
 
+## Vision: the pillar tree
+
+> Planned, not built yet. The design below is the direction; some decisions are still open.
+
+Today, the Architecture doc's list of systems is what anchors agents. The plan is to replace it with a **tree of
+architectural pillars** that the team defines: gameplay, animation, art, content, or whatever fits the game. Pillars
+can be organised around mechanics, domains or disciplines, and nest as deep as needed (for example
+`gameplay/combat/abilities`). Everything else hangs off that tree.
+
+**Author once, generate the rest.** You build the tree in the dashboard's **Planning** section. ProtoBoy then
+generates matching structure:
+
+- **Docs:** a doc per pillar, for example `Pillars/Gameplay/Combat.md`, from a template: Vision, Goals, Non-goals,
+  Design, Rules, Interfaces, Art & assets. ProtoBoy only owns a small managed header (parent and child links,
+  dependencies), so the rest is yours. In Obsidian the links mirror the tree in the graph view.
+- **Tasks:** pillar labels on the board, plus a `Pillar: gameplay/combat` line on each card.
+- **Sync:** generation is previewed before it's applied, and follows stable pillar IDs through renames. Removing a
+  pillar archives its doc and label rather than deleting anything a person wrote.
+
+**You or the agent fill it in.** Pillars start as outlines. You can write the vision yourself, or let an agent
+interview you about the game and each pillar and draft the sections for you to approve.
+
+**Alignment comes from retrieval plus checks.** Retrieval puts the right context in front of the agent; checks catch
+what slips through.
+
+- **Structural retrieval first.** For a task or feature, ProtoBoy resolves its pillar and hands the agent that pillar's
+  doc and rules, the vision of its parent pillars, the interfaces of the pillars it depends on, and the art direction.
+  It's predictable and easy to explain, which matters more at game-project scale than fuzzy matching.
+- **Search for everything else.** Ranked keyword search across the docs, filterable by pillar. Semantic search with
+  local embeddings may follow, opt-in and running in the daemon, since ProtoBoy deliberately holds no LLM keys.
+- **Gates:**
+  - Every task and design change names its pillar. Work that fits no pillar needs an ADR proposing one.
+  - An alignment check gives the agent the relevant vision, rules and a checklist to answer before it writes code.
+  - Deterministic checks flag code outside its pillar's folders, and dependencies between pillars that break the rules.
+  - Asset suggestions use the pillar's art notes and the project's art direction, so prototypes fit the intended look.
+
+ProtoBoy can't guarantee an agent stays aligned. The goal is to make the aligned path the easy one, and misalignment
+visible and checked.
+
 ## Roadmap
 
-**Next (agent alignment)**
+**Next: the pillar tree**
 
-- Engine context: read the project's real structure (modules, plugins, folders, key classes) so agents see the code as
-  it is, not only as documented.
-- `architecture_check`: compare the real structure with the Architecture doc and report drift.
-- Fill in the **Planning** section of the dashboard.
-- Move the MCP server and the docs and task connectors into a standalone **daemon**, so agents keep project context
-  without the editor open and one service can support every engine.
+1. Pillar model and editor: a committed pillar file with stable IDs, a tree editor in **Planning**, and doc generation
+   with a preview.
+2. Pillar-aware agents: a `get_context` tool for a task or pillar, a required pillar on task and design writes, and a
+   "define the vision" interview prompt.
+3. Task projection: pillar labels and `Pillar:` lines on the board, with a preview.
+4. Retrieval and gates: ranked search filtered by pillar, and an alignment check before code is written.
+5. Deterministic checks: read the project's real structure (modules, plugins, folders, key classes), compare it with
+   the pillar tree, and report drift. Per-pillar asset alignment.
+6. Move the MCP server and the docs and task connectors into a standalone **daemon**, so agents keep project context
+   without the editor open, one service can support every engine, and optional local embeddings have a home.
 
 **From the concept**
 
 - Living docs: TDD stubs generated when gameplay assets or classes are created, regenerating only managed blocks.
 - More docs and task platforms behind the same provider interfaces: Notion and Confluence; Jira, Basecamp, Linear and
   GitHub Issues.
+- More asset sources behind the Asset Sourcing section: Kenney, Poly Haven, ambientCG, with license metadata.
 - Toolchain: Git and Perforce hooks, and turning `TODO` / `HACK` markers into tracked tasks.
 - Test scaffolding for mechanics (Unreal Automation Spec, Unity Test Framework, GdUnit4).
 - Unity and Godot plugins.
-
-- More asset sources behind the Asset Sourcing section: Kenney, Poly Haven, ambientCG, with license metadata.
 
 **Shelved for now:** project health checks with the Prototype-to-Production Viability Index, and asset lifecycle
 tagging with the Greybox Replacement Matrix. The earlier stubs are in git history.
