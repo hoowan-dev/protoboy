@@ -47,7 +47,7 @@ void SProtoBoyPillarTreeEditor::Construct(const FArguments& InArgs)
 	[
 		SNew(SVerticalBox)
 
-		// Setup Pillars / Clear Pillars
+		// Setup Pillars from Template / Clear Pillars
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.HAlign(HAlign_Left)
@@ -59,7 +59,7 @@ void SProtoBoyPillarTreeEditor::Construct(const FArguments& InArgs)
 			.AutoWidth()
 			[
 				SNew(SButton)
-				.Text(LOCTEXT("SetupPillars", "Setup Pillars"))
+				.Text(LOCTEXT("SetupPillars", "Setup Pillars from Template"))
 				.OnClicked(this, &SProtoBoyPillarTreeEditor::OnSetupPillarsClicked)
 			]
 

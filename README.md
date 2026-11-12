@@ -117,9 +117,11 @@ deep as needed. Edit it in **Architecture > Pillars**:
   load, with their old top-level pillars moved under it.
 - **Tree editor:** a Behavior Tree style graph with the root at the top. Add, nest, reorder and remove pillars. Each
   pillar has a name, a free-form kind, a one-line vision, a parent and the pillars it depends on.
-- **Setup Pillars / Clear Pillars:** two buttons at the top of the section. **Clear Pillars** removes every pillar
-  below the game (after asking), leaving just the root; their docs are archived like any removed pillar. **Setup
-  Pillars** opens the Setup Pillars window (empty for now).
+- **Setup Pillars from Template / Clear Pillars:** two buttons at the top of the section. **Clear Pillars** removes
+  every pillar below the game (after asking), leaving just the root; their docs are archived like any removed pillar.
+  **Setup Pillars from Template** opens the Setup Pillars from Template window, which offers two ways to start:
+  **Build From Template** (pick a preset by game genre and scope) and **Build From Existing Project** (an LLM proposes
+  pillars around the work done so far). Both next steps are blank for now.
 - **Stable IDs:** each pillar keeps its ID when renamed or moved, so docs and (later) tasks keep pointing at it.
 - **Saved to a file:** `ProtoBoy/Pillars.json` in the project (configurable), meant to be committed and shared.
 - **Generate Docs...:** previews, then writes, a doc per pillar under `Pillars/` in the docs folder, nested like the
