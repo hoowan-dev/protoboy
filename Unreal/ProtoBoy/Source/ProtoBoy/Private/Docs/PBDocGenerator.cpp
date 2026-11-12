@@ -9,7 +9,6 @@
 
 #define LOCTEXT_NAMESPACE "ProtoBoyDocGenerator"
 
-const TCHAR* FProtoBoyDocGenerator::ArchitectureDocPath = TEXT("Architecture.md");
 const TCHAR* FProtoBoyDocGenerator::DesignFolder = TEXT("Design");
 const TCHAR* FProtoBoyDocGenerator::ADRFolder = TEXT("ADR");
 
@@ -122,6 +121,64 @@ FProtoBoyDocGenerator::FProtoBoyDocGenerator(const FProtoBoyObsidianConnector& I
 	: Obsidian(InObsidian)
 	, ObsidianDocs(InObsidian)
 {
+}
+
+FString FProtoBoyDocGenerator::GetArchitectureDocPath()
+{
+	FString Normalized;
+	FText Ignored;
+	return NormalizeDocPath(GetDefault<UProtoBoySettings>()->ArchitectureDocPath, Normalized, Ignored)
+		? Normalized
+		: FString(TEXT("Architecture.md"));
+}
+
+bool FProtoBoyDocGenerator::NormalizeDocPath(const FString& Path, FString& OutNormalized, FText& OutError)
+{
+	FString Out = Path.TrimStartAndEnd();
+	Out.ReplaceInline(TEXT("\\"), TEXT("/"));
+	while (Out.StartsWith(TEXT("/")))
+	{
+		Out.RightChopInline(1);
+	}
+	if (Out.IsEmpty())
+	{
+		OutError = LOCTEXT("EmptyPath", "Enter a path, e.g. \"Architecture.md\".");
+		return false;
+	}
+	if (Out.Contains(TEXT(":")) || Out.Contains(TEXT("..")) || Out.Contains(TEXT("//")))
+	{
+		OutError = LOCTEXT("UnsafePath", "The path must be inside the docs folder (no drive letters or \"..\").");
+		return false;
+	}
+	for (const TCHAR C : FString(TEXT("<>\"|?*")))
+	{
+		if (Out.Contains(FString::Chr(C)))
+		{
+			OutError = LOCTEXT("BadChars", "The path can't contain < > \" | ? *");
+			return false;
+		}
+	}
+	if (!Out.EndsWith(TEXT(".md"), ESearchCase::IgnoreCase))
+	{
+		Out += TEXT(".md");
+	}
+	OutNormalized = Out;
+	return true;
+}
+
+bool FProtoBoyDocGenerator::SetArchitectureDocPath(const FString& Path, FString& OutNormalized, FText& OutError)
+{
+	if (!NormalizeDocPath(Path, OutNormalized, OutError))
+	{
+		return false;
+	}
+	UProtoBoySettings* Settings = GetMutableDefault<UProtoBoySettings>();
+	if (Settings->ArchitectureDocPath != OutNormalized)
+	{
+		Settings->ArchitectureDocPath = OutNormalized;
+		Settings->TryUpdateDefaultConfigFile();
+	}
+	return true;
 }
 
 IProtoBoyDocsProvider& FProtoBoyDocGenerator::GetProvider() const
@@ -245,12 +302,12 @@ bool FProtoBoyDocGenerator::SetManagedBlock(const FString& Path, const FString& 
 
 bool FProtoBoyDocGenerator::HasArchitectureDoc() const
 {
-	return GetProvider().DocExists(ArchitectureDocPath);
+	return GetProvider().DocExists(GetArchitectureDocPath());
 }
 
 bool FProtoBoyDocGenerator::CreateArchitectureDoc(FText& OutError)
 {
-	return GetProvider().WriteDoc(ArchitectureDocPath, ProtoBoyDocGenerator::ArchitectureTemplate, /*bMustNotExist*/ true, OutError);
+	return GetProvider().WriteDoc(GetArchitectureDocPath(), ProtoBoyDocGenerator::ArchitectureTemplate, /*bMustNotExist*/ true, OutError);
 }
 
 FProtoBoyArchitecture FProtoBoyDocGenerator::ReadArchitecture() const
@@ -258,7 +315,7 @@ FProtoBoyArchitecture FProtoBoyDocGenerator::ReadArchitecture() const
 	FProtoBoyArchitecture Architecture;
 	FString Text;
 	FText Ignored;
-	if (!GetProvider().ReadDoc(ArchitectureDocPath, Text, Ignored))
+	if (!GetProvider().ReadDoc(GetArchitectureDocPath(), Text, Ignored))
 	{
 		return Architecture;
 	}

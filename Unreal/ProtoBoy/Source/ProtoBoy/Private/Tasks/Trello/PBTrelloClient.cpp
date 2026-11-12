@@ -1,5 +1,6 @@
 #include "Tasks/Trello/PBTrelloClient.h"
 
+#include "Docs/PBDocGenerator.h"
 #include "Dom/JsonObject.h"
 #include "Misc/App.h"
 #include "Net/PBHttpClient.h"
@@ -330,7 +331,7 @@ void FProtoBoyTrelloClient::ApplyBoardTemplate(const FString& ExistingBoardId, c
 		"Task board for %s, set up by ProtoBoy.\n\n"
 		"- Lists: To Do -> In Progress -> Done. AI agents move cards through them via ProtoBoy.\n"
 		"- Link each card to its design doc with a line like: Design doc: Design/Combat.md\n"
-		"- The project's systems and rules live in Architecture.md in the docs folder."), FApp::GetProjectName()));
+		"- The project's systems and rules live in %s in the docs folder."), FApp::GetProjectName(), *FProtoBoyDocGenerator::GetArchitectureDocPath()));
 
 	Call(TEXT("POST"), TEXT("boards"), Body, [State, MapLists](bool bOk, const FText& Error, const TSharedPtr<FJsonValue>& Json)
 	{

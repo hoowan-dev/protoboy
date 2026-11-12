@@ -64,6 +64,9 @@ public:
 	/** Absolute docs root inside the vault. Only meaningful when IsConnected(). */
 	FString GetDocsRoot() const;
 
+	/** Open a doc (path relative to the docs root) in the Obsidian app via an obsidian://open link. */
+	bool OpenInObsidian(const FString& DocsRelativePath, FText& OutError) const;
+
 	const FProtoBoyDocsConnection& GetConnection() const { return Connection; }
 
 private:

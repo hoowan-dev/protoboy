@@ -1,5 +1,8 @@
 #include "Docs/Obsidian/PBObsidianConnector.h"
 
+#include "GenericPlatform/GenericPlatformHttp.h"
+#include "HAL/PlatformProcess.h"
+
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformMisc.h"
@@ -329,6 +332,29 @@ bool FProtoBoyObsidianConnector::WriteMarkerNote(const FString& DocsRoot, FText&
 	if (!FFileHelper::SaveStringToFile(Content, *NotePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
 	{
 		OutError = FText::Format(LOCTEXT("WriteFailed", "Could not write {0}."), FText::FromString(NotePath));
+		return false;
+	}
+	return true;
+}
+
+bool FProtoBoyObsidianConnector::OpenInObsidian(const FString& DocsRelativePath, FText& OutError) const
+{
+	if (!IsConnected())
+	{
+		OutError = LOCTEXT("OpenNotConnected", "Obsidian isn't connected.");
+		return false;
+	}
+
+	// obsidian://open?vault=<vault name>&file=<path inside the vault>
+	const FString File = GetDocsFolder() / DocsRelativePath;
+	const FString Uri = FString::Printf(TEXT("obsidian://open?vault=%s&file=%s"),
+		*FGenericPlatformHttp::UrlEncode(GetVaultName()), *FGenericPlatformHttp::UrlEncode(File));
+
+	FString LaunchError;
+	FPlatformProcess::LaunchURL(*Uri, nullptr, &LaunchError);
+	if (!LaunchError.IsEmpty())
+	{
+		OutError = FText::Format(LOCTEXT("OpenFailed", "Couldn't open Obsidian ({0}). Is it installed?"), FText::FromString(LaunchError));
 		return false;
 	}
 	return true;

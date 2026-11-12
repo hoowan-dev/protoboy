@@ -23,6 +23,13 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Docs|Obsidian")
 	FString ObsidianDocsFolder;
 
+	/**
+	 * The Architecture doc (end goal, milestone, systems, rules) that agents read before placing work. Path relative to the
+	 * docs folder, e.g. "Architecture.md" or "Overview/Game Architecture.md". Set in Connect to Documentation.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Docs")
+	FString ArchitectureDocPath = TEXT("Architecture.md");
+
 	/** Generate TDD stubs automatically when new gameplay assets are created. */
 	UPROPERTY(Config, EditAnywhere, Category = "Docs")
 	bool bAutoGenerateTDDStubs = true;

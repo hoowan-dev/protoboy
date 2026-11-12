@@ -233,11 +233,11 @@ namespace ProtoBoyMCPTools
 		{
 			Out += FString::Printf(TEXT("\n**There is no %s yet.** Without it you can't tell which system should own new work. "
 				"Ask the user to create it (ProtoBoy dashboard > Documentation > Create Architecture Doc) and fill in the "
-				"systems, or offer to draft the contents for them to review.\n"), FProtoBoyDocGenerator::ArchitectureDocPath);
+				"systems, or offer to draft the contents for them to review.\n"), *FProtoBoyDocGenerator::GetArchitectureDocPath());
 		}
 		else
 		{
-			Out += FString::Printf(TEXT("- **Architecture doc:** %s (read it in full with docs_read)\n"), FProtoBoyDocGenerator::ArchitectureDocPath);
+			Out += FString::Printf(TEXT("- **Architecture doc:** %s (read it in full with docs_read)\n"), *FProtoBoyDocGenerator::GetArchitectureDocPath());
 			Out += FString::Printf(TEXT("\n## End goal\n\n%s\n"), *OrNotSet(Architecture.EndGoal));
 			Out += FString::Printf(TEXT("\n## Current milestone\n\n%s\n"), *OrNotSet(Architecture.CurrentMilestone));
 
@@ -320,7 +320,7 @@ namespace ProtoBoyMCPTools
 		{
 			Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("%s doesn't list any systems yet, so ProtoBoy can't place this. "
 				"Ask the user which system should own it, or offer to draft the Systems section for them to review."),
-				FProtoBoyDocGenerator::ArchitectureDocPath)));
+				*FProtoBoyDocGenerator::GetArchitectureDocPath())));
 			return;
 		}
 
@@ -493,9 +493,13 @@ namespace ProtoBoyMCPTools
 		const FString Content = GetString(Call, TEXT("content"));
 		const FString Mode = GetString(Call, TEXT("mode")).IsEmpty() ? FString(TEXT("append")) : GetString(Call, TEXT("mode"));
 
-		if (Path.Equals(FProtoBoyDocGenerator::ArchitectureDocPath, ESearchCase::IgnoreCase) && Mode != TEXT("append"))
+		FString NormalizedPath;
+		FText PathError;
+		const bool bIsArchitecture = FProtoBoyDocGenerator::NormalizeDocPath(Path, NormalizedPath, PathError)
+			&& NormalizedPath.Equals(FProtoBoyDocGenerator::GetArchitectureDocPath(), ESearchCase::IgnoreCase);
+		if (bIsArchitecture && Mode != TEXT("append"))
 		{
-			Done(FProtoBoyMCPToolResult::Error(TEXT("Architecture.md is owned by humans: agents may only append to it, and only when the user asks.")));
+			Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("%s is the Architecture doc, which humans own: agents may only append to it, and only when the user asks."), *NormalizedPath)));
 			return;
 		}
 
@@ -544,7 +548,7 @@ namespace ProtoBoyMCPTools
 			Done(FProtoBoyMCPToolResult::Error(Error));
 			return;
 		}
-		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Created %s. If it changes systems or rules, propose the matching Architecture.md edit to the user."), *Path)));
+		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Created %s. If it changes systems or rules, propose the matching edit to %s to the user."), *Path, *FProtoBoyDocGenerator::GetArchitectureDocPath())));
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

@@ -138,7 +138,7 @@ namespace ProtoBoyMCP
 		"Follow the architecture's dependency rules and conventions. A new system or module, or an exception to a rule, needs an ADR (adr_create) and the user's agreement first. "
 		"Work from tasks: task_get for details and the linked design doc, task_update_status as you start and finish, task_comment to report what changed. "
 		"Put out-of-scope work into new tasks (task_create) instead of growing the current one. "
-		"Keep docs current by appending to design docs (docs_update_section). Humans own Architecture.md and existing text: never rewrite it. "
+		"Keep docs current by appending to design docs (docs_update_section). Humans own the Architecture doc (get_project_context gives its path) and existing text: never rewrite them. "
 		"Write tools can require the user's approval in the editor; if a change is denied, don't retry it, ask the user. "
 		"Workflow prompts: plan-feature, implement-task, record-decision.");
 
@@ -890,6 +890,19 @@ bool FProtoBoyMCPServer::ConnectClient(EProtoBoyMCPClient Client, FText& OutErro
 
 	OnStatusChanged.Broadcast();
 	return true;
+}
+
+void FProtoBoyMCPServer::RefreshAgentGuides()
+{
+	for (const EProtoBoyMCPClient Client : Connection.ConfiguredClients)
+	{
+		FText Error;
+		if (!ProtoBoyAgentGuide::WriteForClient(Client, Error))
+		{
+			UE_LOG(LogProtoBoy, Warning, TEXT("Couldn't update the agent guide for %s: %s"),
+				*FProtoBoyMCPClientConfig::GetClientName(Client).ToString(), *Error.ToString());
+		}
+	}
 }
 
 bool FProtoBoyMCPServer::DisconnectClient(EProtoBoyMCPClient Client, FText& OutError)

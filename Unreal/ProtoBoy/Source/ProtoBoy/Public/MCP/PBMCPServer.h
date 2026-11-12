@@ -123,6 +123,9 @@ public:
 	/** Remove ProtoBoy's entry from the client's config and forget the client. */
 	bool DisconnectClient(EProtoBoyMCPClient Client, FText& OutError);
 
+	/** Rewrite the agent guide in every connected client's instruction file (e.g. after the Architecture doc moves). */
+	void RefreshAgentGuides();
+
 	/** Any client connected by this user. The server then starts with the editor for them even if the team setting is off. */
 	bool HasConnectedClients() const { return Connection.ConfiguredClients.Num() > 0; }
 

@@ -1,6 +1,7 @@
 #include "UI/Obsidian/SPBObsidianPanel.h"
 
 #include "DesktopPlatformModule.h"
+#include "Docs/PBDocGenerator.h"
 #include "Framework/Application/SlateApplication.h"
 #include "IDesktopPlatform.h"
 #include "Misc/Paths.h"
@@ -12,6 +13,7 @@
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SEditableTextBox.h"
+#include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
@@ -181,9 +183,230 @@ void SProtoBoyObsidianPanel::Construct(const FArguments& InArgs)
 				.OnClicked(this, &SProtoBoyObsidianPanel::OnConnectClicked)
 			]
 		]
+
+		// Architecture doc (after connecting)
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 16.f, 0.f, 0.f)
+		[
+			MakeArchitectureCard()
+		]
 	];
 
 	Revalidate();
+	RefreshArchitectureState();
+}
+
+TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeArchitectureCard()
+{
+	auto IsVaultConnected = []()
+	{
+		const FProtoBoyObsidianConnector* Connector = GetConnector();
+		return Connector && Connector->IsConnected();
+	};
+
+	return SNew(SBorder)
+		.Visibility_Lambda([IsVaultConnected]() { return IsVaultConnected() ? EVisibility::Visible : EVisibility::Collapsed; })
+		.BorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
+		.Padding(12.f)
+		[
+			SNew(SVerticalBox)
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this]()
+				{
+					return bHasArchitecture ? LOCTEXT("ArchitectureHeader", "Architecture doc")
+						: LOCTEXT("ArchitectureHeaderSetup", "Next: set up the Architecture doc");
+				})
+				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 11))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 4.f, 0.f, 0.f)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("ArchitectureIntro", "The project's end goal, current milestone, systems and dependency rules. AI agents read it before designing or placing new work. Humans own it; agents only append."))
+				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+				.AutoWrapText(true)
+			]
+
+			// Where it lives (team-wide)
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 10.f, 0.f, 0.f)
+			[
+				MakeLabel(LOCTEXT("ArchitecturePathLabel", "Path in docs folder"))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 4.f, 0.f, 0.f)
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.f)
+				[
+					SAssignNew(ArchitecturePathBox, SEditableTextBox)
+					.Text(FText::FromString(FProtoBoyDocGenerator::GetArchitectureDocPath()))
+					.HintText(LOCTEXT("ArchitecturePathHint", "Architecture.md"))
+					.ToolTipText(LOCTEXT("ArchitecturePathTip", "Any name or folder inside the docs folder. Point it at an existing note to use that note. Shared by the team (DefaultProtoBoy.ini)."))
+					.OnTextCommitted_Lambda([this](const FText& Text, ETextCommit::Type) { ApplyArchitecturePath(Text.ToString()); })
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.Padding(4.f, 0.f, 0.f, 0.f)
+				[
+					SNew(SButton)
+					.Text(LOCTEXT("BrowseArchitecture", "Browse..."))
+					.ToolTipText(LOCTEXT("BrowseArchitectureTip", "Pick an existing note in the docs folder."))
+					.OnClicked(this, &SProtoBoyObsidianPanel::OnBrowseArchitectureClicked)
+				]
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 8.f, 0.f, 0.f)
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.f)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text_Lambda([this]()
+					{
+						if (!ArchitectureError.IsEmpty())
+						{
+							return ArchitectureError;
+						}
+						const FProtoBoyObsidianConnector* Connector = GetConnector();
+						const FText Path = FText::FromString(Connector ? Connector->GetDocsFolder() / FProtoBoyDocGenerator::GetArchitectureDocPath() : FString());
+						return bHasArchitecture
+							? FText::Format(LOCTEXT("ArchitectureFound", "{0} is in the vault. Keep it current as the design changes."), Path)
+							: FText::Format(LOCTEXT("ArchitectureMissing", "Create {0} from ProtoBoy's template, then fill it in in Obsidian."), Path);
+					})
+					.ColorAndOpacity_Lambda([this]()
+					{
+						return !ArchitectureError.IsEmpty() ? FSlateColor(FStyleColors::Error)
+							: bHasArchitecture ? FSlateColor(FStyleColors::Success)
+							: FSlateColor(FStyleColors::Warning);
+					})
+					.AutoWrapText(true)
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(8.f, 0.f, 0.f, 0.f)
+				[
+					SNew(SButton)
+					.Visibility_Lambda([this]() { return bHasArchitecture ? EVisibility::Collapsed : EVisibility::Visible; })
+					.ButtonStyle(FAppStyle::Get(), "PrimaryButton")
+					.Text(LOCTEXT("CreateArchitecture", "Create Architecture Doc"))
+					.OnClicked(this, &SProtoBoyObsidianPanel::OnCreateArchitectureClicked)
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(8.f, 0.f, 0.f, 0.f)
+				[
+					SNew(SButton)
+					.Visibility_Lambda([this]() { return bHasArchitecture ? EVisibility::Visible : EVisibility::Collapsed; })
+					.Text(LOCTEXT("OpenArchitecture", "Open in Obsidian"))
+					.OnClicked(this, &SProtoBoyObsidianPanel::OnOpenArchitectureClicked)
+				]
+			]
+		];
+}
+
+void SProtoBoyObsidianPanel::ApplyArchitecturePath(const FString& Path)
+{
+	ArchitectureError = FText::GetEmpty();
+
+	FString Normalized;
+	if (!FProtoBoyDocGenerator::SetArchitectureDocPath(Path, Normalized, ArchitectureError))
+	{
+		return;
+	}
+	if (ArchitecturePathBox.IsValid())
+	{
+		ArchitecturePathBox->SetText(FText::FromString(Normalized));
+	}
+	RefreshArchitectureState();
+
+	// The agent guide names the doc, so connected agents need the new path.
+	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		Subsystem->GetMCPServer().RefreshAgentGuides();
+	}
+}
+
+FReply SProtoBoyObsidianPanel::OnBrowseArchitectureClicked()
+{
+	const FProtoBoyObsidianConnector* Connector = GetConnector();
+	IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
+	if (!Connector || !Connector->IsConnected() || !DesktopPlatform)
+	{
+		return FReply::Handled();
+	}
+
+	FString DocsRoot = FPaths::ConvertRelativePathToFull(Connector->GetDocsRoot());
+	FPaths::NormalizeDirectoryName(DocsRoot);
+
+	TArray<FString> Picked;
+	const void* ParentHandle = FSlateApplication::Get().FindBestParentWindowHandleForDialogs(AsShared());
+	if (!DesktopPlatform->OpenFileDialog(ParentHandle, LOCTEXT("BrowseArchitectureTitle", "Choose the Architecture doc").ToString(),
+		DocsRoot, FString(), TEXT("Markdown (*.md)|*.md"), EFileDialogFlags::None, Picked) || Picked.IsEmpty())
+	{
+		return FReply::Handled();
+	}
+
+	FString File = FPaths::ConvertRelativePathToFull(Picked[0]);
+	FPaths::NormalizeFilename(File);
+	if (!File.StartsWith(DocsRoot + TEXT("/"), ESearchCase::IgnoreCase))
+	{
+		ArchitectureError = FText::Format(LOCTEXT("OutsideDocs", "Pick a note inside the docs folder ({0})."), FText::FromString(DocsRoot));
+		return FReply::Handled();
+	}
+
+	ApplyArchitecturePath(File.Mid(DocsRoot.Len() + 1));
+	return FReply::Handled();
+}
+
+void SProtoBoyObsidianPanel::RefreshArchitectureState()
+{
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	bHasArchitecture = Subsystem && Subsystem->GetObsidianConnector().IsConnected() && Subsystem->GetDocGenerator().HasArchitectureDoc();
+}
+
+FReply SProtoBoyObsidianPanel::OnCreateArchitectureClicked()
+{
+	ArchitectureError = FText::GetEmpty();
+	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	if (Subsystem && Subsystem->GetObsidianConnector().IsConnected())
+	{
+		Subsystem->GetDocGenerator().CreateArchitectureDoc(ArchitectureError);
+	}
+	RefreshArchitectureState();
+	return FReply::Handled();
+}
+
+FReply SProtoBoyObsidianPanel::OnOpenArchitectureClicked()
+{
+	ArchitectureError = FText::GetEmpty();
+	if (const FProtoBoyObsidianConnector* Connector = GetConnector())
+	{
+		Connector->OpenInObsidian(FProtoBoyDocGenerator::GetArchitectureDocPath(), ArchitectureError);
+	}
+	return FReply::Handled();
 }
 
 TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeHeader()
@@ -251,6 +474,8 @@ FReply SProtoBoyObsidianPanel::OnConnectClicked()
 		FText Error;
 		ConnectError = Connector->Connect(GetVaultInput(), GetFolderInput(), Error) ? FText::GetEmpty() : Error;
 	}
+	ArchitectureError = FText::GetEmpty();
+	RefreshArchitectureState();
 	return FReply::Handled();
 }
 
@@ -260,6 +485,8 @@ FReply SProtoBoyObsidianPanel::OnDisconnectClicked()
 	{
 		Connector->Disconnect();
 	}
+	ArchitectureError = FText::GetEmpty();
+	RefreshArchitectureState();
 	return FReply::Handled();
 }
 

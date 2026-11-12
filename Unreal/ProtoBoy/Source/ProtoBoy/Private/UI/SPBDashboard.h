@@ -24,7 +24,6 @@ private:
 
 	FReply OnOpenPluginSettingsClicked();
 	FReply OnConnectDocsClicked();
-	FReply OnCreateArchitectureClicked();
 	FReply OnMCPSettingsClicked();
 	FReply OnTasksSettingsClicked();
 

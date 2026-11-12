@@ -2,7 +2,6 @@
 
 #include "ISettingsModule.h"
 #include "MCP/PBMCPClientConfig.h"
-#include "Misc/MessageDialog.h"
 #include "Modules/ModuleManager.h"
 #include "PBSettings.h"
 #include "PBSubsystem.h"
@@ -15,6 +14,7 @@
 #include "UI/SPBConnectLLMDialog.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SExpandableArea.h"
 #include "Widgets/SBoxPanel.h"
@@ -379,6 +379,20 @@ void SProtoBoyDashboard::RebuildDocsSection()
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 			.AutoWrapText(true)
 		];
+
+		// Setup state only; the setup itself lives in Connect to Documentation.
+		const bool bHasArchitecture = Subsystem->GetDocGenerator().HasArchitectureDoc();
+		Content->AddSlot()
+		.AutoHeight()
+		.Padding(0.f, 4.f, 0.f, 0.f)
+		[
+			SNew(STextBlock)
+			.Text(bHasArchitecture
+				? LOCTEXT("DocsSetupComplete", "Setup complete: the Architecture doc is in the vault.")
+				: LOCTEXT("DocsSetupNeeded", "Setup needed: create the Architecture doc."))
+			.ColorAndOpacity(bHasArchitecture ? FSlateColor::UseSubduedForeground() : FSlateColor(FStyleColors::Warning))
+			.AutoWrapText(true)
+		];
 	}
 	else
 	{
@@ -389,53 +403,20 @@ void SProtoBoyDashboard::RebuildDocsSection()
 			.Text(LOCTEXT("NotConnected", "No documentation platform connected."))
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 		];
+
 	}
 
-	// Architecture doc: what agents use to decide where work belongs.
-	const bool bHasArchitecture = Subsystem && Subsystem->GetDocGenerator().HasArchitectureDoc();
-	Content->AddSlot()
-	.AutoHeight()
-	.Padding(0.f, 10.f, 0.f, 0.f)
-	[
-		SNew(SHorizontalBox)
-
-		+ SHorizontalBox::Slot()
-		.FillWidth(1.f)
-		.VAlign(VAlign_Center)
-		[
-			SNew(STextBlock)
-			.Text(bHasArchitecture
-				? FText::Format(LOCTEXT("ArchitectureFound", "Architecture doc: {0}"), FText::FromString(FProtoBoyDocGenerator::ArchitectureDocPath))
-				: LOCTEXT("ArchitectureMissing", "No Architecture doc yet. Agents use it to know which system owns new work."))
-			.ColorAndOpacity(bHasArchitecture ? FSlateColor::UseForeground() : FSlateColor(FStyleColors::Warning))
-			.AutoWrapText(true)
-		]
-
-		+ SHorizontalBox::Slot()
-		.AutoWidth()
-		.VAlign(VAlign_Center)
-		.Padding(8.f, 0.f, 0.f, 0.f)
-		[
-			SNew(SButton)
-			.Visibility(bHasArchitecture ? EVisibility::Collapsed : EVisibility::Visible)
-			.Text(LOCTEXT("CreateArchitecture", "Create Architecture Doc"))
-			.ToolTipText(FText::Format(LOCTEXT("CreateArchitectureTip", "Writes {0} from a template (end goal, milestone, systems, rules) into {1}."),
-				FText::FromString(FProtoBoyDocGenerator::ArchitectureDocPath),
-				Subsystem ? Subsystem->GetDocsProvider().GetDisplayName() : FText::GetEmpty()))
-			.OnClicked(this, &SProtoBoyDashboard::OnCreateArchitectureClicked)
-		]
-	];
-
 	const bool bConnected = Obsidian && Obsidian->IsConnected();
+	const bool bSetUp = bConnected && Subsystem->GetDocGenerator().HasArchitectureDoc();
 	Content->AddSlot()
 	.AutoHeight()
 	.HAlign(HAlign_Left)
 	.Padding(0.f, 8.f, 0.f, 0.f)
 	[
 		SNew(SButton)
-		.Text(bConnected
-			? LOCTEXT("ManageDocs", "Documentation Settings...")
-			: LOCTEXT("ConnectDocs", "Connect to Documentation..."))
+		.Text(!bConnected ? LOCTEXT("ConnectDocs", "Connect to Documentation...")
+			: bSetUp ? LOCTEXT("ManageDocs", "Documentation Settings...")
+			: LOCTEXT("FinishDocs", "Finish Documentation Setup..."))
 		.OnClicked(this, &SProtoBoyDashboard::OnConnectDocsClicked)
 	];
 
@@ -467,23 +448,10 @@ FReply SProtoBoyDashboard::OnOpenPluginSettingsClicked()
 	return FReply::Handled();
 }
 
-FReply SProtoBoyDashboard::OnCreateArchitectureClicked()
-{
-	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
-	{
-		FText Error;
-		if (!Subsystem->GetDocGenerator().CreateArchitectureDoc(Error))
-		{
-			FMessageDialog::Open(EAppMsgType::Ok, Error, LOCTEXT("CreateArchitectureFailed", "Couldn't create the Architecture doc"));
-		}
-	}
-	RebuildDocsSection();
-	return FReply::Handled();
-}
-
 FReply SProtoBoyDashboard::OnConnectDocsClicked()
 {
 	SProtoBoyConnectDocsDialog::Open(AsShared());
+	RebuildDocsSection();
 	return FReply::Handled();
 }
 

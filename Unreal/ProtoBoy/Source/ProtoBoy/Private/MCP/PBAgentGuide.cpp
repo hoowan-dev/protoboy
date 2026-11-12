@@ -1,5 +1,6 @@
 #include "MCP/PBAgentGuide.h"
 
+#include "Docs/PBDocGenerator.h"
 #include "Docs/PBMarkdown.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
@@ -25,7 +26,7 @@ namespace ProtoBoyAgentGuide
 
 	FString GetGuideMarkdown()
 	{
-		return TEXT(R"MD(## ProtoBoy: architecture, design docs and tasks
+		const FString Guide = TEXT(R"MD(## ProtoBoy: architecture, design docs and tasks
 
 This project uses ProtoBoy (an Unreal Editor plugin) so agents build within the game's architecture instead of growing
 disconnected or monolithic code. When the `protoboy` MCP tools are available:
@@ -36,13 +37,14 @@ disconnected or monolithic code. When the `protoboy` MCP tools are available:
   prompt) and get the user's agreement before writing code.
 - **Work from tasks**: `task_get` for the description and linked design doc, `task_update_status` when you start and
   finish, `task_comment` to report what changed. Split out-of-scope work into new tasks with `task_create`.
-- **Keep docs current**: append to the relevant design doc with `docs_update_section`. Humans own `Architecture.md`
+- **Keep docs current**: append to the relevant design doc with `docs_update_section`. Humans own the Architecture doc (`{ARCHITECTURE_DOC}`)
   and existing text; never rewrite them.
 - **Prompts**: `plan-feature`, `implement-task`, `record-decision`.
 
 ProtoBoy's tools are only available while the Unreal Editor is open with its MCP server running. Some changes need the
 user's approval in the editor; if one is denied, don't retry it, ask the user.
 )MD");
+		return Guide.Replace(TEXT("{ARCHITECTURE_DOC}"), *FProtoBoyDocGenerator::GetArchitectureDocPath());
 	}
 
 	bool WriteForClient(EProtoBoyMCPClient Client, FText& OutError)

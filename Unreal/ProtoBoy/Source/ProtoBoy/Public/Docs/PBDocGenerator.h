@@ -40,7 +40,8 @@ struct FProtoBoyArchitecture
  *
  * Works through the active IProtoBoyDocsProvider (Obsidian when connected, else the project's DocsDirectory).
  * Docs layout under the docs root:
- *   Architecture.md   systems, dependency rules, conventions, end goal, milestone (humans own it)
+ *   Architecture doc  systems, dependency rules, conventions, end goal, milestone (humans own it);
+ *                     path is UProtoBoySettings::ArchitectureDocPath, default "Architecture.md"
  *   Design/*.md       per-feature design docs
  *   ADR/ADR-NNNN-*.md architecture decision records
  *
@@ -49,7 +50,18 @@ struct FProtoBoyArchitecture
 class PROTOBOY_API FProtoBoyDocGenerator
 {
 public:
-	static const TCHAR* ArchitectureDocPath;
+	/** The Architecture doc's path relative to the docs root (UProtoBoySettings::ArchitectureDocPath, normalized). */
+	static FString GetArchitectureDocPath();
+
+	/**
+	 * Validate, normalize ('/' separators, ".md" added if missing) and save a new Architecture doc path (team-wide).
+	 * OutNormalized is the stored value.
+	 */
+	static bool SetArchitectureDocPath(const FString& Path, FString& OutNormalized, FText& OutError);
+
+	/** A safe docs-relative Markdown path: no drive, no "..", no leading '/'. Adds ".md" if missing. */
+	static bool NormalizeDocPath(const FString& Path, FString& OutNormalized, FText& OutError);
+
 	static const TCHAR* DesignFolder;
 	static const TCHAR* ADRFolder;
 
@@ -74,7 +86,7 @@ public:
 	bool SetManagedBlock(const FString& Path, const FString& Heading, const FString& BlockId, const FString& Content, FText& OutError);
 
 	bool HasArchitectureDoc() const;
-	/** Write Architecture.md from the template. Fails if it exists. */
+	/** Write the Architecture doc from the template. Fails if it exists. */
 	bool CreateArchitectureDoc(FText& OutError);
 	FProtoBoyArchitecture ReadArchitecture() const;
 
