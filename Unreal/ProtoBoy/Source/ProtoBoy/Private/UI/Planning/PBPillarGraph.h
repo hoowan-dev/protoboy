@@ -23,7 +23,7 @@ public:
 	TWeakPtr<SProtoBoyPillarTreeEditor> Editor;
 };
 
-/** One pillar (or the root, when PillarId is empty). Input pin on top (its parent), output pin below (its children). */
+/** One pillar. Input pin on top (its parent), output pin below (its children); the root (the game) has no input. */
 UCLASS(Transient)
 class UProtoBoyPillarGraphNode : public UEdGraphNode
 {
@@ -32,11 +32,14 @@ class UProtoBoyPillarGraphNode : public UEdGraphNode
 public:
 	static const FName PinCategory;
 
-	/** Empty for the root node. */
 	UPROPERTY()
 	FString PillarId;
 
-	bool IsRoot() const { return PillarId.IsEmpty(); }
+	/** The root pillar (the game). Set before AllocateDefaultPins. */
+	UPROPERTY()
+	bool bRootNode = false;
+
+	bool IsRoot() const { return bRootNode; }
 	UEdGraphPin* GetInputPin() const;
 	UEdGraphPin* GetOutputPin() const;
 	TSharedPtr<SProtoBoyPillarTreeEditor> GetEditor() const;

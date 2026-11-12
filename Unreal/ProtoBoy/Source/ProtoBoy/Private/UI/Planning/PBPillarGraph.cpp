@@ -1,7 +1,6 @@
 #include "UI/Planning/PBPillarGraph.h"
 
 #include "AIGraphConnectionDrawingPolicy.h"
-#include "Misc/App.h"
 #include "PBSubsystem.h"
 #include "Planning/PBPillars.h"
 #include "UI/Planning/SPBPillarGraphNode.h"
@@ -93,11 +92,6 @@ void UProtoBoyPillarGraphNode::AllocateDefaultPins()
 
 FText UProtoBoyPillarGraphNode::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	if (IsRoot())
-	{
-		const FString Project = FApp::GetProjectName();
-		return Project.IsEmpty() ? LOCTEXT("RootTitle", "Game") : FText::FromString(Project);
-	}
 	const FProtoBoyPillarService* Service = ProtoBoyPillarGraph::GetService();
 	const FProtoBoyPillar* Pillar = Service ? Service->Find(PillarId) : nullptr;
 	return Pillar ? FText::FromString(Pillar->Name) : FText::FromString(PillarId);
@@ -107,7 +101,7 @@ FText UProtoBoyPillarGraphNode::GetTooltipText() const
 {
 	if (IsRoot())
 	{
-		return LOCTEXT("RootTip", "The game. Connect pillars to it to make them top-level.");
+		return LOCTEXT("RootTip", "The game, named after the project: the root of the pillar tree. Every pillar sits below it; connect one to it to make it top-level. Double-click to open the Architecture doc.");
 	}
 	const FProtoBoyPillarService* Service = ProtoBoyPillarGraph::GetService();
 	return Service
@@ -161,14 +155,15 @@ bool UProtoBoyPillarGraphSchema::TryCreateConnection(UEdGraphPin* A, UEdGraphPin
 	const UEdGraphPin* ChildPin = nullptr;
 	ProtoBoyPillarGraph::SplitPins(A, B, ParentPin, ChildPin);
 
-	// Don't link pins here: the editor rebuilds the graph from the service once the move is saved.
+	// Don't link pins here: the editor rebuilds the graph from the service once the move is saved. A root parent
+	// passes the root's id, which the service treats like any other parent.
 	ProtoBoyPillarGraph::Reparent(ProtoBoyPillarGraph::OwningNode(ChildPin), ProtoBoyPillarGraph::OwningNode(ParentPin)->PillarId);
 	return true;
 }
 
 void UProtoBoyPillarGraphSchema::BreakPinLinks(UEdGraphPin& TargetPin, bool bSendsNodeNotifcation) const
 {
-	// Unparenting makes a pillar top-level (linked to the root) rather than leaving it floating.
+	// Unparenting makes a pillar top-level (under the root): the root is the only pillar without a parent.
 	if (TargetPin.Direction == EGPD_Input)
 	{
 		ProtoBoyPillarGraph::Reparent(ProtoBoyPillarGraph::OwningNode(&TargetPin), FString());

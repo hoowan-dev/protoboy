@@ -3,6 +3,7 @@
 #include "HAL/FileManager.h"
 #include "JsonObjectConverter.h"
 #include "Misc/DateTime.h"
+#include "Misc/App.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "PBModule.h"
@@ -61,6 +62,7 @@ bool FProtoBoyPillarService::Reload(FText& OutError)
 	const FString Path = GetFilePath();
 	if (!FPaths::FileExists(Path))
 	{
+		EnsureRoot();
 		OnChanged.Broadcast();
 		return true;
 	}
@@ -72,6 +74,7 @@ bool FProtoBoyPillarService::Reload(FText& OutError)
 		LastError = FText::Format(LOCTEXT("ParseFailed", "Couldn't read the pillar file {0}. Fix it or remove it; ProtoBoy won't overwrite it."), FText::FromString(Path));
 		OutError = LastError;
 		UE_LOG(LogProtoBoy, Warning, TEXT("%s"), *LastError.ToString());
+		EnsureRoot();
 		OnChanged.Broadcast();
 		return false;
 	}
@@ -79,11 +82,13 @@ bool FProtoBoyPillarService::Reload(FText& OutError)
 	{
 		LastError = FText::Format(LOCTEXT("TooNew", "{0} was written by a newer ProtoBoy (version {1})."), FText::FromString(Path), FText::AsNumber(Loaded.Version));
 		OutError = LastError;
+		EnsureRoot();
 		OnChanged.Broadcast();
 		return false;
 	}
 
 	Tree = MoveTemp(Loaded);
+	EnsureRoot();
 	OnChanged.Broadcast();
 	return true;
 }
@@ -120,14 +125,77 @@ FProtoBoyPillar* FProtoBoyPillarService::FindMutable(const FString& Id)
 	return Tree.Pillars.FindByPredicate([&Id](const FProtoBoyPillar& P) { return P.Id == Id; });
 }
 
+void FProtoBoyPillarService::EnsureRoot()
+{
+	const FString ProjectName = FApp::GetProjectName();
+	const FString RootName = ProjectName.IsEmpty() ? FString(TEXT("Game")) : ProjectName;
+
+	// Exactly one root: the first one flagged (a hand-merged file could have two), or a new one.
+	FProtoBoyPillar* Root = nullptr;
+	for (FProtoBoyPillar& Pillar : Tree.Pillars)
+	{
+		if (Pillar.bRoot && !Root)
+		{
+			Root = &Pillar;
+		}
+		else
+		{
+			Pillar.bRoot = false;
+		}
+	}
+	if (!Root)
+	{
+		FProtoBoyPillar NewRoot;
+		NewRoot.Id = MakeUniqueId(RootName);
+		NewRoot.Name = RootName;
+		NewRoot.Kind = TEXT("Game");
+		NewRoot.bRoot = true;
+		Tree.Pillars.Insert(NewRoot, 0);
+		Root = &Tree.Pillars[0];
+	}
+	Root->Name = RootName;
+	Root->ParentId.Reset();
+	Root->Order = 0;
+	Root->DependsOn.Reset();
+	const FString RootId = Root->Id;
+
+	// Everything else hangs below the root. Top-level pillars from older files, and pillars whose parent is missing
+	// (e.g. a hand-edited file), move under it after its existing children.
+	bool bMoved = false;
+	for (FProtoBoyPillar& Pillar : Tree.Pillars)
+	{
+		if (Pillar.Id != RootId && (Pillar.ParentId.IsEmpty() || Pillar.ParentId == Pillar.Id || !Find(Pillar.ParentId)))
+		{
+			Pillar.ParentId = RootId;
+			Pillar.Order += 1000000;
+			bMoved = true;
+		}
+	}
+	if (bMoved)
+	{
+		Renumber(RootId);
+	}
+}
+
+const FProtoBoyPillar& FProtoBoyPillarService::GetRoot() const
+{
+	// EnsureRoot runs on every load, so there's always one.
+	const FProtoBoyPillar* Root = Tree.Pillars.FindByPredicate([](const FProtoBoyPillar& P) { return P.bRoot; });
+	check(Root);
+	return *Root;
+}
+
+FString FProtoBoyPillarService::ResolveParent(const FString& ParentId) const
+{
+	return ParentId.IsEmpty() ? GetRootId() : ParentId;
+}
+
 TArray<const FProtoBoyPillar*> FProtoBoyPillarService::GetChildren(const FString& ParentId) const
 {
 	TArray<const FProtoBoyPillar*> Children;
 	for (const FProtoBoyPillar& Pillar : Tree.Pillars)
 	{
-		// Pillars whose parent is missing (e.g. a hand-edited file) show at the top level.
-		const bool bParentMissing = !Pillar.ParentId.IsEmpty() && !Find(Pillar.ParentId);
-		if (Pillar.ParentId == ParentId || (ParentId.IsEmpty() && bParentMissing))
+		if (Pillar.ParentId == ParentId)
 		{
 			Children.Add(&Pillar);
 		}
@@ -174,7 +242,11 @@ FString FProtoBoyPillarService::GetDisplayPath(const FString& Id) const
 	TArray<FString> Names;
 	for (const FProtoBoyPillar* Pillar : GetAncestors(Id))
 	{
-		Names.Add(Pillar->Name);
+		// Every path starts at the root, so it adds nothing.
+		if (!Pillar->bRoot)
+		{
+			Names.Add(Pillar->Name);
+		}
 	}
 	if (const FProtoBoyPillar* Pillar = Find(Id))
 	{
@@ -208,45 +280,11 @@ FString FProtoBoyPillarService::AddPillar(const FString& Name, const FString& Pa
 	FProtoBoyPillar Pillar;
 	Pillar.Name = Name.TrimStartAndEnd().IsEmpty() ? FString(TEXT("New Pillar")) : Name.TrimStartAndEnd();
 	Pillar.Id = MakeUniqueId(Pillar.Name);
-	Pillar.ParentId = Find(ParentId) ? ParentId : FString();
+	Pillar.ParentId = Find(ParentId) ? ParentId : GetRootId();
 	Pillar.Order = GetChildren(Pillar.ParentId).Num();
 	Tree.Pillars.Add(Pillar);
 	SaveAndNotify();
 	return Pillar.Id;
-}
-
-void FProtoBoyPillarService::AddStarterPillars()
-{
-	struct FStarter { const TCHAR* Name; const TCHAR* Kind; const TCHAR* Vision; };
-	const FStarter Starters[] = {
-		{ TEXT("Gameplay"), TEXT("Domain"), TEXT("The core loop, mechanics and rules the player interacts with.") },
-		{ TEXT("Animation"), TEXT("Discipline"), TEXT("How characters and objects move, and how that supports game feel.") },
-		{ TEXT("Art"), TEXT("Discipline"), TEXT("The visual style, assets and their budgets.") },
-		{ TEXT("Audio"), TEXT("Discipline"), TEXT("Music, sound effects and how they react to play.") },
-		{ TEXT("Content"), TEXT("Domain"), TEXT("Levels, encounters, items and other authored content.") },
-		{ TEXT("UI"), TEXT("Domain"), TEXT("Menus, HUD and how the game communicates with the player.") },
-	};
-
-	for (const FStarter& Starter : Starters)
-	{
-		const bool bExists = Tree.Pillars.ContainsByPredicate([&Starter](const FProtoBoyPillar& P)
-		{
-			return P.ParentId.IsEmpty() && P.Name.Equals(Starter.Name, ESearchCase::IgnoreCase);
-		});
-		if (bExists)
-		{
-			continue;
-		}
-
-		FProtoBoyPillar Pillar;
-		Pillar.Name = Starter.Name;
-		Pillar.Id = MakeUniqueId(Pillar.Name);
-		Pillar.Kind = Starter.Kind;
-		Pillar.Vision = Starter.Vision;
-		Pillar.Order = GetChildren(FString()).Num();
-		Tree.Pillars.Add(Pillar);
-	}
-	SaveAndNotify();
 }
 
 bool FProtoBoyPillarService::UpdatePillar(const FProtoBoyPillar& Edited, FText& OutError)
@@ -264,13 +302,17 @@ bool FProtoBoyPillarService::UpdatePillar(const FProtoBoyPillar& Edited, FText& 
 		return false;
 	}
 
-	Pillar->Name = Name;
+	// The root is the game: it keeps the project's name and depends on nothing.
+	if (!Pillar->bRoot)
+	{
+		Pillar->Name = Name;
+	}
 	Pillar->Kind = Edited.Kind.TrimStartAndEnd();
 	Pillar->Vision = Edited.Vision.TrimStartAndEnd();
 	Pillar->DependsOn.Reset();
 	for (const FString& Dependency : Edited.DependsOn)
 	{
-		if (Dependency != Pillar->Id && Find(Dependency))
+		if (!Pillar->bRoot && Dependency != Pillar->Id && Find(Dependency))
 		{
 			Pillar->DependsOn.AddUnique(Dependency);
 		}
@@ -282,14 +324,14 @@ bool FProtoBoyPillarService::UpdatePillar(const FProtoBoyPillar& Edited, FText& 
 bool FProtoBoyPillarService::SetParent(const FString& Id, const FString& NewParentId, FText& OutError)
 {
 	const FProtoBoyPillar* Pillar = Find(Id);
-	if (Pillar && Pillar->ParentId == NewParentId)
+	if (Pillar && !Pillar->bRoot && Pillar->ParentId == ResolveParent(NewParentId))
 	{
 		return true;
 	}
 	return MovePillar(Id, NewParentId, INDEX_NONE, OutError);
 }
 
-bool FProtoBoyPillarService::MovePillar(const FString& Id, const FString& NewParentId, int32 Index, FText& OutError)
+bool FProtoBoyPillarService::MovePillar(const FString& Id, const FString& InNewParentId, int32 Index, FText& OutError)
 {
 	FProtoBoyPillar* Pillar = FindMutable(Id);
 	if (!Pillar)
@@ -297,7 +339,18 @@ bool FProtoBoyPillarService::MovePillar(const FString& Id, const FString& NewPar
 		OutError = LOCTEXT("NoPillarMove", "That pillar no longer exists.");
 		return false;
 	}
-	if (!NewParentId.IsEmpty() && (!Find(NewParentId) || IsInSubtree(NewParentId, Id)))
+	if (Pillar->bRoot)
+	{
+		OutError = LOCTEXT("MoveRoot", "The project is the root of the pillar tree; it can't be moved.");
+		return false;
+	}
+	const FString NewParentId = ResolveParent(InNewParentId);
+	if (!Find(NewParentId))
+	{
+		OutError = LOCTEXT("NoParent", "That parent pillar no longer exists.");
+		return false;
+	}
+	if (IsInSubtree(NewParentId, Id))
 	{
 		OutError = LOCTEXT("BadParent", "A pillar can't be moved under itself or one of its own children.");
 		return false;
@@ -347,12 +400,12 @@ void FProtoBoyPillarService::MoveAmongSiblings(const FString& Id, int32 Delta)
 
 void FProtoBoyPillarService::RemovePillar(const FString& Id)
 {
-	const FProtoBoyPillar* Root = Find(Id);
-	if (!Root)
+	const FProtoBoyPillar* Removing = Find(Id);
+	if (!Removing || Removing->bRoot)
 	{
 		return;
 	}
-	const FString ParentId = Root->ParentId;
+	const FString ParentId = Removing->ParentId;
 
 	TArray<FString> Removed;
 	for (const FProtoBoyPillar& Pillar : Tree.Pillars)
@@ -362,7 +415,32 @@ void FProtoBoyPillarService::RemovePillar(const FString& Id)
 			Removed.Add(Pillar.Id);
 		}
 	}
+	RemoveAndArchive(Removed);
+	Renumber(ParentId);
+	SaveAndNotify();
+}
 
+void FProtoBoyPillarService::ClearPillars()
+{
+	TArray<FString> Removed;
+	for (const FProtoBoyPillar& Pillar : Tree.Pillars)
+	{
+		if (!Pillar.bRoot)
+		{
+			Removed.Add(Pillar.Id);
+		}
+	}
+	if (Removed.IsEmpty())
+	{
+		return;
+	}
+	RemoveAndArchive(Removed);
+	SaveAndNotify();
+}
+
+void FProtoBoyPillarService::RemoveAndArchive(const TArray<FString>& Removed)
+{
+	// Pillars with a doc are remembered so the next doc generation marks the doc archived (never deleted).
 	const FString Now = FDateTime::UtcNow().ToIso8601();
 	for (const FString& RemovedId : Removed)
 	{
@@ -383,8 +461,6 @@ void FProtoBoyPillarService::RemovePillar(const FString& Id)
 	{
 		Pillar.DependsOn.RemoveAll([&Removed](const FString& Dependency) { return Removed.Contains(Dependency); });
 	}
-	Renumber(ParentId);
-	SaveAndNotify();
 }
 
 void FProtoBoyPillarService::SetDocPath(const FString& Id, const FString& DocPath)

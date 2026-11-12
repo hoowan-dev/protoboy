@@ -109,8 +109,16 @@ one and adding ProtoBoy's local address under **Allowed origins**.
 The team's architecture as a tree of **pillars**: mechanics, domains, disciplines, or whatever fits the game, nested as
 deep as needed. Edit it in **Planning > Pillars**:
 
-- **Tree editor:** add, nest, reorder and remove pillars, or start from a common set (Gameplay, Animation, Art, Audio,
-  Content, UI). Each pillar has a name, a free-form kind, a one-line vision, a parent and the pillars it depends on.
+- **One root, the game:** the tree always starts at a root pillar named after the project, and it's the only root.
+  Every other pillar sits below it, and "top-level" means directly under it. You can't remove, move or rename the
+  root, but you can give it a kind and a vision. It has no pillar doc of its own: the Architecture doc is its doc, so
+  top-level pillars link to the Architecture doc as their parent. Pillar files from before the root existed get one on
+  load, with their old top-level pillars moved under it.
+- **Tree editor:** a Behavior Tree style graph with the root at the top. Add, nest, reorder and remove pillars. Each
+  pillar has a name, a free-form kind, a one-line vision, a parent and the pillars it depends on.
+- **Setup Pillars / Clear Pillars:** two buttons at the top of the section. **Clear Pillars** removes every pillar
+  below the game (after asking), leaving just the root; their docs are archived like any removed pillar. **Setup
+  Pillars** opens the Setup Pillars window (empty for now).
 - **Stable IDs:** each pillar keeps its ID when renamed or moved, so docs and (later) tasks keep pointing at it.
 - **Saved to a file:** `ProtoBoy/Pillars.json` in the project (configurable), meant to be committed and shared.
 - **Generate Docs...:** previews, then writes, a doc per pillar under `Pillars/` in the docs folder, nested like the

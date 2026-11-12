@@ -1,6 +1,7 @@
 #include "UI/Planning/SPBPillarTreeEditor.h"
 
 #include "Docs/Obsidian/PBObsidianConnector.h"
+#include "Docs/PBDocGenerator.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "Framework/Commands/UICommandList.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
@@ -15,6 +16,7 @@
 #include "UI/Planning/PBPillarGraph.h"
 #include "UI/Planning/SPBPillarDocsPreview.h"
 #include "UI/Planning/SPBPillarGraphNode.h"
+#include "UI/Planning/SPBSetupPillarsDialog.h"
 #include "UObject/Package.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
@@ -44,6 +46,38 @@ void SProtoBoyPillarTreeEditor::Construct(const FArguments& InArgs)
 	ChildSlot
 	[
 		SNew(SVerticalBox)
+
+		// Setup Pillars / Clear Pillars
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.HAlign(HAlign_Left)
+		.Padding(0.f, 0.f, 0.f, 8.f)
+		[
+			SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("SetupPillars", "Setup Pillars"))
+				.OnClicked(this, &SProtoBoyPillarTreeEditor::OnSetupPillarsClicked)
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.Padding(6.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("ClearPillars", "Clear Pillars"))
+				.ToolTipText(LOCTEXT("ClearPillarsTip", "Remove every pillar below the game, leaving just the root. Their docs are kept and marked archived the next time you generate docs."))
+				.IsEnabled_Lambda([]()
+				{
+					const FProtoBoyPillarService* Service = GetService();
+					return Service && Service->HasPillars();
+				})
+				.OnClicked(this, &SProtoBoyPillarTreeEditor::OnClearPillarsClicked)
+			]
+		]
 
 		+ SVerticalBox::Slot()
 		.AutoHeight()
@@ -142,7 +176,7 @@ void SProtoBoyPillarTreeEditor::Construct(const FArguments& InArgs)
 				.IsEnabled_Lambda([]()
 				{
 					const FProtoBoyPillarService* Service = GetService();
-					return Service && !Service->GetPillars().IsEmpty();
+					return Service && Service->HasPillars();
 				})
 				.OnClicked(this, &SProtoBoyPillarTreeEditor::OnGenerateDocsClicked)
 			]
@@ -315,12 +349,12 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeToolbar()
 TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeAddMenu()
 {
 	const FProtoBoyPillarService* Service = GetService();
-	const bool bHasSelection = HasSelectedPillar();
+	const bool bHasSelection = Service && Service->Find(SelectedId);
 
 	FMenuBuilder Menu(true, nullptr);
 	Menu.AddMenuEntry(
 		LOCTEXT("AddPillar", "Pillar"),
-		LOCTEXT("AddPillarTip", "Add a top-level pillar."),
+		LOCTEXT("AddPillarTip", "Add a top-level pillar (directly under the project)."),
 		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.FolderClosed"),
 		FUIAction(FExecuteAction::CreateSPLambda(this, [this]() { OnAddClicked(false); })));
 	Menu.AddMenuEntry(
@@ -332,12 +366,6 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeAddMenu()
 		FUIAction(
 			FExecuteAction::CreateSPLambda(this, [this]() { OnAddClicked(true); }),
 			FCanExecuteAction::CreateLambda([bHasSelection]() { return bHasSelection; })));
-	Menu.AddSeparator();
-	Menu.AddMenuEntry(
-		LOCTEXT("Starter", "Common Pillars"),
-		LOCTEXT("StarterTip", "Adds Gameplay, Animation, Art, Audio, Content and UI (skips names that exist). Rename, nest or remove them freely."),
-		FSlateIcon(),
-		FUIAction(FExecuteAction::CreateSPLambda(this, [this]() { OnStarterClicked(); })));
 	return Menu.MakeWidget();
 }
 
@@ -402,10 +430,11 @@ void SProtoBoyPillarTreeEditor::OnNodeDoubleClicked(UEdGraphNode* Node)
 		return;
 	}
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-	if (!Pillar->DocPath.IsEmpty() && Subsystem && Subsystem->GetObsidianConnector().IsConnected())
+	const FString DocPath = Pillar->bRoot ? FProtoBoyDocGenerator::GetArchitectureDocPath() : Pillar->DocPath;
+	if (!DocPath.IsEmpty() && Subsystem && Subsystem->GetObsidianConnector().IsConnected())
 	{
 		EditError = FText::GetEmpty();
-		Subsystem->GetObsidianConnector().OpenInObsidian(Pillar->DocPath, EditError);
+		Subsystem->GetObsidianConnector().OpenInObsidian(DocPath, EditError);
 		return;
 	}
 	RequestRename(Pillar->Id);
@@ -442,18 +471,6 @@ FActionMenuContent SProtoBoyPillarTreeEditor::OnCreateActionMenu(UEdGraph* InGra
 			OnClosed.ExecuteIfBound();
 			AddPillarUnder(ParentId);
 		})));
-	if (!bFromPin)
-	{
-		Menu.AddMenuEntry(
-			LOCTEXT("ActionStarter", "Common Pillars"),
-			LOCTEXT("StarterTip", "Adds Gameplay, Animation, Art, Audio, Content and UI (skips names that exist). Rename, nest or remove them freely."),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateSPLambda(this, [this, OnClosed]()
-			{
-				OnClosed.ExecuteIfBound();
-				OnStarterClicked();
-			})));
-	}
 	Menu.EndSection();
 
 	FActionMenuContent Content(Menu.MakeWidget());
@@ -475,15 +492,10 @@ FActionMenuContent SProtoBoyPillarTreeEditor::OnCreateNodeOrPinMenu(UEdGraph* In
 	{
 		Menu->BeginSection("Root", PillarNode->GetNodeTitle(ENodeTitleType::FullTitle));
 		Menu->AddMenuEntry(
-			LOCTEXT("CtxAddPillar", "Add Top-Level Pillar"),
+			LOCTEXT("CtxAddPillar", "Add Pillar"),
 			FText::GetEmpty(),
 			FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Plus"),
 			FUIAction(FExecuteAction::CreateSPLambda(this, [this]() { AddPillarUnder(FString()); })));
-		Menu->AddMenuEntry(
-			LOCTEXT("CtxStarter", "Add Common Pillars"),
-			FText::GetEmpty(),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateSPLambda(this, [this]() { OnStarterClicked(); })));
 		Menu->EndSection();
 		return FActionMenuContent(Menu->MakeWidget());
 	}
@@ -514,7 +526,7 @@ FActionMenuContent SProtoBoyPillarTreeEditor::OnCreateNodeOrPinMenu(UEdGraph* In
 		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.ArrowRight"),
 		FUIAction(FExecuteAction::CreateSPLambda(this, [this]() { OnMoveClicked(1); })));
 	const FProtoBoyPillar* Pillar = Service->Find(Id);
-	if (Pillar && !Pillar->ParentId.IsEmpty())
+	if (Pillar && !Service->IsRoot(Pillar->ParentId))
 	{
 		Menu->AddMenuEntry(
 			LOCTEXT("CtxMoveTop", "Move to Top Level"),
@@ -620,23 +632,19 @@ void SProtoBoyPillarTreeEditor::RebuildGraph()
 		return;
 	}
 
-	auto MakeNode = [this](const FString& PillarId)
+	auto MakeNode = [this, Service](const FString& PillarId)
 	{
 		UProtoBoyPillarGraphNode* Node = NewObject<UProtoBoyPillarGraphNode>(Graph, NAME_None, RF_Transient);
 		Node->PillarId = PillarId;
-		Node->bCanRenameNode = !PillarId.IsEmpty();
+		Node->bRootNode = Service->IsRoot(PillarId);
+		Node->bCanRenameNode = !Node->bRootNode;
 		Node->CreateNewGuid();
 		Node->AllocateDefaultPins();
 		Graph->AddNode(Node, false, false);
 		return Node;
 	};
 
-	if (!RootNode)
-	{
-		RootNode = MakeNode(FString());
-	}
-
-	// Sync nodes with pillars.
+	// Sync nodes with pillars (the root included).
 	TSet<FString> Live;
 	for (const FProtoBoyPillar& Pillar : Service->GetPillars())
 	{
@@ -653,6 +661,11 @@ void SProtoBoyPillarTreeEditor::RebuildGraph()
 			Graph->RemoveNode(It.Value());
 			It.RemoveCurrent();
 		}
+	}
+	RootNode = NodesById.FindRef(Service->GetRootId());
+	if (!RootNode)
+	{
+		return;
 	}
 
 	// Relink parent -> children in sibling order, and lay the tree out top-down (each leaf gets a column; a parent
@@ -749,8 +762,9 @@ void SProtoBoyPillarTreeEditor::RequestRename(const FString& Id)
 
 bool SProtoBoyPillarTreeEditor::HasSelectedPillar() const
 {
+	// Rename, move and remove: every pillar but the root.
 	const FProtoBoyPillarService* Service = GetService();
-	return Service && Service->Find(SelectedId);
+	return Service && Service->Find(SelectedId) && !Service->IsRoot(SelectedId);
 }
 
 void SProtoBoyPillarTreeEditor::AddPillarUnder(const FString& ParentId)
@@ -785,7 +799,7 @@ void SProtoBoyPillarTreeEditor::RebuildDetails()
 	{
 		DetailsBox->SetContent(
 			SNew(STextBlock)
-			.Visibility_Lambda([]() { const FProtoBoyPillarService* S = GetService(); return S && !S->GetPillars().IsEmpty() ? EVisibility::Visible : EVisibility::Collapsed; })
+			.Visibility_Lambda([]() { const FProtoBoyPillarService* S = GetService(); return S && S->HasPillars() ? EVisibility::Visible : EVisibility::Collapsed; })
 			.Text(LOCTEXT("SelectPillar", "Select a pillar to edit it."))
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground()));
 		return;
@@ -813,10 +827,13 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 		MutableService->UpdatePillar(Edited, EditError);
 	};
 
-	// Parent options: top level, or any pillar outside this one's subtree.
+	// The root is the game: fixed name, no parent, no dependencies, and the Architecture doc as its doc.
+	const bool bRoot = Pillar.bRoot;
+	const FString DocPath = bRoot ? FProtoBoyDocGenerator::GetArchitectureDocPath() : Pillar.DocPath;
+
+	// Parent options: any pillar outside this one's subtree (the root, the project, is the top level).
 	ParentOptions.Reset();
-	ParentOptions.Add(MakeShared<FString>());
-	TSharedPtr<FString> CurrentParent = ParentOptions[0];
+	TSharedPtr<FString> CurrentParent;
 	for (const FProtoBoyPillar& Other : Service->GetPillars())
 	{
 		if (!Service->IsInSubtree(Other.Id, Id))
@@ -830,11 +847,11 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 		}
 	}
 
-	// Depends on: every other pillar as a checkbox.
+	// Depends on: every other pillar (not the root) as a checkbox.
 	TSharedRef<SWrapBox> Dependencies = SNew(SWrapBox).UseAllottedSize(true).InnerSlotPadding(FVector2D(10.f, 2.f));
 	for (const FProtoBoyPillar& Other : Service->GetPillars())
 	{
-		if (Other.Id == Id)
+		if (Other.Id == Id || Other.bRoot)
 		{
 			continue;
 		}
@@ -883,6 +900,8 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 				[
 					SNew(SEditableTextBox)
 					.Text(FText::FromString(Pillar.Name))
+					.IsReadOnly(bRoot)
+					.ToolTipText(bRoot ? LOCTEXT("RootNameTip", "The root is named after the project.") : FText::GetEmpty())
 					.OnTextCommitted_Lambda([Commit](const FText& Text, ETextCommit::Type)
 					{
 						Commit([&Text](FProtoBoyPillar& Edited) { Edited.Name = Text.ToString(); });
@@ -915,6 +934,7 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 			.Padding(0.f, 4.f, 0.f, 0.f)
 			[
 				SNew(SHorizontalBox)
+				.Visibility(bRoot ? EVisibility::Collapsed : EVisibility::Visible)
 				+ SHorizontalBox::Slot().AutoWidth()[ MakeLabel(LOCTEXT("ParentLabel", "Parent")) ]
 				+ SHorizontalBox::Slot().FillWidth(1.f)
 				[
@@ -924,9 +944,7 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 					.OnGenerateWidget_Lambda([](TSharedPtr<FString> Option) -> TSharedRef<SWidget>
 					{
 						const FProtoBoyPillarService* S = GetService();
-						return SNew(STextBlock).Text(Option->IsEmpty() || !S
-							? LOCTEXT("TopLevel", "(top level)")
-							: FText::FromString(S->GetDisplayPath(*Option)));
+						return SNew(STextBlock).Text(S ? FText::FromString(S->GetDisplayPath(*Option)) : FText::GetEmpty());
 					})
 					.OnSelectionChanged_Lambda([this, Id](TSharedPtr<FString> Option, ESelectInfo::Type SelectInfo)
 					{
@@ -946,7 +964,7 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 						{
 							const FProtoBoyPillarService* S = GetService();
 							const FProtoBoyPillar* P = S ? S->Find(Id) : nullptr;
-							return !P || P->ParentId.IsEmpty() ? LOCTEXT("TopLevel", "(top level)") : FText::FromString(S->GetDisplayPath(P->ParentId));
+							return P ? FText::FromString(S->GetDisplayPath(P->ParentId)) : FText::GetEmpty();
 						})
 					]
 				]
@@ -978,6 +996,7 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 			.Padding(0.f, 6.f, 0.f, 0.f)
 			[
 				SNew(SHorizontalBox)
+				.Visibility(bRoot ? EVisibility::Collapsed : EVisibility::Visible)
 				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top)[ MakeLabel(LOCTEXT("DependsLabel", "Depends on")) ]
 				+ SHorizontalBox::Slot().FillWidth(1.f)
 				[
@@ -997,9 +1016,9 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 				.VAlign(VAlign_Center)
 				[
 					SNew(STextBlock)
-					.Text(Pillar.DocPath.IsEmpty()
+					.Text(DocPath.IsEmpty()
 						? LOCTEXT("NoDoc", "Not generated yet. Use Generate Docs.")
-						: FText::FromString(Pillar.DocPath))
+						: bRoot ? FText::Format(LOCTEXT("RootDoc", "{0} (the Architecture doc)"), FText::FromString(DocPath)) : FText::FromString(DocPath))
 					.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 				]
 				+ SHorizontalBox::Slot()
@@ -1007,13 +1026,13 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 				.Padding(6.f, 0.f, 0.f, 0.f)
 				[
 					SNew(SButton)
-					.Visibility_Lambda([DocPath = Pillar.DocPath]()
+					.Visibility_Lambda([DocPath]()
 					{
 						const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 						return !DocPath.IsEmpty() && Subsystem && Subsystem->GetObsidianConnector().IsConnected() ? EVisibility::Visible : EVisibility::Collapsed;
 					})
 					.Text(LOCTEXT("OpenDoc", "Open in Obsidian"))
-					.OnClicked_Lambda([this, DocPath = Pillar.DocPath]()
+					.OnClicked_Lambda([this, DocPath]()
 					{
 						if (const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
 						{
@@ -1069,11 +1088,30 @@ FReply SProtoBoyPillarTreeEditor::OnRemoveClicked()
 	return FReply::Handled();
 }
 
-FReply SProtoBoyPillarTreeEditor::OnStarterClicked()
+FReply SProtoBoyPillarTreeEditor::OnSetupPillarsClicked()
 {
-	if (FProtoBoyPillarService* Service = GetService())
+	SProtoBoySetupPillarsDialog::Open(AsShared());
+	return FReply::Handled();
+}
+
+FReply SProtoBoyPillarTreeEditor::OnClearPillarsClicked()
+{
+	FProtoBoyPillarService* Service = GetService();
+	if (!Service || !Service->HasPillars())
 	{
-		Service->AddStarterPillars();
+		return FReply::Handled();
+	}
+
+	const int32 Count = Service->GetPillars().Num() - 1;
+	const FText Message = FText::Format(
+		LOCTEXT("ConfirmClear", "Remove all {0} {0}|plural(one=pillar,other=pillars) below \"{1}\"? Only the game itself stays.\n\nTheir docs are kept and marked archived the next time you generate docs."),
+		FText::AsNumber(Count), FText::FromString(Service->GetRoot().Name));
+
+	if (FMessageDialog::Open(EAppMsgType::YesNo, Message, LOCTEXT("ConfirmClearTitle", "Clear Pillars")) == EAppReturnType::Yes)
+	{
+		SelectedId = Service->GetRootId();
+		EditError = FText::GetEmpty();
+		Service->ClearPillars();
 	}
 	return FReply::Handled();
 }

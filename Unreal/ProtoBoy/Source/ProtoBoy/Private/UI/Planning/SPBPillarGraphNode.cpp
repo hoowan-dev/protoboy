@@ -244,10 +244,6 @@ const FSlateBrush* SProtoBoyPillarGraphNode::GetIcon() const
 FText SProtoBoyPillarGraphNode::GetKind() const
 {
 	const UProtoBoyPillarGraphNode* Node = GetPillarNode();
-	if (Node && Node->IsRoot())
-	{
-		return NSLOCTEXT("SProtoBoyPillarGraphNode", "RootKind", "Game");
-	}
 	const FProtoBoyPillar* Pillar = Node ? ProtoBoyPillarGraphNode::FindPillar(Node->PillarId) : nullptr;
 	return Pillar ? FText::FromString(Pillar->Kind) : FText::GetEmpty();
 }

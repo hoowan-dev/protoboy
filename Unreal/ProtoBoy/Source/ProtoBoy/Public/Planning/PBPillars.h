@@ -20,9 +20,16 @@ struct PROTOBOY_API FProtoBoyPillar
 	UPROPERTY()
 	FString Name;
 
-	/** Parent pillar's Id; empty for a top-level pillar. */
+	/** Parent pillar's Id; empty only for the root. */
 	UPROPERTY()
 	FString ParentId;
+
+	/**
+	 * The game itself: the single root of the tree, named after the project. Every other pillar sits below it. It
+	 * can't be removed, moved or renamed, and has no pillar doc of its own (the Architecture doc stands for it).
+	 */
+	UPROPERTY()
+	bool bRoot = false;
 
 	/** Free-form category chosen by the team, e.g. "Domain", "Mechanic", "Discipline". */
 	UPROPERTY()
@@ -98,37 +105,47 @@ public:
 	/** Re-read the file (e.g. after pulling changes). An empty tree if there's no file yet. */
 	bool Reload(FText& OutError);
 
+	/** Every pillar, the root included. */
 	const TArray<FProtoBoyPillar>& GetPillars() const { return Tree.Pillars; }
+	/** True when the team has added pillars below the root. */
+	bool HasPillars() const { return Tree.Pillars.Num() > 1; }
+	/** The root pillar (the game). Always exists. */
+	const FProtoBoyPillar& GetRoot() const;
+	const FString& GetRootId() const { return GetRoot().Id; }
+	bool IsRoot(const FString& Id) const { return !Id.IsEmpty() && Id == GetRootId(); }
 	const TArray<FProtoBoyArchivedPillar>& GetArchived() const { return Tree.Archived; }
 	const FProtoBoyPillar* Find(const FString& Id) const;
 
-	/** Children of ParentId (empty = top level), in order. */
+	/** Children of ParentId, in order. GetChildren("") is just the root. */
 	TArray<const FProtoBoyPillar*> GetChildren(const FString& ParentId) const;
-	/** Ancestors of Id, top-level first (not including Id). */
+	/** Ancestors of Id, the root first (not including Id). */
 	TArray<const FProtoBoyPillar*> GetAncestors(const FString& Id) const;
 	/** True if Id is Ancestor or sits anywhere below it. */
 	bool IsInSubtree(const FString& Id, const FString& Ancestor) const;
-	/** "Gameplay / Combat" */
+	/** "Gameplay / Combat" (the root is left out, except for the root itself). */
 	FString GetDisplayPath(const FString& Id) const;
 
-	/** Add a pillar at the end of ParentId's children. Returns its new Id. */
+	/** Add a pillar at the end of ParentId's children (empty or unknown = under the root). Returns its new Id. */
 	FString AddPillar(const FString& Name, const FString& ParentId);
-	/** Add a starter set of top-level pillars (Gameplay, Animation, Art, Audio, Content, UI). Skips names that exist. */
-	void AddStarterPillars();
 
-	/** Apply edits to name, kind, vision and dependencies. Id, parent, order and doc path are changed elsewhere. */
+	/**
+	 * Apply edits to name, kind, vision and dependencies. Id, parent, order and doc path are changed elsewhere.
+	 * The root keeps the project's name.
+	 */
 	bool UpdatePillar(const FProtoBoyPillar& Edited, FText& OutError);
-	/** Move under a new parent (empty = top level). Refuses moves into its own subtree. */
+	/** Move under a new parent (empty = the root). Refuses moving the root, and moves into its own subtree. */
 	bool SetParent(const FString& Id, const FString& NewParentId, FText& OutError);
 	/**
-	 * Move under NewParentId (empty = top level) at Index among its new siblings, counted without the moved pillar
-	 * (INDEX_NONE = last). Refuses moves into its own subtree. Used by drag and drop.
+	 * Move under NewParentId (empty = the root) at Index among its new siblings, counted without the moved pillar
+	 * (INDEX_NONE = last). Refuses moving the root, and moves into its own subtree. Used by drag and drop.
 	 */
 	bool MovePillar(const FString& Id, const FString& NewParentId, int32 Index, FText& OutError);
 	/** Move up (-1) or down (+1) among siblings. */
 	void MoveAmongSiblings(const FString& Id, int32 Delta);
-	/** Remove a pillar and everything below it. Their docs are archived on the next generation. */
+	/** Remove a pillar and everything below it (never the root). Their docs are archived on the next generation. */
 	void RemovePillar(const FString& Id);
+	/** Remove every pillar below the root, leaving just the game. Their docs are archived on the next generation. */
+	void ClearPillars();
 
 	/** Record a pillar's generated doc. */
 	void SetDocPath(const FString& Id, const FString& DocPath);
@@ -142,6 +159,16 @@ public:
 
 private:
 	FProtoBoyPillar* FindMutable(const FString& Id);
+	/**
+	 * Make the tree have exactly one root, named after the project, with every other pillar below it. Run after every
+	 * load: files from before the root existed get one, and their top-level pillars (or pillars whose parent is
+	 * missing) move under it. Doesn't save; the next edit does.
+	 */
+	void EnsureRoot();
+	/** Remove these pillars (no save), clean up dependencies on them, and archive the ones that have docs. */
+	void RemoveAndArchive(const TArray<FString>& Removed);
+	/** Empty -> the root; otherwise the Id as given. */
+	FString ResolveParent(const FString& ParentId) const;
 	FString MakeUniqueId(const FString& Name) const;
 	void Renumber(const FString& ParentId);
 	void SaveAndNotify();

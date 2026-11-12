@@ -72,8 +72,10 @@ private:
 	FReply OnAddClicked(bool bAsChild);
 	FReply OnMoveClicked(int32 Delta);
 	FReply OnRemoveClicked();
-	FReply OnStarterClicked();
 	FReply OnGenerateDocsClicked();
+	FReply OnSetupPillarsClicked();
+	/** Asks, then removes every pillar below the root. */
+	FReply OnClearPillarsClicked();
 	bool HasSelectedPillar() const;
 
 	static FProtoBoyPillarService* GetService();
