@@ -281,6 +281,16 @@ bool FProtoBoyPillarService::UpdatePillar(const FProtoBoyPillar& Edited, FText& 
 
 bool FProtoBoyPillarService::SetParent(const FString& Id, const FString& NewParentId, FText& OutError)
 {
+	const FProtoBoyPillar* Pillar = Find(Id);
+	if (Pillar && Pillar->ParentId == NewParentId)
+	{
+		return true;
+	}
+	return MovePillar(Id, NewParentId, INDEX_NONE, OutError);
+}
+
+bool FProtoBoyPillarService::MovePillar(const FString& Id, const FString& NewParentId, int32 Index, FText& OutError)
+{
 	FProtoBoyPillar* Pillar = FindMutable(Id);
 	if (!Pillar)
 	{
@@ -292,16 +302,21 @@ bool FProtoBoyPillarService::SetParent(const FString& Id, const FString& NewPare
 		OutError = LOCTEXT("BadParent", "A pillar can't be moved under itself or one of its own children.");
 		return false;
 	}
-	if (Pillar->ParentId == NewParentId)
-	{
-		return true;
-	}
 
 	const FString OldParent = Pillar->ParentId;
+	TArray<const FProtoBoyPillar*> Siblings = GetChildren(NewParentId);
+	Siblings.Remove(Pillar);
+	Siblings.Insert(Pillar, Siblings.IsValidIndex(Index) ? Index : Siblings.Num());
+
 	Pillar->ParentId = NewParentId;
-	Pillar->Order = TNumericLimits<int32>::Max(); // Last among the new siblings.
-	Renumber(OldParent);
-	Renumber(NewParentId);
+	for (int32 i = 0; i < Siblings.Num(); ++i)
+	{
+		FindMutable(Siblings[i]->Id)->Order = i;
+	}
+	if (OldParent != NewParentId)
+	{
+		Renumber(OldParent);
+	}
 	SaveAndNotify();
 	return true;
 }

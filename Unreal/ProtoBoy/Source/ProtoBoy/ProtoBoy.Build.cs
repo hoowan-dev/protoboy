@@ -30,6 +30,8 @@ public class ProtoBoy : ModuleRules
 			"Settings",
 			"HTTPServer",
 			"HTTP",
+			"GraphEditor",
+			"AIGraph",
 		});
 	}
 }

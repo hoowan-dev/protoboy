@@ -120,6 +120,11 @@ public:
 	bool UpdatePillar(const FProtoBoyPillar& Edited, FText& OutError);
 	/** Move under a new parent (empty = top level). Refuses moves into its own subtree. */
 	bool SetParent(const FString& Id, const FString& NewParentId, FText& OutError);
+	/**
+	 * Move under NewParentId (empty = top level) at Index among its new siblings, counted without the moved pillar
+	 * (INDEX_NONE = last). Refuses moves into its own subtree. Used by drag and drop.
+	 */
+	bool MovePillar(const FString& Id, const FString& NewParentId, int32 Index, FText& OutError);
 	/** Move up (-1) or down (+1) among siblings. */
 	void MoveAmongSiblings(const FString& Id, int32 Delta);
 	/** Remove a pillar and everything below it. Their docs are archived on the next generation. */
