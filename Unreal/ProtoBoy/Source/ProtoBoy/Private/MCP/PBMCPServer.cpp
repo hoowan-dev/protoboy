@@ -140,7 +140,8 @@ namespace ProtoBoyMCP
 		"Put out-of-scope work into new tasks (task_create) instead of growing the current one. "
 		"Keep docs current by appending to design docs (docs_update_section). Humans own the Architecture doc (get_project_context gives its path) and existing text: never rewrite them. "
 		"Write tools can require the user's approval in the editor; if a change is denied, don't retry it, ask the user. "
-		"Workflow prompts: plan-feature, implement-task, record-decision.");
+		"Don't generate assets with AI when the project prefers sourced assets: check the Asset sourcing section of get_project_context. "
+		"Workflow prompts: plan-feature, implement-task, record-decision, source-assets.");
 
 	/** Compact JSON of a tool's arguments, cut to a readable length (approvals, activity log). */
 	FString SummarizeArgs(const TSharedPtr<FJsonObject>& Args)
@@ -292,6 +293,10 @@ bool FProtoBoyMCPServer::IsToolEnabled(const FProtoBoyMCPTool& Tool) const
 {
 	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
 	if (Tool.bWrites && !Settings->bAllowMCPWriteTools)
+	{
+		return false;
+	}
+	if (Tool.IsAvailable && !Tool.IsAvailable())
 	{
 		return false;
 	}
@@ -719,7 +724,9 @@ bool FProtoBoyMCPServer::CallTool(const TSharedPtr<FJsonObject>& Params, const F
 	{
 		OutError = Tool->bWrites && !GetDefault<UProtoBoySettings>()->bAllowMCPWriteTools
 			? FString::Printf(TEXT("%s changes the project, and this project doesn't allow agent changes (ProtoBoy > MCP Settings > Server). Ask the user to allow them, or make the change yourself."), *Name)
-			: FString::Printf(TEXT("%s is turned off in ProtoBoy's MCP settings."), *Name);
+			: Tool->IsAvailable && !Tool->IsAvailable()
+				? FString::Printf(TEXT("%s isn't available: its feature is turned off for this project in ProtoBoy."), *Name)
+				: FString::Printf(TEXT("%s is turned off in ProtoBoy's MCP settings."), *Name);
 		return false;
 	}
 

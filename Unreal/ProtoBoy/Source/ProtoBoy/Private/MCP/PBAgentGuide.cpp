@@ -5,6 +5,7 @@
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "PBSettings.h"
 
 #define LOCTEXT_NAMESPACE "ProtoBoyAgentGuide"
 
@@ -39,12 +40,17 @@ disconnected or monolithic code. When the `protoboy` MCP tools are available:
   finish, `task_comment` to report what changed. Split out-of-scope work into new tasks with `task_create`.
 - **Keep docs current**: append to the relevant design doc with `docs_update_section`. Humans own the Architecture doc (`{ARCHITECTURE_DOC}`)
   and existing text; never rewrite them.
-- **Prompts**: `plan-feature`, `implement-task`, `record-decision`.
+{ASSET_POLICY}- **Prompts**: `plan-feature`, `implement-task`, `record-decision`, `source-assets`.
 
 ProtoBoy's tools are only available while the Unreal Editor is open with its MCP server running. Some changes need the
 user's approval in the editor; if one is denied, don't retry it, ask the user.
 )MD");
-		return Guide.Replace(TEXT("{ARCHITECTURE_DOC}"), *FProtoBoyDocGenerator::GetArchitectureDocPath());
+		const FString AssetPolicy = GetDefault<UProtoBoySettings>()->bPreferSourcedAssets
+			? FString(TEXT("- **Assets**: don't generate art, audio or other assets with AI. Use the sources in `get_project_context`\n"
+				"  (for example `fab_search`) or the `source-assets` prompt, and marked placeholders when nothing fits.\n"))
+			: FString();
+		return Guide.Replace(TEXT("{ARCHITECTURE_DOC}"), *FProtoBoyDocGenerator::GetArchitectureDocPath())
+			.Replace(TEXT("{ASSET_POLICY}"), *AssetPolicy);
 	}
 
 	bool WriteForClient(EProtoBoyMCPClient Client, FText& OutError)

@@ -86,6 +86,31 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Tasks", meta = (ClampMin = "1024", ClampMax = "65535"))
 	int32 TasksCallbackPort = 47802;
 
+	/**
+	 * Tell agents to source art, audio and other assets from the enabled sources (and placeholders) instead of generating
+	 * them with AI. Shown to agents in get_project_context and the agent guide.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Asset Sourcing")
+	bool bPreferSourcedAssets = true;
+
+	/**
+	 * Let agents search Fab (fab.com) for assets that fit the design and art direction. ProtoBoy opens the search in the
+	 * user's browser; it never reads Fab listings itself (Fab has no public search API).
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Asset Sourcing|Fab")
+	bool bEnableFabSource = false;
+
+	/** Fab "asset_formats" filter for searches, e.g. "unreal-engine". Empty searches every format. */
+	UPROPERTY(Config, EditAnywhere, Category = "Asset Sourcing|Fab", meta = (EditCondition = "bEnableFabSource"))
+	FString FabAssetFormat = TEXT("unreal-engine");
+
+	/**
+	 * Optional doc (relative to the docs folder) describing the art style, references and asset goals, e.g.
+	 * "Art Direction.md". Agents read it before searching for assets. Empty: agents search the docs for art direction.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Asset Sourcing")
+	FString ArtDirectionDocPath;
+
 	/** Connect to the ProtoBoy background daemon. */
 	UPROPERTY(Config, EditAnywhere, Category = "Daemon")
 	bool bConnectToDaemon = false;

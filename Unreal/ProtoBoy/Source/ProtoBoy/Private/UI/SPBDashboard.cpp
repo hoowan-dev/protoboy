@@ -1,6 +1,8 @@
 #include "UI/SPBDashboard.h"
 
 #include "ISettingsModule.h"
+#include "Assets/PBAssetSourcing.h"
+#include "Docs/PBDocGenerator.h"
 #include "MCP/PBMCPClientConfig.h"
 #include "Modules/ModuleManager.h"
 #include "PBSettings.h"
@@ -14,6 +16,8 @@
 #include "UI/SPBConnectLLMDialog.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SCheckBox.h"
+#include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SExpandableArea.h"
@@ -304,6 +308,13 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 								.OnClicked(this, &SProtoBoyDashboard::OnTasksSettingsClicked)
 							])
 					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 12.f, 0.f, 0.f)
+					[
+						MakeSection(LOCTEXT("AssetSourcingHeader", "Asset Sourcing (optional)"), MakeAssetSourcingSection())
+					]
 				, /*bTopLevel*/ true)
 			]
 
@@ -312,8 +323,7 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 			.AutoHeight()
 			.Padding(0.f, 12.f, 0.f, 0.f)
 			[
-				// TODO: Planning tools.
-				MakeSection(LOCTEXT("PlanningHeader", "Planning"), SNew(SBox), /*bTopLevel*/ true)
+				MakeSection(LOCTEXT("PlanningHeader", "Planning"), MakePlanningSection(), /*bTopLevel*/ true)
 			]
 		]
 	];
@@ -339,6 +349,8 @@ void SProtoBoyDashboard::RebuildDocsSection()
 {
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 	const FProtoBoyObsidianConnector* Obsidian = Subsystem ? &Subsystem->GetObsidianConnector() : nullptr;
+	bHasArchitectureDoc = Obsidian && Obsidian->IsConnected() && Subsystem->GetDocGenerator().HasArchitectureDoc();
+	RefreshArtDirectionStatus();
 
 	TSharedRef<SVerticalBox> Content = SNew(SVerticalBox);
 
@@ -381,7 +393,7 @@ void SProtoBoyDashboard::RebuildDocsSection()
 		];
 
 		// Setup state only; the setup itself lives in Connect to Documentation.
-		const bool bHasArchitecture = Subsystem->GetDocGenerator().HasArchitectureDoc();
+		const bool bHasArchitecture = bHasArchitectureDoc;
 		Content->AddSlot()
 		.AutoHeight()
 		.Padding(0.f, 4.f, 0.f, 0.f)
@@ -407,7 +419,7 @@ void SProtoBoyDashboard::RebuildDocsSection()
 	}
 
 	const bool bConnected = Obsidian && Obsidian->IsConnected();
-	const bool bSetUp = bConnected && Subsystem->GetDocGenerator().HasArchitectureDoc();
+	const bool bSetUp = bConnected && bHasArchitectureDoc;
 	Content->AddSlot()
 	.AutoHeight()
 	.HAlign(HAlign_Left)
@@ -421,6 +433,349 @@ void SProtoBoyDashboard::RebuildDocsSection()
 	];
 
 	DocsSection->SetContent(Content);
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakeAssetSourcingSection()
+{
+	auto Checked = [](bool bValue) { return bValue ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; };
+
+	return SNew(SVerticalBox)
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("AssetSourcingIntro", "Choose where agents get art, audio and other assets, so they don't default to generating them with AI. Shared by the team."))
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true)
+		]
+
+		// Policy
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 8.f, 0.f, 0.f)
+		[
+			SNew(SCheckBox)
+			.IsChecked_Lambda([Checked]() { return Checked(GetDefault<UProtoBoySettings>()->bPreferSourcedAssets); })
+			.OnCheckStateChanged_Lambda([this](ECheckBoxState State)
+			{
+				GetMutableDefault<UProtoBoySettings>()->bPreferSourcedAssets = State == ECheckBoxState::Checked;
+				OnAssetSourcingChanged();
+			})
+			.ToolTipText(LOCTEXT("PreferSourcedTip", "Agents are told to use the sources below, or marked placeholders, instead of AI-generated assets."))
+			[
+				SNew(STextBlock).Text(LOCTEXT("PreferSourced", "Prefer sourced assets over AI-generated ones"))
+			]
+		]
+
+		// Sources
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 10.f, 0.f, 4.f)
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("SourcesLabel", "Sources"))
+			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SBorder)
+			.BorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"))
+			.Padding(8.f)
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Top)
+				[
+					SNew(SCheckBox)
+					.IsChecked_Lambda([Checked]() { return Checked(GetDefault<UProtoBoySettings>()->bEnableFabSource); })
+					.OnCheckStateChanged_Lambda([this](ECheckBoxState State)
+					{
+						GetMutableDefault<UProtoBoySettings>()->bEnableFabSource = State == ECheckBoxState::Checked;
+						OnAssetSourcingChanged();
+					})
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Top)
+				.Padding(6.f, 0.f, 6.f, 0.f)
+				[
+					SNew(SImage)
+					.Image(FProtoBoyStyle::Get().GetBrush("ProtoBoy.Icon.Fab"))
+				]
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.f)
+				[
+					SNew(SVerticalBox)
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
+						SNew(STextBlock).Text(LOCTEXT("FabName", "Fab"))
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 2.f, 0.f, 0.f)
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("FabDesc", "Agents can search Fab for assets that fit your design and art direction. Searches open in your browser and you pick the listings; ProtoBoy doesn't read Fab results (Fab has no public search API)."))
+						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+						.AutoWrapText(true)
+					]
+				]
+			]
+		]
+
+		// Art direction
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 10.f, 0.f, 4.f)
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("ArtDirectionLabel", "Art direction doc (optional)"))
+			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SEditableTextBox)
+			.Text(FText::FromString(GetDefault<UProtoBoySettings>()->ArtDirectionDocPath))
+			.HintText(LOCTEXT("ArtDirectionHint", "e.g. Art Direction.md (in the docs folder)"))
+			.ToolTipText(LOCTEXT("ArtDirectionTip", "The doc describing the art style, references and asset goals. Agents read it before searching for assets. Leave empty to let agents search the docs."))
+			.OnTextCommitted_Lambda([this](const FText& Text, ETextCommit::Type)
+			{
+				FString Path = Text.ToString().TrimStartAndEnd();
+				if (!Path.IsEmpty())
+				{
+					FString Normalized;
+					FText Error;
+					if (!FProtoBoyDocGenerator::NormalizeDocPath(Path, Normalized, Error))
+					{
+						return; // Keep the previous value; the box still shows what was typed.
+					}
+					Path = Normalized;
+				}
+				GetMutableDefault<UProtoBoySettings>()->ArtDirectionDocPath = Path;
+				OnAssetSourcingChanged();
+			})
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 4.f, 0.f, 0.f)
+		[
+			SNew(STextBlock)
+			.Text_Lambda([this]() { return ArtDirectionStatus; })
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true)
+		];
+}
+
+void SProtoBoyDashboard::RefreshArtDirectionStatus()
+{
+	const FString Path = ProtoBoyAssetSourcing::GetArtDirectionDocPath();
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	if (Path.IsEmpty())
+	{
+		ArtDirectionStatus = LOCTEXT("ArtDirectionNone", "Not set: agents will look for art direction in the docs, or ask.");
+	}
+	else if (Subsystem && Subsystem->GetDocsProvider().DocExists(Path))
+	{
+		ArtDirectionStatus = FText::Format(LOCTEXT("ArtDirectionFound", "Agents read {0} before choosing assets."), FText::FromString(Path));
+	}
+	else
+	{
+		ArtDirectionStatus = FText::Format(LOCTEXT("ArtDirectionMissing", "{0} doesn't exist in the docs folder yet."), FText::FromString(Path));
+	}
+}
+
+void SProtoBoyDashboard::OnAssetSourcingChanged()
+{
+	GetMutableDefault<UProtoBoySettings>()->TryUpdateDefaultConfigFile();
+	RefreshArtDirectionStatus();
+
+	// The agent guide states the asset policy.
+	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		Subsystem->GetMCPServer().RefreshAgentGuides();
+	}
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakePlanningSection()
+{
+	SetupSteps.Reset();
+
+	// Each step must be done for agents to plan within the architecture: an agent to talk to, docs to plan against,
+	// and a board to plan into.
+	const FSetupStepState AgentStep = [](FText& OutDetail)
+	{
+		const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+		if (!Subsystem)
+		{
+			return false;
+		}
+		const FProtoBoyMCPServer& Server = Subsystem->GetMCPServer();
+		TArray<FString> Agents;
+		for (const EProtoBoyMCPClient Client : Server.GetConnection().ConfiguredClients)
+		{
+			Agents.Add(FProtoBoyMCPClientConfig::GetClientName(Client).ToString());
+		}
+
+		if (Agents.IsEmpty())
+		{
+			OutDetail = LOCTEXT("StepAgentNone", "No agent connected yet.");
+			return false;
+		}
+		if (!Server.IsRunning())
+		{
+			OutDetail = FText::Format(LOCTEXT("StepAgentStopped", "{0} set up, but the MCP server isn't running."), FText::FromString(FString::Join(Agents, TEXT(", "))));
+			return false;
+		}
+		OutDetail = FText::Format(LOCTEXT("StepAgentDone", "{0}, server running."), FText::FromString(FString::Join(Agents, TEXT(", "))));
+		return true;
+	};
+
+	const FSetupStepState DocsStep = [this](FText& OutDetail)
+	{
+		const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+		if (!Subsystem || !Subsystem->GetObsidianConnector().IsConnected())
+		{
+			OutDetail = LOCTEXT("StepDocsNone", "Obsidian isn't connected.");
+			return false;
+		}
+		if (!bHasArchitectureDoc)
+		{
+			OutDetail = LOCTEXT("StepDocsNoArchitecture", "Obsidian connected; the Architecture doc isn't set up yet.");
+			return false;
+		}
+		OutDetail = FText::Format(LOCTEXT("StepDocsDone", "Vault \"{0}\", Architecture doc in place."),
+			FText::FromString(Subsystem->GetObsidianConnector().GetVaultName()));
+		return true;
+	};
+
+	const FSetupStepState TasksStep = [](FText& OutDetail)
+	{
+		if (!ProtoBoyDashboard::IsTrelloConnected())
+		{
+			OutDetail = LOCTEXT("StepTasksNone", "No task board connected.");
+			return false;
+		}
+		if (!ProtoBoyDashboard::IsBoardReady(OutDetail))
+		{
+			return false;
+		}
+		OutDetail = FText::Format(LOCTEXT("StepTasksDone", "Trello board \"{0}\", lists mapped."),
+			FText::FromString(GetDefault<UProtoBoySettings>()->TrelloBoardName));
+		return true;
+	};
+
+	SetupSteps = { AgentStep, DocsStep, TasksStep };
+
+	return SNew(SVerticalBox)
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.Text_Lambda([this]()
+			{
+				int32 Done = 0;
+				for (const FSetupStepState& Step : SetupSteps)
+				{
+					FText Ignored;
+					Done += Step(Ignored) ? 1 : 0;
+				}
+				return Done == SetupSteps.Num()
+					? LOCTEXT("SetupAllDone", "Setup complete. Agents can plan and build within your architecture.")
+					: FText::Format(LOCTEXT("SetupProgress", "Setup: {0} of {1} steps done"), FText::AsNumber(Done), FText::AsNumber(SetupSteps.Num()));
+			})
+			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 8.f, 0.f, 0.f)
+		[
+			MakeSetupStep(LOCTEXT("StepAgent", "Connect an agent (MCP)"), AgentStep, &SProtoBoyDashboard::OnMCPSettingsClicked)
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 6.f, 0.f, 0.f)
+		[
+			MakeSetupStep(LOCTEXT("StepDocs", "Connect documentation"), DocsStep, &SProtoBoyDashboard::OnConnectDocsClicked)
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 6.f, 0.f, 0.f)
+		[
+			MakeSetupStep(LOCTEXT("StepTasks", "Connect a task board"), TasksStep, &SProtoBoyDashboard::OnTasksSettingsClicked)
+		];
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupStep(const FText& Title, FSetupStepState GetState, FReply (SProtoBoyDashboard::*OnSetUp)())
+{
+	auto IsDone = [GetState]() { FText Ignored; return GetState(Ignored); };
+
+	return SNew(SHorizontalBox)
+
+		// Check (done) or warning (to do)
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Top)
+		.Padding(0.f, 1.f, 8.f, 0.f)
+		[
+			SNew(SImage)
+			.Image_Lambda([IsDone]()
+			{
+				return FAppStyle::Get().GetBrush(IsDone() ? "Icons.SuccessWithColor" : "Icons.WarningWithColor");
+			})
+			.DesiredSizeOverride(FVector2D(16.f, 16.f))
+		]
+
+		+ SHorizontalBox::Slot()
+		.FillWidth(1.f)
+		.VAlign(VAlign_Center)
+		[
+			SNew(SVerticalBox)
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(STextBlock)
+				.Text(Title)
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 1.f, 0.f, 0.f)
+			[
+				SNew(STextBlock)
+				.Text_Lambda([GetState]() { FText Detail; GetState(Detail); return Detail; })
+				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+				.AutoWrapText(true)
+			]
+		]
+
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		.Padding(8.f, 0.f, 0.f, 0.f)
+		[
+			SNew(SButton)
+			.Visibility_Lambda([IsDone]() { return IsDone() ? EVisibility::Collapsed : EVisibility::Visible; })
+			.Text(LOCTEXT("SetUpStep", "Set Up..."))
+			.OnClicked(this, OnSetUp)
+		];
 }
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeSection(const FText& Title, const TSharedRef<SWidget>& Body, bool bTopLevel)

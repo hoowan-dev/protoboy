@@ -1,5 +1,6 @@
 #include "MCP/PBMCPTools.h"
 
+#include "Assets/PBAssetSourcing.h"
 #include "Docs/PBDocGenerator.h"
 #include "Docs/PBMarkdown.h"
 #include "Dom/JsonObject.h"
@@ -16,7 +17,7 @@ namespace ProtoBoyMCPTools
 	struct FParam
 	{
 		const TCHAR* Name;
-		const TCHAR* Type; // "string" or "integer"
+		const TCHAR* Type; // "string", "integer" or "boolean"
 		const TCHAR* Description;
 		bool bRequired = false;
 		TArray<FString> Enum;
@@ -63,6 +64,13 @@ namespace ProtoBoyMCPTools
 		FString Value;
 		Call.Args->TryGetStringField(Name, Value);
 		return Value.TrimStartAndEnd();
+	}
+
+	bool GetBool(const FProtoBoyMCPToolCall& Call, const TCHAR* Name, bool bDefault)
+	{
+		bool bValue = bDefault;
+		Call.Args->TryGetBoolField(Name, bValue);
+		return bValue;
 	}
 
 	int32 GetInt(const FProtoBoyMCPToolCall& Call, const TCHAR* Name, int32 Default, int32 Min, int32 Max)
@@ -253,6 +261,8 @@ namespace ProtoBoyMCPTools
 			Out += FString::Printf(TEXT("\n## Dependency rules\n\n%s\n"), *OrNotSet(Architecture.DependencyRules));
 			Out += FString::Printf(TEXT("\n## Conventions\n\n%s\n"), *OrNotSet(Architecture.Conventions));
 		}
+
+		Out += FString::Printf(TEXT("\n## Asset sourcing\n\n%s"), *ProtoBoyAssetSourcing::DescribePolicyForAgents());
 
 		const TArray<FProtoBoyDocInfo> DocList = DocsProvider.ListDocs();
 		Out += FString::Printf(TEXT("\n## Docs (%d)\n\n"), DocList.Num());
@@ -677,6 +687,43 @@ namespace ProtoBoyMCPTools
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
+	// Assets
+
+	void FabSearch(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
+	{
+		if (!Require(Call, Done, { TEXT("query") }))
+		{
+			return;
+		}
+
+		ProtoBoyAssetSourcing::FFabSearch Search;
+		Search.Query = GetString(Call, TEXT("query"));
+		Search.ListingType = GetString(Call, TEXT("listing_type"));
+		Search.bFreeOnly = GetBool(Call, TEXT("free_only"), false);
+
+		FString Url;
+		FText Error;
+		if (!GetBool(Call, TEXT("open"), true))
+		{
+			Url = ProtoBoyAssetSourcing::BuildFabSearchUrl(Search);
+			Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Fab search URL (not opened): %s"), *Url)));
+			return;
+		}
+		if (!ProtoBoyAssetSourcing::OpenFabSearch(Search, Url, Error))
+		{
+			Done(FProtoBoyMCPToolResult::Error(Error));
+			return;
+		}
+
+		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT(
+			"Opened a Fab search in the user's browser: %s\n\n"
+			"ProtoBoy can't see Fab results (Fab has no public search API). Tell the user what to look for (style, scale, "
+			"poly budget, license) based on the design doc and art direction, and ask which listings they pick. "
+			"Then record the choices (listing name and link, what each is for) in the relevant design doc with docs_update_section. "
+			"Don't substitute AI-generated assets if nothing fits; use a marked placeholder and ask the user."), *Url)));
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
 	// Registration
 
 	void RegisterTools(TArray<FProtoBoyMCPTool>& OutTools)
@@ -726,6 +773,16 @@ namespace ProtoBoyMCPTools
 		Add(TEXT("task_get"), LOCTEXT("TaskGetTitle", "Get task"),
 			LOCTEXT("TaskGetDesc", "Gets a task's description, status, linked design doc and recent comments."),
 			false, { { TEXT("id"), TEXT("string"), TEXT("Task id from tasks_list."), true } }, &TaskGet);
+
+		Add(TEXT("fab_search"), LOCTEXT("FabTitle", "Search Fab"),
+			LOCTEXT("FabDesc", "Opens a Fab (fab.com) asset search in the user's browser, for assets that fit the design and art direction. You get the URL, not results: the user browses and picks. Use instead of generating assets."),
+			false, {
+				{ TEXT("query"), TEXT("string"), TEXT("Search terms derived from the design need and art style, e.g. \"stylized low poly medieval crates\"."), true },
+				{ TEXT("listing_type"), TEXT("string"), TEXT("Optional Fab listing type filter, e.g. \"3d-model\", \"material\", \"audio\".") },
+				{ TEXT("free_only"), TEXT("boolean"), TEXT("Only free listings.") },
+				{ TEXT("open"), TEXT("boolean"), TEXT("Open it in the user's browser (default true). False returns the URL only.") },
+			}, &FabSearch);
+		OutTools.Last().IsAvailable = &ProtoBoyAssetSourcing::IsFabEnabled;
 
 		// Write
 		Add(TEXT("docs_create"), LOCTEXT("CreateTitle", "Create doc"),

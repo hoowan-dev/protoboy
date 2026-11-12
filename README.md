@@ -40,9 +40,11 @@ come later (see [Roadmap](#roadmap)).
 
 **Tools > ProtoBoy Dashboard** has two sections:
 
-- **Setup**: a shortcut to the plugin's Project Settings, plus the **MCP**, **Documentation** and **Tasks** sections.
-  Each shows its connection status and what's left to set up.
-- **Planning**: reserved for upcoming planning tools (empty for now).
+- **Setup**: a shortcut to the plugin's Project Settings, plus the **MCP**, **Documentation**, **Tasks** and optional
+  **Asset Sourcing** sections. Each shows its connection status and what's left to set up.
+- **Planning**: a setup checklist, with a check or warning for connecting an agent (MCP), documentation (Obsidian and
+  the Architecture doc) and a task board (Trello, with lists mapped). Each step has a **Set Up...** shortcut until it's
+  done. Planning tools come next.
 
 ### MCP server and one-click agent setup
 
@@ -62,9 +64,9 @@ come later (see [Roadmap](#roadmap)).
 
 | Read | Write |
 |---|---|
-| `get_project_context`, `locate_feature`, `docs_list`, `docs_search`, `docs_read`, `tasks_list`, `task_get` | `docs_create`, `docs_update_section`, `adr_create`, `task_create`, `task_update_status`, `task_comment` |
+| `get_project_context`, `locate_feature`, `docs_list`, `docs_search`, `docs_read`, `tasks_list`, `task_get`, `fab_search` (when Fab is enabled) | `docs_create`, `docs_update_section`, `adr_create`, `task_create`, `task_update_status`, `task_comment` |
 
-**Prompts:** `plan-feature`, `implement-task`, `record-decision`.
+**Prompts:** `plan-feature`, `implement-task`, `record-decision`, `source-assets`.
 
 **Write safety**
 
@@ -95,6 +97,17 @@ come later (see [Roadmap](#roadmap)).
 
 Trello needs an API key from a Trello Power-Up. The Trello page of **Connect Task Board** walks you through creating
 one and adding ProtoBoy's local address under **Allowed origins**.
+
+### Asset sourcing (optional)
+
+Stops agents from defaulting to AI-generated assets. In **Setup > Asset Sourcing** you choose:
+
+- **Policy.** Whether agents should prefer sourced assets (on by default). Agents see the policy in
+  `get_project_context` and in the agent guide.
+- **Sources.** Which ones are enabled. Today that's **Fab**: agents call `fab_search` with terms derived from the
+  design doc and art direction, ProtoBoy opens the fab.com search in your browser, and you pick the listings. Fab has
+  no public search API, so ProtoBoy never reads Fab results itself.
+- **Art direction.** An optional art direction doc that agents read before choosing assets.
 
 ## Getting started
 
@@ -164,6 +177,8 @@ Power-Up's secret is, and ProtoBoy never needs it.
 - Test scaffolding for mechanics (Unreal Automation Spec, Unity Test Framework, GdUnit4).
 - Unity and Godot plugins.
 
+- More asset sources behind the Asset Sourcing section: Kenney, Poly Haven, ambientCG, with license metadata.
+
 **Shelved for now:** project health checks with the Prototype-to-Production Viability Index, and asset lifecycle
 tagging with the Greybox Replacement Matrix. The earlier stubs are in git history.
 
@@ -180,6 +195,7 @@ Unreal/ProtoBoy/                 Unreal Engine 5.9 editor plugin
         Obsidian/                Obsidian vault connector and provider
       Tasks/                     Task provider interface, task board connection store
         Trello/                  Trello connect flow and REST client
+      Assets/                    Asset sourcing policy and sources (Fab)
       MCP/                       MCP server, tools, prompts, approvals, agent guide, client config
       Net/                       Shared HTTP helpers
       Daemon/                    Client for the future daemon (stub)

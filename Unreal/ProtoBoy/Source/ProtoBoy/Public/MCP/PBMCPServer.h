@@ -45,6 +45,8 @@ struct FProtoBoyMCPTool
 	/** JSON Schema for the arguments object. */
 	TSharedPtr<FJsonObject> InputSchema;
 	FProtoBoyMCPToolHandler Handler;
+	/** Optional: the tool is only offered while this returns true (e.g. its source is enabled in settings). */
+	TFunction<bool()> IsAvailable;
 };
 
 /** A workflow prompt (shown by agents as a slash command). Registered in MCP/PBMCPPrompts.cpp. */
