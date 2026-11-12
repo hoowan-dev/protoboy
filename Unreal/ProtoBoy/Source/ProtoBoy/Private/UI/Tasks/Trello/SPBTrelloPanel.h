@@ -5,6 +5,7 @@
 #include "Widgets/SCompoundWidget.h"
 
 class FProtoBoyTrelloConnector;
+class SEditableTextBox;
 class UProtoBoySettings;
 
 /**
@@ -35,6 +36,15 @@ private:
 
 	/** Fill unmapped list fields by name ("To Do", "Doing", "Done", ...). */
 	void AutoMapLists();
+
+	/** Template actions: shown when no board is chosen, or when the chosen board lacks lists. */
+	TSharedRef<SWidget> MakeTemplateActions();
+	/** Create a board from ProtoBoy's template (bNewBoard) or add the missing lists to the chosen board. */
+	void ApplyTemplate(bool bNewBoard);
+	/** Board chosen, lists loaded, and at least one of To Do / In Progress / Done isn't mapped to a list on the board. */
+	bool NeedsListSetup() const;
+	/** Template names of the lists the chosen board is missing, e.g. "In Progress, Done". */
+	FString GetMissingListNames() const;
 	FText GetListName(const FString& ListId) const;
 	FText GetBoardStatusText() const;
 	FSlateColor GetBoardStatusColor() const;
@@ -47,6 +57,11 @@ private:
 	bool bLoadingLists = false;
 	FText BoardError;
 	FDelegateHandle ConnectionChangedHandle;
+
+	TSharedPtr<SEditableTextBox> NewBoardNameBox;
+	bool bApplyingTemplate = false;
+	/** Result of the last template action. */
+	FText TemplateMessage;
 
 	TSharedRef<SWidget> MakeHeader();
 	/** Step-by-step guide to getting a Trello API key (expanded until a key is set). */

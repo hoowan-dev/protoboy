@@ -13,7 +13,9 @@
 #include "Tasks/Trello/PBTrelloConnector.h"
 #include "UI/PBStyle.h"
 #include "Widgets/Images/SImage.h"
+#include "Misc/App.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Input/SHyperlink.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
@@ -181,7 +183,14 @@ TSharedRef<SWidget> SProtoBoyTrelloPanel::MakeBoardSection()
 			.AutoHeight()
 			[
 				SNew(STextBlock)
-				.Text(LOCTEXT("BoardHeader", "Project board"))
+				.Text_Lambda([]()
+				{
+					const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+					FText WhyNot;
+					return Subsystem && Subsystem->GetTrelloClient().IsReady(WhyNot)
+						? LOCTEXT("BoardHeader", "Project board")
+						: LOCTEXT("BoardHeaderSetup", "Next: set up your project board");
+				})
 				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 11))
 			]
 
@@ -268,6 +277,13 @@ TSharedRef<SWidget> SProtoBoyTrelloPanel::MakeBoardSection()
 				+ SVerticalBox::Slot().AutoHeight()[ MakeListRow(LOCTEXT("ToDo", "To Do"), &UProtoBoySettings::TrelloToDoListId) ]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)[ MakeListRow(LOCTEXT("InProgress", "In Progress"), &UProtoBoySettings::TrelloInProgressListId) ]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)[ MakeListRow(LOCTEXT("Done", "Done"), &UProtoBoySettings::TrelloDoneListId) ]
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 12.f, 0.f, 0.f)
+			[
+				MakeTemplateActions()
 			]
 
 			+ SVerticalBox::Slot()
@@ -435,33 +451,20 @@ void SProtoBoyTrelloPanel::OnBoardPicked(FItemPtr Board, ESelectInfo::Type Selec
 
 void SProtoBoyTrelloPanel::AutoMapLists()
 {
+	TArray<FProtoBoyTrelloItem> Lists;
+	for (const FItemPtr& Item : ListOptions)
+	{
+		Lists.Add(*Item);
+	}
+
 	UProtoBoySettings* Settings = GetMutableDefault<UProtoBoySettings>();
-
-	auto IsKnown = [this](const FString& Id)
-	{
-		return ListOptions.ContainsByPredicate([&Id](const FItemPtr& Item) { return Item->Id == Id; });
-	};
-	auto Guess = [this](std::initializer_list<const TCHAR*> Names) -> FString
-	{
-		for (const TCHAR* Name : Names)
-		{
-			for (const FItemPtr& Item : ListOptions)
-			{
-				if (Item->Name.TrimStartAndEnd().Equals(Name, ESearchCase::IgnoreCase))
-				{
-					return Item->Id;
-				}
-			}
-		}
-		return FString();
-	};
-
 	bool bChanged = false;
-	auto Fill = [&](FString& Field, std::initializer_list<const TCHAR*> Names)
+	auto Fill = [&](FString& Field, EProtoBoyTaskStatus Status)
 	{
-		if (Field.IsEmpty() || !IsKnown(Field))
+		const bool bKnown = Lists.ContainsByPredicate([&Field](const FProtoBoyTrelloItem& List) { return List.Id == Field; });
+		if (Field.IsEmpty() || !bKnown)
 		{
-			const FString Guessed = Guess(Names);
+			const FString Guessed = FProtoBoyTrelloClient::GuessListId(Lists, Status);
 			if (Guessed != Field)
 			{
 				Field = Guessed;
@@ -470,14 +473,179 @@ void SProtoBoyTrelloPanel::AutoMapLists()
 		}
 	};
 
-	Fill(Settings->TrelloToDoListId, { TEXT("To Do"), TEXT("ToDo"), TEXT("Todo"), TEXT("Backlog"), TEXT("Next"), TEXT("Up Next") });
-	Fill(Settings->TrelloInProgressListId, { TEXT("In Progress"), TEXT("Doing"), TEXT("WIP"), TEXT("In Development") });
-	Fill(Settings->TrelloDoneListId, { TEXT("Done"), TEXT("Complete"), TEXT("Completed"), TEXT("Finished") });
+	Fill(Settings->TrelloToDoListId, EProtoBoyTaskStatus::ToDo);
+	Fill(Settings->TrelloInProgressListId, EProtoBoyTaskStatus::InProgress);
+	Fill(Settings->TrelloDoneListId, EProtoBoyTaskStatus::Done);
 
 	if (bChanged)
 	{
 		Settings->TryUpdateDefaultConfigFile();
 	}
+}
+
+TSharedRef<SWidget> SProtoBoyTrelloPanel::MakeTemplateActions()
+{
+	return SNew(SVerticalBox)
+
+		// No board yet: create one from the template.
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SVerticalBox)
+			.Visibility_Lambda([]() { return GetDefault<UProtoBoySettings>()->TrelloBoardId.IsEmpty() ? EVisibility::Visible : EVisibility::Collapsed; })
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("TemplateIntro", "No board for this project yet? Create one from ProtoBoy's template: To Do, In Progress and Done lists, mapped automatically."))
+				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+				.AutoWrapText(true)
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 6.f, 0.f, 0.f)
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.f)
+				.VAlign(VAlign_Center)
+				[
+					SAssignNew(NewBoardNameBox, SEditableTextBox)
+					.Text(FText::FromString(FString::Printf(TEXT("%s Tasks"), FApp::GetProjectName())))
+					.HintText(LOCTEXT("BoardNameHint", "New board name"))
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.Padding(6.f, 0.f, 0.f, 0.f)
+				[
+					SNew(SButton)
+					.ButtonStyle(FAppStyle::Get(), "PrimaryButton")
+					.Text(LOCTEXT("CreateBoard", "Create Board from Template"))
+					.IsEnabled_Lambda([this]() { return !bApplyingTemplate; })
+					.OnClicked_Lambda([this]() { ApplyTemplate(/*bNewBoard*/ true); return FReply::Handled(); })
+				]
+			]
+		]
+
+		// Board chosen but missing lists: add them.
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SHorizontalBox)
+			.Visibility_Lambda([this]() { return NeedsListSetup() ? EVisibility::Visible : EVisibility::Collapsed; })
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this]()
+				{
+					return FText::Format(LOCTEXT("MissingLists", "This board doesn't have the lists ProtoBoy expects ({0}). Pick existing ones above, or add them."),
+						FText::FromString(GetMissingListNames()));
+				})
+				.ColorAndOpacity(FStyleColors::Warning)
+				.AutoWrapText(true)
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(8.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("AddLists", "Add Missing Lists"))
+				.ToolTipText(LOCTEXT("AddListsTip", "Creates only the missing lists on this Trello board and maps them. Existing lists and cards aren't touched."))
+				.IsEnabled_Lambda([this]() { return !bApplyingTemplate; })
+				.OnClicked_Lambda([this]() { ApplyTemplate(/*bNewBoard*/ false); return FReply::Handled(); })
+			]
+		];
+}
+
+bool SProtoBoyTrelloPanel::NeedsListSetup() const
+{
+	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
+	if (Settings->TrelloBoardId.IsEmpty() || bLoadingLists || !BoardError.IsEmpty())
+	{
+		return false;
+	}
+	return !GetMissingListNames().IsEmpty();
+}
+
+FString SProtoBoyTrelloPanel::GetMissingListNames() const
+{
+	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
+	auto IsMapped = [this](const FString& Id)
+	{
+		return !Id.IsEmpty() && ListOptions.ContainsByPredicate([&Id](const FItemPtr& Item) { return Item->Id == Id; });
+	};
+
+	TArray<FString> Missing;
+	if (!IsMapped(Settings->TrelloToDoListId)) { Missing.Add(FProtoBoyTrelloClient::GetTemplateListName(EProtoBoyTaskStatus::ToDo)); }
+	if (!IsMapped(Settings->TrelloInProgressListId)) { Missing.Add(FProtoBoyTrelloClient::GetTemplateListName(EProtoBoyTaskStatus::InProgress)); }
+	if (!IsMapped(Settings->TrelloDoneListId)) { Missing.Add(FProtoBoyTrelloClient::GetTemplateListName(EProtoBoyTaskStatus::Done)); }
+	return FString::Join(Missing, TEXT(", "));
+}
+
+void SProtoBoyTrelloPanel::ApplyTemplate(bool bNewBoard)
+{
+	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	if (!Subsystem || bApplyingTemplate)
+	{
+		return;
+	}
+
+	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
+	const FString NewName = NewBoardNameBox.IsValid() ? NewBoardNameBox->GetText().ToString() : FString();
+
+	bApplyingTemplate = true;
+	BoardError = FText::GetEmpty();
+	TemplateMessage = FText::GetEmpty();
+
+	const TWeakPtr<SProtoBoyTrelloPanel> WeakThis = StaticCastSharedRef<SProtoBoyTrelloPanel>(AsShared());
+	Subsystem->GetTrelloClient().ApplyBoardTemplate(
+		bNewBoard ? FString() : Settings->TrelloBoardId,
+		bNewBoard ? FString() : Settings->TrelloBoardName,
+		NewName,
+		[WeakThis](const TProtoBoyTaskResult<FProtoBoyTrelloBoardSetup>& Result)
+		{
+			// Save the mapping even if the panel was closed meanwhile: the board now exists on Trello.
+			if (Result.bOk)
+			{
+				UProtoBoySettings* MutableSettings = GetMutableDefault<UProtoBoySettings>();
+				MutableSettings->TrelloBoardId = Result.Value.BoardId;
+				MutableSettings->TrelloBoardName = Result.Value.BoardName;
+				MutableSettings->TrelloToDoListId = Result.Value.ToDoListId;
+				MutableSettings->TrelloInProgressListId = Result.Value.InProgressListId;
+				MutableSettings->TrelloDoneListId = Result.Value.DoneListId;
+				MutableSettings->TryUpdateDefaultConfigFile();
+			}
+
+			const TSharedPtr<SProtoBoyTrelloPanel> This = WeakThis.Pin();
+			if (!This.IsValid())
+			{
+				return;
+			}
+			This->bApplyingTemplate = false;
+			if (!Result.bOk)
+			{
+				This->BoardError = Result.Error;
+				return;
+			}
+
+			This->TemplateMessage = Result.Value.bCreatedBoard
+				? FText::Format(LOCTEXT("CreatedBoard", "Created board \"{0}\"."), FText::FromString(Result.Value.BoardName))
+				: Result.Value.CreatedLists.IsEmpty()
+					? LOCTEXT("NothingMissing", "The board already had the lists ProtoBoy needs.")
+					: FText::Format(LOCTEXT("AddedLists", "Added lists: {0}."), FText::FromString(FString::Join(Result.Value.CreatedLists, TEXT(", "))));
+
+			This->RefreshBoards();
+			This->RefreshLists(Result.Value.BoardId);
+		});
 }
 
 FText SProtoBoyTrelloPanel::GetListName(const FString& ListId) const
@@ -502,15 +670,22 @@ FText SProtoBoyTrelloPanel::GetBoardStatusText() const
 	{
 		return BoardError;
 	}
+	if (bApplyingTemplate)
+	{
+		return LOCTEXT("ApplyingTemplate", "Setting up the board on Trello...");
+	}
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 	if (!Subsystem)
 	{
 		return FText::GetEmpty();
 	}
 	FText WhyNot;
-	return Subsystem->GetTrelloClient().IsReady(WhyNot)
-		? LOCTEXT("BoardReady", "Ready: agents can read and update tasks on this board through ProtoBoy.")
-		: WhyNot;
+	if (!Subsystem->GetTrelloClient().IsReady(WhyNot))
+	{
+		return WhyNot;
+	}
+	const FText Ready = LOCTEXT("BoardReady", "Ready: agents can read and update tasks on this board through ProtoBoy.");
+	return TemplateMessage.IsEmpty() ? Ready : FText::Format(LOCTEXT("ReadyWithMessage", "{0} {1}"), TemplateMessage, Ready);
 }
 
 FSlateColor SProtoBoyTrelloPanel::GetBoardStatusColor() const

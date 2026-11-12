@@ -12,6 +12,19 @@ struct FProtoBoyTrelloItem
 	FString Name;
 };
 
+/** Result of applying ProtoBoy's board template: the board and the lists to save as the team's mapping. */
+struct FProtoBoyTrelloBoardSetup
+{
+	FString BoardId;
+	FString BoardName;
+	FString ToDoListId;
+	FString InProgressListId;
+	FString DoneListId;
+	bool bCreatedBoard = false;
+	/** Names of the lists the template had to create. */
+	TArray<FString> CreatedLists;
+};
+
 /**
  * Trello REST client and task provider. Uses the user's token from FProtoBoyTrelloConnector and the team's board and
  * list mapping from UProtoBoySettings (TrelloBoardId, TrelloToDoListId, ...). Every task call is limited to that board.
@@ -20,12 +33,26 @@ class PROTOBOY_API FProtoBoyTrelloClient : public IProtoBoyTaskProvider
 {
 public:
 	using FItemsCallback = TFunction<void(const TProtoBoyTaskResult<TArray<FProtoBoyTrelloItem>>&)>;
+	using FSetupCallback = TFunction<void(const TProtoBoyTaskResult<FProtoBoyTrelloBoardSetup>&)>;
 
 	explicit FProtoBoyTrelloClient(const FProtoBoyTrelloConnector& InConnector);
 
 	// Board picker
 	void FetchBoards(FItemsCallback OnDone);
 	void FetchLists(const FString& BoardId, FItemsCallback OnDone);
+
+	/**
+	 * ProtoBoy's board template: "To Do", "In Progress" and "Done" lists.
+	 * With ExistingBoardId empty, creates a new board named NewBoardName (with a description of ProtoBoy's conventions).
+	 * Otherwise keeps the board's lists that are already mapped or recognizable by name and creates only the missing ones.
+	 * Doesn't save settings; the caller stores the returned mapping.
+	 */
+	void ApplyBoardTemplate(const FString& ExistingBoardId, const FString& ExistingBoardName, const FString& NewBoardName, FSetupCallback OnDone);
+
+	/** The list for a status: by name ("To Do", "Doing", "Done", ...). Empty if none matches. */
+	static FString GuessListId(const TArray<FProtoBoyTrelloItem>& Lists, EProtoBoyTaskStatus Status);
+	/** The list name ProtoBoy's template uses for a status. */
+	static FString GetTemplateListName(EProtoBoyTaskStatus Status);
 
 	// IProtoBoyTaskProvider
 	virtual FText GetDisplayName() const override;
