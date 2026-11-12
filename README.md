@@ -38,13 +38,19 @@ come later (see [Roadmap](#roadmap)).
 
 ### Dashboard
 
-**Tools > ProtoBoy Dashboard** has two sections:
+**Tools > ProtoBoy Dashboard** has two pages, picked from the list in its sidebar (the dashboard reopens on the last
+page you used):
 
 - **Setup**: a shortcut to the plugin's Project Settings, plus the **MCP**, **Documentation**, **Tasks** and optional
-  **Asset Sourcing** sections. Each shows its connection status and what's left to set up.
-- **Planning**: a setup checklist, with a check or warning for connecting an agent (MCP), documentation (Obsidian and
-  the Architecture doc) and a task board (Trello, with lists mapped). Each step has a **Set Up...** shortcut until it's
-  done. Below it is the **pillar tree** editor (see [Pillars](#pillars)).
+  **Asset Sourcing** sections. Each shows its connection status and what's left to set up, with a check or a red X in
+  its header (hover it for details). These are the same checks as on the Planning page.
+- **Planning**: two sections.
+  - **Setup Checks**: a check or warning for connecting an agent (MCP), documentation (Obsidian and the Architecture
+    doc) and a task board (Trello, with lists mapped). Each has a **Set Up...** shortcut until it's done. A fourth check,
+    **Asset sourcing**, is always green because sourcing is optional. It shows the team's choices: whether agents source
+    assets instead of generating them, the enabled sources, and the art direction note. Its **Change...** button opens the
+    Setup page.
+  - **Pillars**: the pillar tree editor (see [Pillars](#pillars)). It's disabled until every setup check is green.
 
 ### MCP server and one-click agent setup
 
@@ -183,7 +189,7 @@ architectural pillars** that the team defines: gameplay, animation, art, content
 can be organised around mechanics, domains or disciplines, and nest as deep as needed (for example
 `gameplay/combat/abilities`). Everything else hangs off that tree.
 
-**Author once, generate the rest.** You build the tree in the dashboard's **Planning** section. ProtoBoy then
+**Author once, generate the rest.** You build the tree on the dashboard's **Planning** page. ProtoBoy then
 generates matching structure:
 
 - **Docs:** a doc per pillar, for example `Pillars/Gameplay/Combat.md`, from a template: Vision, Goals, Non-goals,
