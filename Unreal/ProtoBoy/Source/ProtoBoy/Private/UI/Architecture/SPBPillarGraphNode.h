@@ -5,8 +5,8 @@
 class UProtoBoyPillarGraphNode;
 
 /**
- * A pillar node drawn like a Behavior Tree node: input bar on top, colored body (name, kind, vision), output bar
- * below. Body color follows the pillar's Kind. Nodes that don't match the editor's search are dimmed.
+ * A pillar node drawn like a Behavior Tree node: input bar on top, colored body (name, type, description), output bar
+ * below. Body color follows the pillar's Type. Nodes that don't match the editor's search are dimmed.
  */
 class SProtoBoyPillarGraphNode : public SGraphNode
 {
@@ -29,6 +29,6 @@ private:
 	FSlateColor GetBodyColor() const;
 	FLinearColor GetOpacity() const;
 	const FSlateBrush* GetIcon() const;
-	FText GetKind() const;
-	FText GetVision() const;
+	FText GetType() const;
+	FText GetDescription() const;
 };

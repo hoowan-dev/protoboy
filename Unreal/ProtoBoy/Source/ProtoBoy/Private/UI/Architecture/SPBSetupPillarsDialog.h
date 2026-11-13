@@ -12,7 +12,7 @@ class SWidgetSwitcher;
 /**
  * "Setup Pillars from Template" window, opened from Architecture > Pillars. Starts on a choice between two ways to
  * build the pillar tree, each of which moves the window on to its own step:
- * - Build From Template: a list of presets (by game genre and scope) and a preview of the selected one's tree. Next
+ * - Build From Template: a list of presets (by game genre) and a preview of the selected one's tree. Next
  *   moves to a confirmation step that shows the template again and says what it overwrites, then applies it.
  * - Build From Existing Project: an LLM reads the work done so far and proposes pillars around it (blank for now).
  */

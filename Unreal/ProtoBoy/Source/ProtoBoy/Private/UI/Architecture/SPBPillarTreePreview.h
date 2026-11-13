@@ -19,7 +19,7 @@ public:
 
 	void Construct(const FArguments& InArgs);
 
-	/** Show these pillars (the root first, the rest pointing at their parent by Id) and zoom to fit them. */
+	/** Show these pillars (the first is the root, the rest point at their parent by Id) and zoom to fit them. */
 	void SetPillars(const TArray<FProtoBoyPillar>& Pillars);
 
 	// FGCObject

@@ -148,7 +148,7 @@ TSharedRef<SWidget> SProtoBoySetupPillarsDialog::MakeOption(const FText& Title, 
 
 TSharedRef<SWidget> SProtoBoySetupPillarsDialog::MakeFromTemplateStep()
 {
-	// TODO: Filter by genre and scope once there are more templates.
+	// TODO: Filter by genre once there are more templates.
 	for (FProtoBoyPillarTemplate& Template : ProtoBoyPillarTemplates::LoadTemplates())
 	{
 		Templates.Add(MakeShared<FProtoBoyPillarTemplate>(MoveTemp(Template)));
@@ -228,17 +228,8 @@ TSharedRef<SWidget> SProtoBoySetupPillarsDialog::MakeFromTemplateStep()
 
 TSharedRef<ITableRow> SProtoBoySetupPillarsDialog::OnGenerateTemplateRow(TSharedPtr<FProtoBoyPillarTemplate> Template, const TSharedRef<STableViewBase>& OwnerTable)
 {
-	// "Genre · Scope" under the name, when the template is meant for a particular kind of game.
-	TArray<FText> Tags;
-	if (!Template->Genre.IsEmpty())
-	{
-		Tags.Add(FText::FromString(Template->Genre));
-	}
-	if (!Template->Scope.IsEmpty())
-	{
-		Tags.Add(FText::FromString(Template->Scope));
-	}
-	const FText Subtitle = Tags.IsEmpty() ? LOCTEXT("AnyGame", "Any genre or scope") : FText::Join(LOCTEXT("TagSeparator", " · "), Tags);
+	// The genre under the name, when the template is meant for a particular kind of game.
+	const FText Subtitle = Template->Genre.IsEmpty() ? LOCTEXT("AnyGenre", "Any genre") : FText::FromString(Template->Genre);
 
 	return SNew(STableRow<TSharedPtr<FProtoBoyPillarTemplate>>, OwnerTable)
 		.Padding(FMargin(8.f, 6.f))

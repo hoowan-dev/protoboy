@@ -170,7 +170,7 @@ FText UProtoBoyPillarGraphNode::GetTooltipText() const
 	if (Graph && Graph->bPreview)
 	{
 		const FProtoBoyPillar* Pillar = Graph->FindPillar(PillarId);
-		return Pillar ? FText::FromString(Pillar->Vision) : FText::GetEmpty();
+		return Pillar ? FText::FromString(Pillar->Description) : FText::GetEmpty();
 	}
 	if (IsRoot())
 	{

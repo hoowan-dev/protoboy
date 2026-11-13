@@ -44,21 +44,12 @@ namespace ProtoBoyPillarTemplates
 				UE_LOG(LogProtoBoy, Warning, TEXT("Skipping pillar template %s: written by a newer ProtoBoy (version %d)."), *Path, Template.Version);
 				continue;
 			}
-			FProtoBoyPillar* Root = nullptr;
-			int32 RootCount = 0;
-			for (FProtoBoyPillar& Pillar : Template.Pillars)
+			if (Template.Pillars.IsEmpty() || Template.Pillars[0].Type != EProtoBoyPillarType::Game)
 			{
-				if (Pillar.bRoot)
-				{
-					Root = &Pillar;
-					++RootCount;
-				}
-			}
-			if (RootCount != 1)
-			{
-				UE_LOG(LogProtoBoy, Warning, TEXT("Skipping pillar template %s: it needs exactly one root pillar (found %d)."), *Path, RootCount);
+				UE_LOG(LogProtoBoy, Warning, TEXT("Skipping pillar template %s: its first pillar must be the root, with type Game."), *Path);
 				continue;
 			}
+			FProtoBoyPillar* Root = &Template.Pillars[0];
 
 			// The root stands for the game, so it shows (and is applied with) this project's name.
 			Root->Name = ProjectName.IsEmpty() ? FString(TEXT("Game")) : ProjectName;

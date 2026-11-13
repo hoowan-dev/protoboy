@@ -15,6 +15,7 @@ class UProtoBoyPillarGraphNode;
  * Architecture > Pillars: the pillar tree as a Behavior Tree style graph. The game is the root node at the top, each
  * pillar a node below its parent, laid out automatically. Wire a node's bottom bar to another's top bar to nest it,
  * drag off a bottom bar into empty space to add a child, F2 to rename, Delete to remove, right-click for more.
+ * Ctrl+Z / Ctrl+Y (or the toolbar) undo and redo pillar edits.
  * The selected pillar's details are edited below the graph, and docs are generated from the tree (with a preview).
  * Edits save to the pillar file immediately; the graph is only a view rebuilt from FProtoBoyPillarService.
  */
@@ -26,6 +27,9 @@ public:
 
 	void Construct(const FArguments& InArgs);
 	virtual ~SProtoBoyPillarTreeEditor() override;
+
+	// Undo / redo shortcuts when focus is anywhere in the editor (text boxes handle their own first).
+	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
 
 	// FGCObject
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
@@ -72,6 +76,10 @@ private:
 	FReply OnAddClicked(bool bAsChild);
 	FReply OnMoveClicked(int32 Delta);
 	FReply OnRemoveClicked();
+	void UndoEdit();
+	void RedoEdit();
+	bool CanUndoEdit() const;
+	bool CanRedoEdit() const;
 	FReply OnGenerateDocsClicked();
 	FReply OnSetupPillarsClicked();
 	/** Asks, then removes every pillar below the root. */

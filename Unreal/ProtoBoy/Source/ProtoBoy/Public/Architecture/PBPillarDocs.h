@@ -39,8 +39,8 @@ struct FProtoBoyPillarDocChange
  * Generates docs from the pillar tree. Plan() computes every change without writing; Apply() writes a plan.
  *
  * Each pillar gets <PillarDocsFolder>/<ancestors>/<Name>.md from a template (Vision, Goals, Non-goals, Design, Rules,
- * Interfaces, Art & assets, Open questions). ProtoBoy only owns a managed "pillar" header block in it (kind, vision,
- * parent/children/dependency links); the rest is the team's. Docs keep their path when a pillar is renamed or moved.
+ * Interfaces, Art & assets, Open questions). ProtoBoy only owns a managed "pillar" header block in it (type, description,
+ * parent and children links); the rest is the team's. Docs keep their path when a pillar is renamed or moved.
  * The Architecture doc, if it exists, gets a managed "pillars" overview of the tree.
  */
 class PROTOBOY_API FProtoBoyPillarDocSync

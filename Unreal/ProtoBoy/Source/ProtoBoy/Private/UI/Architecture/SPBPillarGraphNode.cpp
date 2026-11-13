@@ -15,16 +15,14 @@
 
 namespace ProtoBoyPillarGraphNode
 {
-	/** Body colors, borrowed from the Behavior Tree editor's palette (task, decorator, service, ...). */
-	const FLinearColor KindColors[] = {
-		FLinearColor(0.24f, 0.055f, 0.715f),
-		FLinearColor(0.0f, 0.07f, 0.4f),
-		FLinearColor(0.0f, 0.4f, 0.22f),
-		FLinearColor(0.0f, 0.28f, 0.35f),
-		FLinearColor(0.42f, 0.17f, 0.02f),
-		FLinearColor(0.38f, 0.04f, 0.12f),
-	};
-	const FLinearColor NoKindColor(0.1f, 0.1f, 0.1f);
+	/** Body colors per type, borrowed from the Behavior Tree editor's palette. */
+	const FLinearColor CoreColor(0.24f, 0.055f, 0.715f);
+	const FLinearColor FeatureColor(0.42f, 0.17f, 0.02f);
+	const FLinearColor ContentColor(0.0f, 0.28f, 0.35f);
+	const FLinearColor InterfaceColor(0.38f, 0.04f, 0.12f);
+	const FLinearColor AssetColor(0.0f, 0.07f, 0.4f);
+	const FLinearColor ToolColor(0.0f, 0.4f, 0.22f);
+	const FLinearColor NoTypeColor(0.1f, 0.1f, 0.1f);
 	const FLinearColor RootColor(0.15f, 0.15f, 0.15f);
 	const FLinearColor BorderColor(0.08f, 0.08f, 0.08f);
 
@@ -132,30 +130,30 @@ void SProtoBoyPillarGraphNode::UpdateGraphNode()
 								]
 							]
 
-							// Kind
+							// Type
 							+ SVerticalBox::Slot()
 							.AutoHeight()
 							.Padding(0.f, 2.f, 0.f, 0.f)
 							[
 								SNew(STextBlock)
-								.Text(this, &SProtoBoyPillarGraphNode::GetKind)
-								.Visibility_Lambda([this]() { return GetKind().IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible; })
+								.Text(this, &SProtoBoyPillarGraphNode::GetType)
+								.Visibility_Lambda([this]() { return GetType().IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible; })
 								.TextStyle(FAppStyle::Get(), "SmallText")
 								.ColorAndOpacity(FLinearColor(1.f, 1.f, 1.f, 0.6f))
 							]
 
-							// Vision
+							// Description
 							+ SVerticalBox::Slot()
 							.AutoHeight()
 							.Padding(0.f, 4.f, 0.f, 0.f)
 							[
 								SNew(STextBlock)
-								.Text(this, &SProtoBoyPillarGraphNode::GetVision)
+								.Text(this, &SProtoBoyPillarGraphNode::GetDescription)
 								.Visibility_Lambda([this]()
 								{
 									const TSharedPtr<SGraphPanel> Panel = GetOwnerPanel();
 									const bool bDetailed = !Panel.IsValid() || Panel->GetCurrentLOD() > EGraphRenderingLOD::LowDetail;
-									return bDetailed && !GetVision().IsEmpty() ? EVisibility::Visible : EVisibility::Collapsed;
+									return bDetailed && !GetDescription().IsEmpty() ? EVisibility::Visible : EVisibility::Collapsed;
 								})
 								.AutoWrapText(true)
 								.ColorAndOpacity(FLinearColor(1.f, 1.f, 1.f, 0.85f))
@@ -212,13 +210,18 @@ FSlateColor SProtoBoyPillarGraphNode::GetBodyColor() const
 		return ProtoBoyPillarGraphNode::RootColor;
 	}
 	const FProtoBoyPillar* Pillar = ProtoBoyPillarGraphNode::FindPillar(Node);
-	const FString Kind = Pillar ? Pillar->Kind.ToLower() : FString();
-	if (Kind.IsEmpty())
+	// One color per type, so the tree's structure reads at a glance.
+	switch (Pillar ? Pillar->Type : EProtoBoyPillarType::None)
 	{
-		return ProtoBoyPillarGraphNode::NoKindColor;
+	case EProtoBoyPillarType::Core: return ProtoBoyPillarGraphNode::CoreColor;
+	case EProtoBoyPillarType::Feature: return ProtoBoyPillarGraphNode::FeatureColor;
+	case EProtoBoyPillarType::Content: return ProtoBoyPillarGraphNode::ContentColor;
+	case EProtoBoyPillarType::Interface: return ProtoBoyPillarGraphNode::InterfaceColor;
+	case EProtoBoyPillarType::Asset: return ProtoBoyPillarGraphNode::AssetColor;
+	case EProtoBoyPillarType::Tool: return ProtoBoyPillarGraphNode::ToolColor;
+	case EProtoBoyPillarType::Game: return ProtoBoyPillarGraphNode::RootColor;
+	default: return ProtoBoyPillarGraphNode::NoTypeColor;
 	}
-	// Same kind, same color, so the team's categories read at a glance.
-	return ProtoBoyPillarGraphNode::KindColors[GetTypeHash(Kind) % UE_ARRAY_COUNT(ProtoBoyPillarGraphNode::KindColors)];
 }
 
 FLinearColor SProtoBoyPillarGraphNode::GetOpacity() const
@@ -240,16 +243,16 @@ const FSlateBrush* SProtoBoyPillarGraphNode::GetIcon() const
 	return FAppStyle::GetBrush(ChildrenPin && !ChildrenPin->LinkedTo.IsEmpty() ? "Icons.FolderOpen" : "Icons.FolderClosed");
 }
 
-FText SProtoBoyPillarGraphNode::GetKind() const
+FText SProtoBoyPillarGraphNode::GetType() const
 {
 	const UProtoBoyPillarGraphNode* Node = GetPillarNode();
 	const FProtoBoyPillar* Pillar = ProtoBoyPillarGraphNode::FindPillar(Node);
-	return Pillar ? FText::FromString(Pillar->Kind) : FText::GetEmpty();
+	return Pillar ? GetPillarTypeText(Pillar->Type) : FText::GetEmpty();
 }
 
-FText SProtoBoyPillarGraphNode::GetVision() const
+FText SProtoBoyPillarGraphNode::GetDescription() const
 {
 	const UProtoBoyPillarGraphNode* Node = GetPillarNode();
 	const FProtoBoyPillar* Pillar = ProtoBoyPillarGraphNode::FindPillar(Node);
-	return Pillar ? FText::FromString(Pillar->Vision) : FText::GetEmpty();
+	return Pillar ? FText::FromString(Pillar->Description) : FText::GetEmpty();
 }

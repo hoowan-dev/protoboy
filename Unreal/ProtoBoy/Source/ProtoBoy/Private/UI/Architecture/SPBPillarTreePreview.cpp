@@ -38,17 +38,18 @@ void SProtoBoyPillarTreePreview::SetPillars(const TArray<FProtoBoyPillar>& Pilla
 
 	TMap<FString, TObjectPtr<UProtoBoyPillarGraphNode>> NodesById;
 	UProtoBoyPillarGraphNode* Root = nullptr;
-	for (const FProtoBoyPillar& Pillar : Pillars)
+	for (int32 Index = 0; Index < Pillars.Num(); ++Index)
 	{
+		const FProtoBoyPillar& Pillar = Pillars[Index];
 		UProtoBoyPillarGraphNode* Node = NewObject<UProtoBoyPillarGraphNode>(Graph, NAME_None, RF_Transient);
 		Node->PillarId = Pillar.Id;
-		Node->bRootNode = Pillar.bRoot;
+		Node->bRootNode = Index == 0;
 		Node->bCanRenameNode = false;
 		Node->CreateNewGuid();
 		Node->AllocateDefaultPins();
 		Graph->AddNode(Node, false, false);
 		NodesById.Add(Pillar.Id, Node);
-		if (Pillar.bRoot && !Root)
+		if (Index == 0)
 		{
 			Root = Node;
 		}
@@ -59,7 +60,7 @@ void SProtoBoyPillarTreePreview::SetPillars(const TArray<FProtoBoyPillar>& Pilla
 		TArray<const FProtoBoyPillar*> Children;
 		for (const FProtoBoyPillar& Pillar : Pillars)
 		{
-			if (!Pillar.bRoot && Pillar.ParentId == ParentId)
+			if (&Pillar != &Pillars[0] && Pillar.ParentId == ParentId)
 			{
 				Children.Add(&Pillar);
 			}

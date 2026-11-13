@@ -82,6 +82,9 @@ dist/
 # Personal dev scripts (point at a local test project)
 Scripts/Test/BuildAndRelaunchTestProject.ps1
 
+# Actually, just ignore any helpers scripts made by llms
+Scripts/
+
 # Claude Code local (per-user) settings
 .claude/settings.local.json
 

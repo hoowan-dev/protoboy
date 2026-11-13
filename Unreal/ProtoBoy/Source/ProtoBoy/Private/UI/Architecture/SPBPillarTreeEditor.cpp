@@ -213,6 +213,12 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeGraph()
 	GraphCommands->MapAction(FGenericCommands::Get().Delete,
 		FExecuteAction::CreateSPLambda(this, [this]() { OnRemoveClicked(); }),
 		FCanExecuteAction::CreateSP(this, &SProtoBoyPillarTreeEditor::HasSelectedPillar));
+	GraphCommands->MapAction(FGenericCommands::Get().Undo,
+		FExecuteAction::CreateSP(this, &SProtoBoyPillarTreeEditor::UndoEdit),
+		FCanExecuteAction::CreateSP(this, &SProtoBoyPillarTreeEditor::CanUndoEdit));
+	GraphCommands->MapAction(FGenericCommands::Get().Redo,
+		FExecuteAction::CreateSP(this, &SProtoBoyPillarTreeEditor::RedoEdit),
+		FCanExecuteAction::CreateSP(this, &SProtoBoyPillarTreeEditor::CanRedoEdit));
 	GraphCommands->MapAction(FGenericCommands::Get().Rename,
 		FExecuteAction::CreateSPLambda(this, [this]() { RequestRename(SelectedId); }),
 		FCanExecuteAction::CreateSP(this, &SProtoBoyPillarTreeEditor::HasSelectedPillar));
@@ -260,6 +266,54 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeToolbar()
 	};
 
 	return SNew(SHorizontalBox)
+
+		// Undo / Redo
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		[
+			SNew(SButton)
+			.ButtonStyle(FAppStyle::Get(), "SimpleButton")
+			.ContentPadding(FMargin(4.f, 2.f))
+			.ToolTipText_Lambda([this]()
+			{
+				const FProtoBoyPillarService* Service = GetService();
+				return Service && Service->CanUndo()
+					? FText::Format(LOCTEXT("UndoTip", "Undo {0} (Ctrl+Z)"), Service->GetUndoDescription())
+					: LOCTEXT("NothingToUndo", "Nothing to undo");
+			})
+			.IsEnabled(this, &SProtoBoyPillarTreeEditor::CanUndoEdit)
+			.OnClicked_Lambda([this]() { UndoEdit(); return FReply::Handled(); })
+			[
+				SNew(SImage)
+				.Image(FAppStyle::Get().GetBrush("GenericCommands.Undo"))
+				.ColorAndOpacity(FSlateColor::UseForeground())
+			]
+		]
+
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		.Padding(0.f, 0.f, 6.f, 0.f)
+		[
+			SNew(SButton)
+			.ButtonStyle(FAppStyle::Get(), "SimpleButton")
+			.ContentPadding(FMargin(4.f, 2.f))
+			.ToolTipText_Lambda([this]()
+			{
+				const FProtoBoyPillarService* Service = GetService();
+				return Service && Service->CanRedo()
+					? FText::Format(LOCTEXT("RedoTip", "Redo {0} (Ctrl+Y)"), Service->GetRedoDescription())
+					: LOCTEXT("NothingToRedo", "Nothing to redo");
+			})
+			.IsEnabled(this, &SProtoBoyPillarTreeEditor::CanRedoEdit)
+			.OnClicked_Lambda([this]() { RedoEdit(); return FReply::Handled(); })
+			[
+				SNew(SImage)
+				.Image(FAppStyle::Get().GetBrush("GenericCommands.Redo"))
+				.ColorAndOpacity(FSlateColor::UseForeground())
+			]
+		]
 
 		// + Add
 		+ SHorizontalBox::Slot()
@@ -427,7 +481,7 @@ void SProtoBoyPillarTreeEditor::OnNodeDoubleClicked(UEdGraphNode* Node)
 		return;
 	}
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-	const FString DocPath = Pillar->bRoot ? FProtoBoyDocGenerator::GetArchitectureDocPath() : Pillar->DocPath;
+	const FString DocPath = Service->IsRoot(Pillar->Id) ? FProtoBoyDocGenerator::GetArchitectureDocPath() : Pillar->DocPath;
 	if (!DocPath.IsEmpty() && Subsystem && Subsystem->GetObsidianConnector().IsConnected())
 	{
 		EditError = FText::GetEmpty();
@@ -557,7 +611,7 @@ bool SProtoBoyPillarTreeEditor::MatchesFilter(const FString& Id) const
 	const FProtoBoyPillarService* Service = GetService();
 	const FProtoBoyPillar* Pillar = Service ? Service->Find(Id) : nullptr;
 	const FString Filter = FilterText.ToString();
-	return Pillar && (Pillar->Name.Contains(Filter) || Pillar->Kind.Contains(Filter) || Pillar->Vision.Contains(Filter));
+	return Pillar && (Pillar->Name.Contains(Filter) || GetPillarTypeText(Pillar->Type).ToString().Contains(Filter) || Pillar->Description.Contains(Filter));
 }
 
 bool SProtoBoyPillarTreeEditor::ConsumePendingRename(const FString& Id)
@@ -790,8 +844,8 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 		MutableService->UpdatePillar(Edited, EditError);
 	};
 
-	// The root is the game: fixed name, no parent, no dependencies, and the Architecture doc as its doc.
-	const bool bRoot = Pillar.bRoot;
+	// The root is the game: fixed name and type, no parent, and the Architecture doc as its doc.
+	const bool bRoot = Service->IsRoot(Id);
 	const FString DocPath = bRoot ? FProtoBoyDocGenerator::GetArchitectureDocPath() : Pillar.DocPath;
 
 	// Parent options: any pillar outside this one's subtree (the root, the project, is the top level).
@@ -808,33 +862,6 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 				CurrentParent = Option;
 			}
 		}
-	}
-
-	// Depends on: every other pillar (not the root) as a checkbox.
-	TSharedRef<SWrapBox> Dependencies = SNew(SWrapBox).UseAllottedSize(true).InnerSlotPadding(FVector2D(10.f, 2.f));
-	for (const FProtoBoyPillar& Other : Service->GetPillars())
-	{
-		if (Other.Id == Id || Other.bRoot)
-		{
-			continue;
-		}
-		const FString OtherId = Other.Id;
-		Dependencies->AddSlot()
-		[
-			SNew(SCheckBox)
-			.IsChecked(Pillar.DependsOn.Contains(OtherId) ? ECheckBoxState::Checked : ECheckBoxState::Unchecked)
-			.OnCheckStateChanged_Lambda([Commit, OtherId](ECheckBoxState State)
-			{
-				Commit([OtherId, State](FProtoBoyPillar& Edited)
-				{
-					if (State == ECheckBoxState::Checked) { Edited.DependsOn.AddUnique(OtherId); }
-					else { Edited.DependsOn.Remove(OtherId); }
-				});
-			})
-			[
-				SNew(STextBlock).Text(FText::FromString(Service->GetDisplayPath(OtherId)))
-			]
-		];
 	}
 
 	return SNew(SBorder)
@@ -872,22 +899,39 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 				]
 			]
 
-			// Kind
+			// Type
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(0.f, 4.f, 0.f, 0.f)
 			[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth()[ MakeLabel(LOCTEXT("KindLabel", "Kind")) ]
+				+ SHorizontalBox::Slot().AutoWidth()[ MakeLabel(LOCTEXT("TypeLabel", "Type")) ]
 				+ SHorizontalBox::Slot().FillWidth(1.f)
 				[
-					SNew(SEditableTextBox)
-					.Text(FText::FromString(Pillar.Kind))
-					.HintText(LOCTEXT("KindHint", "Domain, Mechanic, Discipline, ..."))
-					.OnTextCommitted_Lambda([Commit](const FText& Text, ETextCommit::Type)
+					SNew(SComboButton)
+					.IsEnabled(!bRoot)
+					.ToolTipText(bRoot ? LOCTEXT("RootTypeTip", "The root is always the game.") : GetPillarTypeDescription(Pillar.Type))
+					.OnGetMenuContent_Lambda([Commit]()
 					{
-						Commit([&Text](FProtoBoyPillar& Edited) { Edited.Kind = Text.ToString(); });
+						FMenuBuilder Menu(true, nullptr);
+						for (const EProtoBoyPillarType Type : GetPillarTypesForChildren())
+						{
+							Menu.AddMenuEntry(
+								Type == EProtoBoyPillarType::None ? LOCTEXT("TypeNone", "None") : GetPillarTypeText(Type),
+								GetPillarTypeDescription(Type),
+								FSlateIcon(),
+								FUIAction(FExecuteAction::CreateLambda([Commit, Type]()
+								{
+									Commit([Type](FProtoBoyPillar& Edited) { Edited.Type = Type; });
+								})));
+						}
+						return Menu.MakeWidget();
 					})
+					.ButtonContent()
+					[
+						SNew(STextBlock)
+						.Text(Pillar.Type == EProtoBoyPillarType::None ? LOCTEXT("TypeNone", "None") : GetPillarTypeText(Pillar.Type))
+					]
 				]
 			]
 
@@ -933,37 +977,23 @@ TSharedRef<SWidget> SProtoBoyPillarTreeEditor::MakeDetails(const FString& Id)
 				]
 			]
 
-			// Vision
+			// Description
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(0.f, 4.f, 0.f, 0.f)
 			[
 				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top)[ MakeLabel(LOCTEXT("VisionLabel", "Vision")) ]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top)[ MakeLabel(LOCTEXT("DescriptionLabel", "Description")) ]
 				+ SHorizontalBox::Slot().FillWidth(1.f)
 				[
 					SNew(SMultiLineEditableTextBox)
-					.Text(FText::FromString(Pillar.Vision))
-					.HintText(LOCTEXT("VisionHint", "One or two sentences: what this pillar is for. The full vision goes in its doc."))
+					.Text(FText::FromString(Pillar.Description))
+					.HintText(LOCTEXT("DescriptionHint", "One or two sentences: what this pillar is for. The full vision goes in its doc."))
 					.AutoWrapText(true)
 					.OnTextCommitted_Lambda([Commit](const FText& Text, ETextCommit::Type)
 					{
-						Commit([&Text](FProtoBoyPillar& Edited) { Edited.Vision = Text.ToString(); });
+						Commit([&Text](FProtoBoyPillar& Edited) { Edited.Description = Text.ToString(); });
 					})
-				]
-			]
-
-			// Depends on
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			.Padding(0.f, 6.f, 0.f, 0.f)
-			[
-				SNew(SHorizontalBox)
-				.Visibility(bRoot ? EVisibility::Collapsed : EVisibility::Visible)
-				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top)[ MakeLabel(LOCTEXT("DependsLabel", "Depends on")) ]
-				+ SHorizontalBox::Slot().FillWidth(1.f)
-				[
-					Dependencies
 				]
 			]
 
@@ -1049,6 +1079,45 @@ FReply SProtoBoyPillarTreeEditor::OnRemoveClicked()
 		Service->RemovePillar(SelectedId);
 	}
 	return FReply::Handled();
+}
+
+FReply SProtoBoyPillarTreeEditor::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
+{
+	if (GraphCommands.IsValid() && GraphCommands->ProcessCommandBindings(InKeyEvent))
+	{
+		return FReply::Handled();
+	}
+	return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
+}
+
+void SProtoBoyPillarTreeEditor::UndoEdit()
+{
+	if (FProtoBoyPillarService* Service = GetService())
+	{
+		EditError = FText::GetEmpty();
+		Service->Undo();
+	}
+}
+
+void SProtoBoyPillarTreeEditor::RedoEdit()
+{
+	if (FProtoBoyPillarService* Service = GetService())
+	{
+		EditError = FText::GetEmpty();
+		Service->Redo();
+	}
+}
+
+bool SProtoBoyPillarTreeEditor::CanUndoEdit() const
+{
+	const FProtoBoyPillarService* Service = GetService();
+	return Service && Service->CanUndo();
+}
+
+bool SProtoBoyPillarTreeEditor::CanRedoEdit() const
+{
+	const FProtoBoyPillarService* Service = GetService();
+	return Service && Service->CanRedo();
 }
 
 FReply SProtoBoyPillarTreeEditor::OnSetupPillarsClicked()
