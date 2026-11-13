@@ -16,7 +16,8 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	MCPServer = MakeUnique<FProtoBoyMCPServer>();
 	TrelloConnector = MakeUnique<FProtoBoyTrelloConnector>();
 	TrelloClient = MakeUnique<FProtoBoyTrelloClient>(*TrelloConnector);
-	Pillars = MakeUnique<FProtoBoyPillarService>();
+	DocMap = MakeUnique<FProtoBoyDocMap>(*DocGenerator);
+	DocsConnectionChangedHandle = ObsidianConnector->OnConnectionChanged.AddLambda([this]() { DocMap->Refresh(); });
 
 	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
 	if (Settings->bConnectToDaemon)
@@ -39,7 +40,8 @@ void UProtoBoySubsystem::Deinitialize()
 	MCPServer->Stop();
 	DaemonClient->Disconnect();
 
-	Pillars.Reset();
+	ObsidianConnector->OnConnectionChanged.Remove(DocsConnectionChangedHandle);
+	DocMap.Reset();
 	TrelloClient.Reset();
 	TrelloConnector.Reset();
 	MCPServer.Reset();

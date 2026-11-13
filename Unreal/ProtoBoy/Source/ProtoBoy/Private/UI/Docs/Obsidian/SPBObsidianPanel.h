@@ -21,16 +21,13 @@ private:
 	TSharedRef<SWidget> MakeHeader();
 	TSharedRef<SWidget> MakeLabel(const FText& Text);
 
-	/** Architecture doc card, shown once the vault is connected. */
-	TSharedRef<SWidget> MakeArchitectureCard();
-	FReply OnCreateArchitectureClicked();
-	FReply OnOpenArchitectureClicked();
-	/** Use a different Architecture doc path (typed or browsed). Saves the team setting. */
-	void ApplyArchitecturePath(const FString& Path);
-	FReply OnBrowseArchitectureClicked();
+	/** Vision and Overview card, shown once the vault is connected. */
+	TSharedRef<SWidget> MakeVisionCard();
+	FReply OnCreateVisionClicked();
+	FReply OnOpenVisionClicked();
 
-	/** Re-check whether the Architecture doc exists (a file check, so not done per frame). */
-	void RefreshArchitectureState();
+	/** Re-check whether the Vision and Overview exist (reads the doc map, so not done per frame). */
+	void RefreshVisionState();
 
 	FReply OnBrowseClicked();
 	FReply OnConnectClicked();
@@ -62,8 +59,7 @@ private:
 	/** Set after a failed Connect; cleared on the next edit. */
 	FText ConnectError;
 
-	bool bHasArchitecture = false;
-	TSharedPtr<SEditableTextBox> ArchitecturePathBox;
-	/** Set when creating or opening the Architecture doc fails. */
-	FText ArchitectureError;
+	bool bHasVisionDocs = false;
+	/** Set when creating or opening the Vision fails. */
+	FText VisionError;
 };

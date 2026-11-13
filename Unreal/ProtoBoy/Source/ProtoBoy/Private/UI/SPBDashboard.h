@@ -7,7 +7,7 @@ class SWidgetSwitcher;
 
 /**
  * ProtoBoy dashboard: a sidebar listing the pages, and the selected page beside it. Pages: Setup (plugin settings, MCP,
- * Documentation, Tasks, Asset Sourcing), Architecture (setup checklist, pillar tree), Documentation and Tasks (both blank
+ * Documentation, Tasks, Asset Sourcing), Architecture (setup checklist, doc map), Documentation and Tasks (both blank
  * for now). The open page is remembered per user.
  */
 class SProtoBoyDashboard : public SCompoundWidget
@@ -65,7 +65,7 @@ private:
 	/** Setup > MCP: a logo chip for each agent app this user has set up (Claude Code, Claude Desktop, Gemini CLI). */
 	TSharedRef<SWidget> MakeEnabledAgents();
 
-	/** Architecture: a checklist of the setup steps, then the pillar tree editor. */
+	/** Architecture: a checklist of the setup steps, then the doc map. */
 	TSharedRef<SWidget> MakeArchitectureSection();
 
 	/** Documentation: blank for now. */
@@ -84,8 +84,8 @@ private:
 	TArray<FSetupStepState> SetupSteps;
 	int32 CountDoneSetupSteps() const;
 
-	/** Whether the Architecture doc exists. A file check, so cached and refreshed with the Documentation section. */
-	bool bHasArchitectureDoc = false;
+	/** Whether the Vision and Overview docs exist. Cached; refreshed with the Documentation section and on doc map changes. */
+	bool bHasVisionDocs = false;
 
 	FReply OnOpenPluginSettingsClicked();
 	FReply OnConnectDocsClicked();
@@ -98,4 +98,5 @@ private:
 	/** Setup > Asset Sourcing; refreshed with the docs section. */
 	TSharedPtr<class SProtoBoyAssetSourcingPanel> AssetSourcingPanel;
 	FDelegateHandle ConnectionChangedHandle;
+	FDelegateHandle DocMapChangedHandle;
 };

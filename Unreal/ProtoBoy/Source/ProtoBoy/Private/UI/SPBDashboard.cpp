@@ -12,7 +12,7 @@
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
 #include "UI/PBStyle.h"
-#include "UI/Architecture/SPBPillarTreeEditor.h"
+#include "UI/Docs/Map/SPBDocMapEditor.h"
 #include "UI/Sourcing/SPBAssetSourcingPanel.h"
 #include "UI/Tasks/SPBConnectTasksDialog.h"
 #include "UI/Docs/SPBConnectDocsDialog.h"
@@ -61,7 +61,7 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 	// TODO: Status header, New ADR.
 	Pages = {
 		MakeShared<FPage>(FPage{ LOCTEXT("SetupPage", "Setup"), LOCTEXT("SetupPageTip", "Plugin settings and connections to agents, docs, task boards and asset sources."), "Icons.Settings" }),
-		MakeShared<FPage>(FPage{ LOCTEXT("ArchitecturePage", "Architecture"), LOCTEXT("ArchitecturePageTip", "Setup checklist and the game's pillar tree."), "Icons.Layout" }),
+		MakeShared<FPage>(FPage{ LOCTEXT("ArchitecturePage", "Architecture"), LOCTEXT("ArchitecturePageTip", "Setup checklist and the map of the project's docs."), "Icons.Layout" }),
 		MakeShared<FPage>(FPage{ LOCTEXT("DocumentationPage", "Documentation"), LOCTEXT("DocumentationPageTip", "The game's design docs and ADRs."), "Icons.Documentation" }),
 		MakeShared<FPage>(FPage{ LOCTEXT("TasksPage", "Tasks"), LOCTEXT("TasksPageTip", "The team's task board."), "Icons.Clipboard" }),
 	};
@@ -206,6 +206,8 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 	{
 		ConnectionChangedHandle = Subsystem->GetObsidianConnector().OnConnectionChanged.AddSP(
 			this, &SProtoBoyDashboard::RebuildDocsSection);
+		// Creating the Vision and Overview (from the doc map or setup) completes the docs setup step.
+		DocMapChangedHandle = Subsystem->GetDocMap().OnChanged.AddSP(this, &SProtoBoyDashboard::RebuildDocsSection);
 	}
 }
 
@@ -528,6 +530,7 @@ SProtoBoyDashboard::~SProtoBoyDashboard()
 	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
 	{
 		Subsystem->GetObsidianConnector().OnConnectionChanged.Remove(ConnectionChangedHandle);
+		Subsystem->GetDocMap().OnChanged.Remove(DocMapChangedHandle);
 	}
 }
 
@@ -535,7 +538,7 @@ void SProtoBoyDashboard::RebuildDocsSection()
 {
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 	const FProtoBoyObsidianConnector* Obsidian = Subsystem ? &Subsystem->GetObsidianConnector() : nullptr;
-	bHasArchitectureDoc = Obsidian && Obsidian->IsConnected() && Subsystem->GetDocGenerator().HasArchitectureDoc();
+	bHasVisionDocs = Obsidian && Obsidian->IsConnected() && Subsystem->GetDocMap().HasVisionAndOverview();
 	// The docs folder may have changed, which changes whether the art direction doc exists.
 	if (AssetSourcingPanel.IsValid())
 	{
@@ -583,16 +586,15 @@ void SProtoBoyDashboard::RebuildDocsSection()
 		];
 
 		// Setup state only; the setup itself lives in Connect to Documentation.
-		const bool bHasArchitecture = bHasArchitectureDoc;
 		Content->AddSlot()
 		.AutoHeight()
 		.Padding(0.f, 4.f, 0.f, 0.f)
 		[
 			SNew(STextBlock)
-			.Text(bHasArchitecture
-				? LOCTEXT("DocsSetupComplete", "Setup complete: the Architecture doc is in the vault.")
-				: LOCTEXT("DocsSetupNeeded", "Setup needed: create the Architecture doc."))
-			.ColorAndOpacity(bHasArchitecture ? FSlateColor::UseSubduedForeground() : FSlateColor(FStyleColors::Warning))
+			.Text(bHasVisionDocs
+				? LOCTEXT("DocsSetupComplete", "Setup complete: the Vision and Overview are in the vault.")
+				: LOCTEXT("DocsSetupNeeded", "Setup needed: create the Vision and Overview."))
+			.ColorAndOpacity(bHasVisionDocs ? FSlateColor::UseSubduedForeground() : FSlateColor(FStyleColors::Warning))
 			.AutoWrapText(true)
 		];
 	}
@@ -609,7 +611,7 @@ void SProtoBoyDashboard::RebuildDocsSection()
 	}
 
 	const bool bConnected = Obsidian && Obsidian->IsConnected();
-	const bool bSetUp = bConnected && bHasArchitectureDoc;
+	const bool bSetUp = bConnected && bHasVisionDocs;
 	Content->AddSlot()
 	.AutoHeight()
 	.HAlign(HAlign_Left)
@@ -665,12 +667,12 @@ void SProtoBoyDashboard::BuildSetupSteps()
 			OutDetail = LOCTEXT("StepDocsNone", "Obsidian isn't connected.");
 			return false;
 		}
-		if (!bHasArchitectureDoc)
+		if (!bHasVisionDocs)
 		{
-			OutDetail = LOCTEXT("StepDocsNoArchitecture", "Obsidian connected; the Architecture doc isn't set up yet.");
+			OutDetail = LOCTEXT("StepDocsNoVision", "Obsidian connected; the Vision and Overview aren't set up yet.");
 			return false;
 		}
-		OutDetail = FText::Format(LOCTEXT("StepDocsDone", "Vault \"{0}\", Architecture doc in place."),
+		OutDetail = FText::Format(LOCTEXT("StepDocsDone", "Vault \"{0}\", Vision and Overview in place."),
 			FText::FromString(Subsystem->GetObsidianConnector().GetVaultName()));
 		return true;
 	};
@@ -764,7 +766,7 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
 
 	auto IsSetupDone = [this]() { return CountDoneSetupSteps() == SetupSteps.Num(); };
 
-	const TSharedRef<SWidget> Pillars = SNew(SVerticalBox)
+	const TSharedRef<SWidget> DocMap = SNew(SVerticalBox)
 
 		// Why it's disabled
 		+ SVerticalBox::Slot()
@@ -789,7 +791,7 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
 			.VAlign(VAlign_Center)
 			[
 				SNew(STextBlock)
-				.Text(LOCTEXT("PillarsLocked", "Finish the setup checks above to edit pillars. Agents plan against the docs and task board, so those need to be connected first."))
+				.Text(LOCTEXT("DocMapLocked", "Finish the setup checks above to edit the doc map. Agents plan against the docs and task board, so those need to be connected first."))
 				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 				.AutoWrapText(true)
 			]
@@ -801,7 +803,7 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
 			SNew(SBox)
 			.IsEnabled_Lambda(IsSetupDone)
 			[
-				SNew(SProtoBoyPillarTreeEditor)
+				SNew(SProtoBoyDocMapEditor)
 			]
 		];
 
@@ -817,7 +819,7 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
 		.AutoHeight()
 		.Padding(0.f, 12.f, 0.f, 0.f)
 		[
-			MakeSection(LOCTEXT("PillarsHeader", "Pillars"), Pillars)
+			MakeSection(LOCTEXT("DocMapHeader", "Doc Map"), DocMap)
 		];
 }
 

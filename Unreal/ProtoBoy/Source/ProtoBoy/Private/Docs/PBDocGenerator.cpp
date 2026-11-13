@@ -1,6 +1,7 @@
 #include "Docs/PBDocGenerator.h"
 
 #include "Docs/Obsidian/PBObsidianConnector.h"
+#include "Docs/PBDocLayers.h"
 #include "Docs/PBMarkdown.h"
 #include "Misc/DateTime.h"
 #include "Misc/Paths.h"
@@ -9,50 +10,10 @@
 
 #define LOCTEXT_NAMESPACE "ProtoBoyDocGenerator"
 
-const TCHAR* FProtoBoyDocGenerator::DesignFolder = TEXT("Design");
 const TCHAR* FProtoBoyDocGenerator::ADRFolder = TEXT("ADR");
 
 namespace ProtoBoyDocGenerator
 {
-	const TCHAR* ArchitectureTemplate = TEXT(R"MD(# Architecture
-
-> The source of truth for how this game is structured. ProtoBoy hands this file to AI agents before they design or build
-> anything, so keep it current. Humans own this text: agents only append to it or edit inside `protoboy` managed blocks.
-
-## End Goal
-
-What the finished game is, in a few sentences. Every system and task should serve this.
-
-## Current Milestone
-
-The milestone the team is working toward now, and what "done" means for it.
-
-## Systems
-
-One `###` heading per system. Agents use these to decide where new work belongs. Replace the example.
-
-### Example: Combat
-
-- **Owns:** damage, hit reactions, ability execution
-- **Code:** Source/<Module>/Combat/
-- **Depends on:** Core, Animation
-- **Must not:** reference UI directly (raise events instead)
-- **Design doc:** Design/Combat.md
-
-## Dependency Rules
-
-- Lower layers never depend on higher ones (for example Core -> Gameplay -> UI).
-- A new system or module needs an ADR (see the ADR folder) before code is written.
-
-## Conventions
-
-- Naming, folder layout, when to use Blueprint vs C++, ...
-
-## Roadmap
-
-- Milestones after the current one.
-)MD");
-
 	/** Lowercase words of 2+ letters/digits. */
 	TArray<FString> Tokenize(const FString& Text)
 	{
@@ -84,7 +45,8 @@ One `###` heading per system. Agents use these to decide where new work belongs.
 	{
 		int32 Count = 0;
 		int32 From = 0;
-		while ((From = Haystack.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, From)) != INDEX_NONE)
+		// FString::Find clamps From to the last character, so stop at the end rather than search from past it.
+		while (From < Haystack.Len() && (From = Haystack.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, From)) != INDEX_NONE)
 		{
 			++Count;
 			From += Needle.Len();
@@ -123,15 +85,6 @@ FProtoBoyDocGenerator::FProtoBoyDocGenerator(const FProtoBoyObsidianConnector& I
 {
 }
 
-FString FProtoBoyDocGenerator::GetArchitectureDocPath()
-{
-	FString Normalized;
-	FText Ignored;
-	return NormalizeDocPath(GetDefault<UProtoBoySettings>()->ArchitectureDocPath, Normalized, Ignored)
-		? Normalized
-		: FString(TEXT("Architecture.md"));
-}
-
 bool FProtoBoyDocGenerator::NormalizeDocPath(const FString& Path, FString& OutNormalized, FText& OutError)
 {
 	FString Out = Path.TrimStartAndEnd();
@@ -142,7 +95,7 @@ bool FProtoBoyDocGenerator::NormalizeDocPath(const FString& Path, FString& OutNo
 	}
 	if (Out.IsEmpty())
 	{
-		OutError = LOCTEXT("EmptyPath", "Enter a path, e.g. \"Architecture.md\".");
+		OutError = LOCTEXT("EmptyPath", "Enter a path, e.g. \"Design/Combat.md\".");
 		return false;
 	}
 	if (Out.Contains(TEXT(":")) || Out.Contains(TEXT("..")) || Out.Contains(TEXT("//")))
@@ -163,21 +116,6 @@ bool FProtoBoyDocGenerator::NormalizeDocPath(const FString& Path, FString& OutNo
 		Out += TEXT(".md");
 	}
 	OutNormalized = Out;
-	return true;
-}
-
-bool FProtoBoyDocGenerator::SetArchitectureDocPath(const FString& Path, FString& OutNormalized, FText& OutError)
-{
-	if (!NormalizeDocPath(Path, OutNormalized, OutError))
-	{
-		return false;
-	}
-	UProtoBoySettings* Settings = GetMutableDefault<UProtoBoySettings>();
-	if (Settings->ArchitectureDocPath != OutNormalized)
-	{
-		Settings->ArchitectureDocPath = OutNormalized;
-		Settings->TryUpdateDefaultConfigFile();
-	}
 	return true;
 }
 
@@ -300,52 +238,6 @@ bool FProtoBoyDocGenerator::SetManagedBlock(const FString& Path, const FString& 
 	return Provider.WriteDoc(Path, ProtoBoyMarkdown::SetManagedBlock(Text, Heading, BlockId, Content), false, OutError);
 }
 
-bool FProtoBoyDocGenerator::HasArchitectureDoc() const
-{
-	return GetProvider().DocExists(GetArchitectureDocPath());
-}
-
-bool FProtoBoyDocGenerator::CreateArchitectureDoc(FText& OutError)
-{
-	return GetProvider().WriteDoc(GetArchitectureDocPath(), ProtoBoyDocGenerator::ArchitectureTemplate, /*bMustNotExist*/ true, OutError);
-}
-
-FProtoBoyArchitecture FProtoBoyDocGenerator::ReadArchitecture() const
-{
-	FProtoBoyArchitecture Architecture;
-	FString Text;
-	FText Ignored;
-	if (!GetProvider().ReadDoc(GetArchitectureDocPath(), Text, Ignored))
-	{
-		return Architecture;
-	}
-
-	Architecture.bExists = true;
-	Architecture.EndGoal = ProtoBoyMarkdown::GetSectionBody(Text, TEXT("End Goal"));
-	Architecture.CurrentMilestone = ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Current Milestone"));
-	Architecture.DependencyRules = ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Dependency Rules"));
-	Architecture.Conventions = ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Conventions"));
-	Architecture.Roadmap = ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Roadmap"));
-
-	const TArray<ProtoBoyMarkdown::FSection> Sections = ProtoBoyMarkdown::ParseSections(Text);
-	if (const ProtoBoyMarkdown::FSection* SystemsSection = ProtoBoyMarkdown::FindSection(Sections, TEXT("Systems")))
-	{
-		for (const ProtoBoyMarkdown::FSection& Section : Sections)
-		{
-			const bool bInside = Section.HeadingStart > SystemsSection->HeadingStart && Section.HeadingStart < SystemsSection->End;
-			// The template's example system isn't a real one.
-			if (bInside && Section.Level == SystemsSection->Level + 1 && !Section.Heading.StartsWith(TEXT("Example"), ESearchCase::IgnoreCase))
-			{
-				FProtoBoyArchitectureSystem System;
-				System.Name = Section.Heading;
-				System.Text = Text.Mid(Section.BodyStart, Section.End - Section.BodyStart).TrimStartAndEnd();
-				Architecture.Systems.Add(MoveTemp(System));
-			}
-		}
-	}
-	return Architecture;
-}
-
 bool FProtoBoyDocGenerator::CreateADR(const FString& Title, const FString& Context, const FString& Decision, const FString& Consequences,
 	const FString& Status, const FString& ProposedBy, FString& OutPath, FText& OutError)
 {
@@ -371,7 +263,7 @@ bool FProtoBoyDocGenerator::CreateADR(const FString& Title, const FString& Conte
 
 	auto OrPlaceholder = [](const FString& Value) { return Value.TrimStartAndEnd().IsEmpty() ? FString(TEXT("_To be filled in._")) : Value.TrimStartAndEnd(); };
 
-	const FString Text = FString::Printf(TEXT(
+	const FString Body = FString::Printf(TEXT(
 		"# ADR-%04d: %s\n"
 		"\n"
 		"- **Status:** %s\n"
@@ -388,6 +280,10 @@ bool FProtoBoyDocGenerator::CreateADR(const FString& Title, const FString& Conte
 		*FDateTime::UtcNow().ToString(TEXT("%Y-%m-%d")),
 		ProposedBy.IsEmpty() ? TEXT("unknown") : *ProposedBy,
 		*OrPlaceholder(Context), *OrPlaceholder(Decision), *OrPlaceholder(Consequences));
+	const FString Text = ProtoBoyMarkdown::SetFrontmatterValues(Body, {
+		{ ProtoBoyDocLayers::IdKey, FString::Printf(TEXT("adr-%04d"), Number) },
+		{ ProtoBoyDocLayers::LayerKey, ProtoBoyDocLayers::ToKey(EProtoBoyDocLayer::Decision) },
+	});
 
 	return GetProvider().WriteDoc(OutPath, Text, /*bMustNotExist*/ true, OutError);
 }

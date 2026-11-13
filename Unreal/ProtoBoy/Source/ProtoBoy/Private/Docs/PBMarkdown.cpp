@@ -30,6 +30,21 @@ namespace ProtoBoyMarkdown
 			return Level;
 		}
 
+		/**
+		 * Offset of the newline ending the line that starts at From, or Text.Len() for the last line. Use this instead of
+		 * Find(TEXT("\n"), ..., From) in line loops: FString::Find clamps From to the last character, so searching from
+		 * Text.Len() finds a trailing newline again and the loop never ends.
+		 */
+		int32 FindLineEnd(const FString& Text, int32 From)
+		{
+			if (From >= Text.Len())
+			{
+				return Text.Len();
+			}
+			const int32 At = Text.Find(TEXT("\n"), ESearchCase::CaseSensitive, ESearchDir::FromStart, From);
+			return At == INDEX_NONE ? Text.Len() : At;
+		}
+
 		FString BeginMarker(const FString& Id) { return FString::Printf(TEXT("<!-- protoboy:begin %s -->"), *Id); }
 		FString EndMarker(const FString& Id) { return FString::Printf(TEXT("<!-- protoboy:end %s -->"), *Id); }
 
@@ -50,14 +65,11 @@ namespace ProtoBoyMarkdown
 		TArray<FSection> Sections;
 		bool bInFence = false;
 
-		int32 LineStart = 0;
+		// Frontmatter isn't Markdown: a YAML comment there would look like a heading.
+		int32 LineStart = ParseFrontmatter(Text).BodyStart;
 		while (LineStart <= Text.Len())
 		{
-			int32 LineEnd = Text.Find(TEXT("\n"), ESearchCase::CaseSensitive, ESearchDir::FromStart, LineStart);
-			if (LineEnd == INDEX_NONE)
-			{
-				LineEnd = Text.Len();
-			}
+			const int32 LineEnd = Detail::FindLineEnd(Text, LineStart);
 			const FString Line = Text.Mid(LineStart, LineEnd - LineStart).TrimEnd();
 
 			// Headings inside fenced code blocks don't count.
@@ -188,5 +200,162 @@ namespace ProtoBoyMarkdown
 			}
 		}
 		return true;
+	}
+
+	FString StripComments(const FString& Text)
+	{
+		FString Out;
+		int32 From = 0;
+		while (From < Text.Len())
+		{
+			const int32 Open = Text.Find(TEXT("<!--"), ESearchCase::CaseSensitive, ESearchDir::FromStart, From);
+			if (Open == INDEX_NONE)
+			{
+				Out += Text.Mid(From);
+				break;
+			}
+			Out += Text.Mid(From, Open - From);
+			const int32 Close = Text.Find(TEXT("-->"), ESearchCase::CaseSensitive, ESearchDir::FromStart, Open + 4);
+			if (Close == INDEX_NONE)
+			{
+				break;
+			}
+			From = Close + 3;
+		}
+		return Out.TrimStartAndEnd();
+	}
+
+	namespace Detail
+	{
+		/** The frontmatter's lines (between the fences) and where the block ends. False without frontmatter. */
+		bool SplitFrontmatter(const FString& Text, TArray<FString>& OutLines, int32& OutBodyStart)
+		{
+			if (!Text.StartsWith(TEXT("---")))
+			{
+				return false;
+			}
+			const int32 FirstEnd = FindLineEnd(Text, 0);
+			if (FirstEnd >= Text.Len() || !Text.Left(FirstEnd).TrimEnd().Equals(TEXT("---")))
+			{
+				return false;
+			}
+			TArray<FString> Lines;
+			for (int32 LineStart = FirstEnd + 1; LineStart < Text.Len(); )
+			{
+				const int32 LineEnd = FindLineEnd(Text, LineStart);
+				const FString Line = Text.Mid(LineStart, LineEnd - LineStart).TrimEnd();
+				if (Line == TEXT("---") || Line == TEXT("..."))
+				{
+					OutLines = MoveTemp(Lines);
+					OutBodyStart = FMath::Min(LineEnd + 1, Text.Len());
+					return true;
+				}
+				Lines.Add(Line);
+				LineStart = LineEnd + 1;
+			}
+			return false;
+		}
+
+		/** "key: value" with the key at the start of the line. */
+		bool SplitKeyValue(const FString& Line, FString& OutKey, FString& OutValue)
+		{
+			if (Line.IsEmpty() || FChar::IsWhitespace(Line[0]) || Line.StartsWith(TEXT("#")) || Line.StartsWith(TEXT("-")))
+			{
+				return false;
+			}
+			int32 Colon = INDEX_NONE;
+			if (!Line.FindChar(TEXT(':'), Colon) || Colon == 0)
+			{
+				return false;
+			}
+			OutKey = Line.Left(Colon).TrimStartAndEnd();
+			OutValue = Line.Mid(Colon + 1).TrimStartAndEnd();
+			if (OutValue.Len() >= 2 && ((OutValue.StartsWith(TEXT("\"")) && OutValue.EndsWith(TEXT("\""))) || (OutValue.StartsWith(TEXT("'")) && OutValue.EndsWith(TEXT("'")))))
+			{
+				OutValue = OutValue.Mid(1, OutValue.Len() - 2);
+			}
+			return true;
+		}
+
+		/** Quote a value if YAML would read it as something other than a plain string. */
+		FString QuoteValue(const FString& Value)
+		{
+			const bool bPlain = !Value.Contains(TEXT(":")) && !Value.Contains(TEXT("#")) && !Value.StartsWith(TEXT("["))
+				&& !Value.StartsWith(TEXT("{")) && !Value.StartsWith(TEXT("\"")) && !Value.StartsWith(TEXT("'"));
+			return bPlain ? Value : FString::Printf(TEXT("\"%s\""), *Value.Replace(TEXT("\""), TEXT("\\\"")));
+		}
+	}
+
+	FString FFrontmatter::Get(const FString& Key) const
+	{
+		for (const TPair<FString, FString>& Pair : Values)
+		{
+			if (Pair.Key.Equals(Key, ESearchCase::IgnoreCase))
+			{
+				return Pair.Value;
+			}
+		}
+		return FString();
+	}
+
+	FFrontmatter ParseFrontmatter(const FString& Text)
+	{
+		FFrontmatter Out;
+		TArray<FString> Lines;
+		if (!Detail::SplitFrontmatter(Text, Lines, Out.BodyStart))
+		{
+			return Out;
+		}
+		Out.bPresent = true;
+		for (const FString& Line : Lines)
+		{
+			FString Key, Value;
+			if (Detail::SplitKeyValue(Line, Key, Value))
+			{
+				Out.Values.Emplace(Key, Value);
+			}
+		}
+		return Out;
+	}
+
+	FString SetFrontmatterValues(const FString& Text, const TArray<TPair<FString, FString>>& Values)
+	{
+		TArray<FString> Lines;
+		int32 BodyStart = 0;
+		const bool bHadFrontmatter = Detail::SplitFrontmatter(Text, Lines, BodyStart);
+
+		for (const TPair<FString, FString>& Pair : Values)
+		{
+			const int32 Existing = Lines.IndexOfByPredicate([&Pair](const FString& Line)
+			{
+				FString Key, Value;
+				return Detail::SplitKeyValue(Line, Key, Value) && Key.Equals(Pair.Key, ESearchCase::IgnoreCase);
+			});
+			const FString Value = Pair.Value.TrimStartAndEnd();
+			if (Value.IsEmpty())
+			{
+				if (Existing != INDEX_NONE)
+				{
+					Lines.RemoveAt(Existing);
+				}
+				continue;
+			}
+			const FString Line = FString::Printf(TEXT("%s: %s"), *Pair.Key, *Detail::QuoteValue(Value));
+			if (Existing != INDEX_NONE)
+			{
+				Lines[Existing] = Line;
+			}
+			else
+			{
+				Lines.Add(Line);
+			}
+		}
+
+		const FString Body = bHadFrontmatter ? Text.Mid(BodyStart) : Text;
+		if (Lines.IsEmpty())
+		{
+			return Body;
+		}
+		return TEXT("---\n") + FString::Join(Lines, TEXT("\n")) + TEXT("\n---\n") + Body;
 	}
 }

@@ -23,24 +23,6 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Docs|Obsidian")
 	FString ObsidianDocsFolder;
 
-	/**
-	 * The Architecture doc (end goal, milestone, systems, rules) that agents read before placing work. Path relative to the
-	 * docs folder, e.g. "Architecture.md" or "Overview/Game Architecture.md". Set in Connect to Documentation.
-	 */
-	UPROPERTY(Config, EditAnywhere, Category = "Docs")
-	FString ArchitectureDocPath = TEXT("Architecture.md");
-
-	/**
-	 * The pillar tree file, relative to the project folder. Commit it: it's the team's shared definition of the game's
-	 * architecture. Edited in the dashboard's Architecture section.
-	 */
-	UPROPERTY(Config, EditAnywhere, Category = "Architecture")
-	FString PillarsFilePath = TEXT("ProtoBoy/Pillars.json");
-
-	/** Folder (relative to the docs folder) where each pillar's doc is generated, nested like the tree. */
-	UPROPERTY(Config, EditAnywhere, Category = "Architecture")
-	FString PillarDocsFolder = TEXT("Pillars");
-
 	/** Generate TDD stubs automatically when new gameplay assets are created. */
 	UPROPERTY(Config, EditAnywhere, Category = "Docs")
 	bool bAutoGenerateTDDStubs = true;

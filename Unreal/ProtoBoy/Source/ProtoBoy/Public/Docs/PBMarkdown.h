@@ -51,4 +51,30 @@ namespace ProtoBoyMarkdown
 
 	/** True if BlockId is a safe managed-block id: lowercase letters, digits and '-'. */
 	PROTOBOY_API bool IsValidBlockId(const FString& BlockId);
+
+	/** Text with every HTML comment (hints, managed-block markers) removed and trimmed: what a reader actually wrote. */
+	PROTOBOY_API FString StripComments(const FString& Text);
+
+	/**
+	 * YAML frontmatter: a block at the very top between two "---" lines (what Obsidian shows as properties).
+	 * Only flat "key: value" lines are read; lists and nested values are kept as they are but not parsed.
+	 */
+	struct FFrontmatter
+	{
+		bool bPresent = false;
+		TArray<TPair<FString, FString>> Values;
+		/** Offset just after the closing "---" line (0 without frontmatter). Headings are only looked for after it. */
+		int32 BodyStart = 0;
+
+		/** Value of Key (case-insensitive), or empty. */
+		PROTOBOY_API FString Get(const FString& Key) const;
+	};
+
+	PROTOBOY_API FFrontmatter ParseFrontmatter(const FString& Text);
+
+	/**
+	 * Set keys in the frontmatter, creating it at the top if missing. An empty value removes the key. Every other line
+	 * (the team's own properties) is kept as it is.
+	 */
+	PROTOBOY_API FString SetFrontmatterValues(const FString& Text, const TArray<TPair<FString, FString>>& Values);
 }

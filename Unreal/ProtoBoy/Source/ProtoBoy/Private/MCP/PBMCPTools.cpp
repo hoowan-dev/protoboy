@@ -1,6 +1,7 @@
 #include "MCP/PBMCPTools.h"
 
 #include "Docs/PBDocGenerator.h"
+#include "Docs/PBDocMap.h"
 #include "Docs/PBMarkdown.h"
 #include "Dom/JsonObject.h"
 #include "MCP/PBMCPToolHelpers.h"
@@ -94,28 +95,12 @@ namespace ProtoBoyMCPTools
 		return Out;
 	}
 
-	/** First line of a system's text that mentions what it owns, for compact summaries. */
-	FString SystemSummary(const FProtoBoyArchitectureSystem& System)
-	{
-		TArray<FString> Lines;
-		System.Text.ParseIntoArrayLines(Lines);
-		for (const FString& Line : Lines)
-		{
-			if (Line.Contains(TEXT("Owns:"), ESearchCase::IgnoreCase))
-			{
-				FString Owns = Line.Mid(Line.Find(TEXT("Owns:"), ESearchCase::IgnoreCase) + 5).Replace(TEXT("*"), TEXT("")).TrimStartAndEnd();
-				return Owns;
-			}
-		}
-		return Lines.IsEmpty() ? FString() : Lines[0].TrimStartAndEnd();
-	}
-
 	FString OrNotSet(const FString& Value)
 	{
 		return Value.IsEmpty() ? FString(TEXT("_Not written yet._")) : Value;
 	}
 
-	/** Lowercase words of 3+ letters, minus filler words, for matching feature descriptions to systems. */
+	/** Lowercase words of 3+ letters, minus filler words, for matching feature descriptions to docs. */
 	TArray<FString> Keywords(const FString& Text)
 	{
 		static const TSet<FString> Stop = { TEXT("the"), TEXT("and"), TEXT("for"), TEXT("with"), TEXT("that"), TEXT("this"),
@@ -141,6 +126,29 @@ namespace ProtoBoyMCPTools
 		return Words;
 	}
 
+	/** "- [design] Design/Combat/Combat.md: Combat (Tech doc: Design/Combat/Combat.tech.md)", nested under its parent. */
+	void AppendDocTree(const FProtoBoyDocMap& Map, const FProtoBoyDocNode& Node, int32 Depth, FString& Out)
+	{
+		Out += FString::ChrN(Depth * 2, TEXT(' ')) + FString::Printf(TEXT("- [%s] %s: %s"),
+			*ProtoBoyDocLayers::ToKey(Node.Layer), *Node.Path, *Node.Title);
+		if (!Node.Summary.IsEmpty())
+		{
+			Out += FString::Printf(TEXT(" - %s"), *Node.Summary);
+		}
+		Out += TEXT("\n");
+		for (const FProtoBoyDocNode* Child : Map.GetChildren(Node.Id))
+		{
+			AppendDocTree(Map, *Child, Depth + 1, Out);
+		}
+	}
+
+	/** True if Path is the Vision or Overview, which humans own. */
+	bool IsHumanOwnedDoc(const FProtoBoyDocMap& Map, const FString& Path)
+	{
+		const FProtoBoyDocNode* Node = Map.FindByPath(Path);
+		return Node && (Node->Layer == EProtoBoyDocLayer::Vision || Node->Layer == EProtoBoyDocLayer::Overview);
+	}
+
 	// -----------------------------------------------------------------------------------------------------------------
 	// Context and placement
 
@@ -152,49 +160,57 @@ namespace ProtoBoyMCPTools
 			return;
 		}
 
-		FProtoBoyDocGenerator& Docs = Subsystem->GetDocGenerator();
-		IProtoBoyDocsProvider& DocsProvider = Docs.GetProvider();
-		const FProtoBoyArchitecture Architecture = Docs.ReadArchitecture();
+		IProtoBoyDocsProvider& DocsProvider = Subsystem->GetDocsProvider();
+		FProtoBoyDocMap& Map = Subsystem->GetDocMap();
+		Map.Refresh();
+		const FProtoBoyVision Vision = Map.ReadVision();
 
 		FString Out = TEXT("# Project context (ProtoBoy)\n\n");
 		Out += FString::Printf(TEXT("- **Docs:** %s\n"), *DocsProvider.GetDisplayName().ToString());
+		Out += TEXT("- **Doc layers:** Vision (why) > Overview (what, and an index) > Design (each feature, player side) > "
+			"Tech (how a Design doc is built) / Systems (shared tech) / Content (what exists) / Direction (look, sound, writing) / "
+			"Decision (ADRs). Read down the layers before building.\n");
 
-		if (!Architecture.bExists)
+		if (!Vision.bExists)
 		{
-			Out += FString::Printf(TEXT("\n**There is no %s yet.** Without it you can't tell which system should own new work. "
-				"Ask the user to create it (ProtoBoy dashboard > Documentation > Create Architecture Doc) and fill in the "
-				"systems, or offer to draft the contents for them to review.\n"), *FProtoBoyDocGenerator::GetArchitectureDocPath());
+			Out += TEXT("\n**There is no Vision doc yet.** Without it you can't tell whether new work serves the game. "
+				"Ask the user to create the Vision and Overview (ProtoBoy dashboard > Architecture > Doc Map), or offer to draft "
+				"them for review.\n");
 		}
 		else
 		{
-			Out += FString::Printf(TEXT("- **Architecture doc:** %s (read it in full with docs_read)\n"), *FProtoBoyDocGenerator::GetArchitectureDocPath());
-			Out += FString::Printf(TEXT("\n## End goal\n\n%s\n"), *OrNotSet(Architecture.EndGoal));
-			Out += FString::Printf(TEXT("\n## Current milestone\n\n%s\n"), *OrNotSet(Architecture.CurrentMilestone));
-
-			Out += TEXT("\n## Systems\n\n");
-			if (Architecture.Systems.IsEmpty())
+			Out += FString::Printf(TEXT("- **Vision:** %s (read it in full with docs_read)\n"), *Vision.Path);
+			Out += FString::Printf(TEXT("\n## Pitch\n\n%s\n"), *OrNotSet(Vision.Pitch));
+			Out += TEXT("\n## Design pillars\n\nEvery feature should serve at least one. If a change serves none, say so before building it.\n\n");
+			if (Vision.Pillars.IsEmpty())
 			{
-				Out += TEXT("_No systems are listed yet. New work can't be placed reliably; ask the user which system it belongs to._\n");
+				Out += TEXT("_None written yet._\n");
 			}
-			for (const FProtoBoyArchitectureSystem& System : Architecture.Systems)
+			for (const FProtoBoyDesignPillar& Pillar : Vision.Pillars)
 			{
-				Out += FString::Printf(TEXT("- **%s**: %s\n"), *System.Name, *SystemSummary(System));
+				Out += FString::Printf(TEXT("### %s\n\n%s\n\n"), *Pillar.Name, *OrNotSet(Pillar.Text));
 			}
-			Out += FString::Printf(TEXT("\n## Dependency rules\n\n%s\n"), *OrNotSet(Architecture.DependencyRules));
-			Out += FString::Printf(TEXT("\n## Conventions\n\n%s\n"), *OrNotSet(Architecture.Conventions));
+			Out += FString::Printf(TEXT("\n## Non-goals\n\n%s\n"), *OrNotSet(Vision.NonGoals));
+		}
+		if (const FProtoBoyDocNode* Overview = Map.GetOverview())
+		{
+			Out += FString::Printf(TEXT("\n## Overview (%s)\n\n%s\n"), *Overview->Path, *OrNotSet(Map.ReadOverviewSummary()));
 		}
 
 		Out += FString::Printf(TEXT("\n## Asset sourcing\n\n%s"), *ProtoBoyAssetSourcing::DescribePolicyForAgents());
 
-		const TArray<FProtoBoyDocInfo> DocList = DocsProvider.ListDocs();
-		Out += FString::Printf(TEXT("\n## Docs (%d)\n\n"), DocList.Num());
-		for (int32 i = 0; i < DocList.Num() && i < 60; ++i)
+		Out += TEXT("\n## Doc map\n\n");
+		if (const FProtoBoyDocNode* Root = Map.GetVision())
 		{
-			Out += FString::Printf(TEXT("- %s: %s\n"), *DocList[i].Path, *DocList[i].Title);
+			AppendDocTree(Map, *Root, 0, Out);
 		}
-		if (DocList.Num() > 60)
+		else
 		{
-			Out += TEXT("- ... (use docs_search or docs_list for the rest)\n");
+			Out += TEXT("_No map yet (no Vision doc)._\n");
+		}
+		if (!Map.GetUnmappedDocs().IsEmpty())
+		{
+			Out += FString::Printf(TEXT("\n%d other docs aren't on the map (no layer); find them with docs_list or docs_search.\n"), Map.GetUnmappedDocs().Num());
 		}
 
 		// Tasks are optional: report why they're missing instead of failing.
@@ -247,54 +263,71 @@ namespace ProtoBoyMCPTools
 			return;
 		}
 
-		const FProtoBoyArchitecture Architecture = Subsystem->GetDocGenerator().ReadArchitecture();
-		if (!Architecture.bExists || Architecture.Systems.IsEmpty())
-		{
-			Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("%s doesn't list any systems yet, so ProtoBoy can't place this. "
-				"Ask the user which system should own it, or offer to draft the Systems section for them to review."),
-				*FProtoBoyDocGenerator::GetArchitectureDocPath())));
-			return;
-		}
+		FProtoBoyDocMap& Map = Subsystem->GetDocMap();
+		Map.Refresh();
+		const IProtoBoyDocsProvider& Provider = Subsystem->GetDocsProvider();
 
-		const TArray<FString> Words = Keywords(GetString(Call, TEXT("description")));
-
-		struct FScored { const FProtoBoyArchitectureSystem* System; int32 Score; };
+		// Features are described in Design docs and shared tech in Systems docs: those are where new work gets placed.
+		struct FScored { const FProtoBoyDocNode* Doc; FString Text; int32 Score; };
 		TArray<FScored> Scored;
-		for (const FProtoBoyArchitectureSystem& System : Architecture.Systems)
+		const TArray<FString> Words = Keywords(GetString(Call, TEXT("description")));
+		for (const FProtoBoyDocNode& Doc : Map.GetNodes())
 		{
-			const FString Name = System.Name.ToLower();
-			const FString Text = System.Text.ToLower();
+			if (Doc.Layer != EProtoBoyDocLayer::Design && Doc.Layer != EProtoBoyDocLayer::Systems)
+			{
+				continue;
+			}
+			FString Text;
+			FText Ignored;
+			Provider.ReadDoc(Doc.Path, Text, Ignored);
+			const FString Title = Doc.Title.ToLower();
+			const FString Lower = Text.ToLower();
 			int32 Score = 0;
 			for (const FString& Word : Words)
 			{
-				Score += Name.Contains(Word) ? 5 : 0;
-				Score += Text.Contains(Word) ? 2 : 0;
+				Score += Title.Contains(Word) ? 5 : 0;
+				Score += Lower.Contains(Word) ? 2 : 0;
 			}
-			Scored.Add({ &System, Score });
+			Scored.Add({ &Doc, MoveTemp(Text), Score });
+		}
+
+		if (Scored.IsEmpty())
+		{
+			Done(FProtoBoyMCPToolResult::Error(TEXT("There are no Design or Systems docs on the doc map yet, so ProtoBoy can't place this. "
+				"Ask the user where it belongs, or propose a new Design doc for them to add from the Doc Map.")));
+			return;
 		}
 		Scored.Sort([](const FScored& A, const FScored& B) { return A.Score > B.Score; });
 
 		FString Out;
 		if (Scored[0].Score == 0)
 		{
-			Out = TEXT("No system in the architecture clearly matches this. Either it extends one of the systems below "
-				"(pick the closest and say why), or it's a new system, which needs an ADR (adr_create) and the user's "
-				"agreement before any code is written.\n\n## Systems\n\n");
-			for (const FProtoBoyArchitectureSystem& System : Architecture.Systems)
+			Out = TEXT("No Design or Systems doc clearly matches this. Either it extends one of the docs below (pick the closest "
+				"and say why), or it's a new feature or system: propose a new doc to the user, check it against the Vision's "
+				"design pillars, and record the decision with adr_create before writing code.\n\n## Design and Systems docs\n\n");
+			for (const FScored& Entry : Scored)
 			{
-				Out += FString::Printf(TEXT("- **%s**: %s\n"), *System.Name, *SystemSummary(System));
+				Out += FString::Printf(TEXT("- [%s] %s: %s\n"), *ProtoBoyDocLayers::ToKey(Entry.Doc->Layer), *Entry.Doc->Path, *Entry.Doc->Title);
 			}
 		}
 		else
 		{
-			Out = TEXT("Best matches by keyword (check them against the full descriptions; keyword matching is a hint, not a decision):\n");
+			Out = TEXT("Best matches by keyword (check them against the docs themselves; keyword matching is a hint, not a decision):\n");
 			for (int32 i = 0; i < Scored.Num() && i < 3 && Scored[i].Score > 0; ++i)
 			{
-				Out += FString::Printf(TEXT("\n## %s\n\n%s\n"), *Scored[i].System->Name, *Scored[i].System->Text);
+				const FProtoBoyDocNode& Doc = *Scored[i].Doc;
+				Out += FString::Printf(TEXT("\n## %s (%s, %s)\n\n"), *Doc.Title, *ProtoBoyDocLayers::GetDisplayName(Doc.Layer).ToString(), *Doc.Path);
+				if (const FProtoBoyDocNode* Tech = Doc.Layer == EProtoBoyDocLayer::Design ? Map.FindTechFor(Doc.Id) : nullptr)
+				{
+					Out += FString::Printf(TEXT("How it's built: %s (read it before changing code).\n\n"), *Tech->Path);
+				}
+				else if (Doc.Layer == EProtoBoyDocLayer::Design)
+				{
+					Out += TEXT("It has no Tech doc yet: how it's built isn't written down.\n\n");
+				}
+				Out += Scored[i].Text.Left(4000) + TEXT("\n");
 			}
 		}
-
-		Out += FString::Printf(TEXT("\n## Rules that always apply\n\n%s\n"), *OrNotSet(Architecture.DependencyRules));
 		Done(FProtoBoyMCPToolResult::Ok(Out));
 	}
 
@@ -427,11 +460,11 @@ namespace ProtoBoyMCPTools
 
 		FString NormalizedPath;
 		FText PathError;
-		const bool bIsArchitecture = FProtoBoyDocGenerator::NormalizeDocPath(Path, NormalizedPath, PathError)
-			&& NormalizedPath.Equals(FProtoBoyDocGenerator::GetArchitectureDocPath(), ESearchCase::IgnoreCase);
-		if (bIsArchitecture && Mode != TEXT("append"))
+		const bool bHumanOwned = FProtoBoyDocGenerator::NormalizeDocPath(Path, NormalizedPath, PathError)
+			&& IsHumanOwnedDoc(Subsystem->GetDocMap(), NormalizedPath);
+		if (bHumanOwned && Mode != TEXT("append"))
 		{
-			Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("%s is the Architecture doc, which humans own: agents may only append to it, and only when the user asks."), *NormalizedPath)));
+			Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("%s is the Vision or Overview, which humans own: agents may only append to it, and only when the user asks."), *NormalizedPath)));
 			return;
 		}
 
@@ -480,7 +513,8 @@ namespace ProtoBoyMCPTools
 			Done(FProtoBoyMCPToolResult::Error(Error));
 			return;
 		}
-		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Created %s. If it changes systems or rules, propose the matching edit to %s to the user."), *Path, *FProtoBoyDocGenerator::GetArchitectureDocPath())));
+		Subsystem->GetDocMap().Refresh();
+		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Created %s. If it changes a Design, Tech or Systems doc, propose the matching edit to the user."), *Path)));
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -626,15 +660,15 @@ namespace ProtoBoyMCPTools
 
 		// Read
 		Add(TEXT("get_project_context"), LOCTEXT("ContextTitle", "Get project context"),
-			LOCTEXT("ContextDesc", "Start here. Returns the project's end goal, current milestone, systems, dependency rules, conventions, doc index and open tasks."),
+			LOCTEXT("ContextDesc", "Start here. Returns the Vision (pitch, design pillars, non-goals), the Overview's summary, the doc map (every doc by layer) and open tasks."),
 			false, {}, &GetProjectContext);
 
 		Add(TEXT("locate_feature"), LOCTEXT("LocateTitle", "Locate feature"),
-			LOCTEXT("LocateDesc", "Finds which architecture system should own a feature or change, with that system's rules. Use before writing code."),
+			LOCTEXT("LocateDesc", "Finds the Design or Systems doc a feature or change belongs to, and its Tech doc. Use before writing code."),
 			false, { { TEXT("description"), TEXT("string"), TEXT("What you're about to build or change."), true } }, &LocateFeature);
 
 		Add(TEXT("docs_list"), LOCTEXT("ListTitle", "List docs"),
-			LOCTEXT("ListDesc", "Lists the project's docs (design docs, ADRs, architecture)."),
+			LOCTEXT("ListDesc", "Lists the project's docs (Vision, Overview, Design, Tech, ADRs, ...)."),
 			false, { { TEXT("folder"), TEXT("string"), TEXT("Only list docs under this folder, e.g. \"Design\" or \"ADR\".") } }, &DocsList);
 
 		Add(TEXT("docs_search"), LOCTEXT("SearchTitle", "Search docs"),
@@ -678,7 +712,7 @@ namespace ProtoBoyMCPTools
 			}, &DocsUpdateSection);
 
 		Add(TEXT("adr_create"), LOCTEXT("AdrTitle", "Create ADR"),
-			LOCTEXT("AdrDesc", "Records an Architecture Decision Record. Required before adding a new system or module, or breaking a dependency rule."),
+			LOCTEXT("AdrDesc", "Records an Architecture Decision Record. Required before adding a new feature, system or module the docs don't cover."),
 			true, {
 				{ TEXT("title"), TEXT("string"), TEXT("Short decision title."), true },
 				{ TEXT("decision"), TEXT("string"), TEXT("What was decided."), true },

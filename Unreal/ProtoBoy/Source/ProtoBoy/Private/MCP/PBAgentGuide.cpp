@@ -1,6 +1,5 @@
 #include "MCP/PBAgentGuide.h"
 
-#include "Docs/PBDocGenerator.h"
 #include "Docs/PBMarkdown.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
@@ -27,19 +26,22 @@ namespace ProtoBoyAgentGuide
 
 	FString GetGuideMarkdown()
 	{
-		const FString Guide = TEXT(R"MD(## ProtoBoy: architecture, design docs and tasks
+		const FString Guide = TEXT(R"MD(## ProtoBoy: design docs and tasks
 
-This project uses ProtoBoy (an Unreal Editor plugin) so agents build within the game's architecture instead of growing
-disconnected or monolithic code. When the `protoboy` MCP tools are available:
+This project uses ProtoBoy (an Unreal Editor plugin) so agents build what the game's docs describe instead of growing
+disconnected or monolithic code. The docs are layered: Vision (why the game exists, its design pillars) > Overview
+(what it is) > Design docs (each feature, from the player's side) > Tech docs (how each is built) and Systems docs
+(shared tech). When the `protoboy` MCP tools are available:
 
-- **Before designing or implementing**, call `get_project_context`, then `locate_feature` to find the system that owns
-  the work. Follow the architecture's dependency rules and conventions.
-- **New systems or rule exceptions need a decision first**: record it with `adr_create` (or the `record-decision`
-  prompt) and get the user's agreement before writing code.
+- **Before designing or implementing**, call `get_project_context`, then `locate_feature` to find the Design or Systems
+  doc the work belongs to. Read its Tech doc before changing code. Check the work serves one of the Vision's design
+  pillars and isn't one of its non-goals.
+- **New features or systems need a decision first**: record it with `adr_create` (or the `record-decision` prompt) and
+  get the user's agreement before writing code.
 - **Work from tasks**: `task_get` for the description and linked design doc, `task_update_status` when you start and
   finish, `task_comment` to report what changed. Split out-of-scope work into new tasks with `task_create`.
-- **Keep docs current**: append to the relevant design doc with `docs_update_section`. Humans own the Architecture doc (`{ARCHITECTURE_DOC}`)
-  and existing text; never rewrite them.
+- **Keep docs current**: record how things are built in the Tech doc, and append to Design docs with
+  `docs_update_section`. Humans own the Vision and Overview and all existing text; never rewrite them.
 {ASSET_POLICY}- **Prompts**: `plan-feature`, `implement-task`, `record-decision`, `source-assets`.
 
 ProtoBoy's tools are only available while the Unreal Editor is open with its MCP server running. Some changes need the
@@ -49,8 +51,7 @@ user's approval in the editor; if one is denied, don't retry it, ask the user.
 			? FString(TEXT("- **Assets**: don't generate art, audio or other assets with AI. Use the sources in `get_project_context`\n"
 				"  (for example `fab_search`) or the `source-assets` prompt, and marked placeholders when nothing fits.\n"))
 			: FString();
-		return Guide.Replace(TEXT("{ARCHITECTURE_DOC}"), *FProtoBoyDocGenerator::GetArchitectureDocPath())
-			.Replace(TEXT("{ASSET_POLICY}"), *AssetPolicy);
+		return Guide.Replace(TEXT("{ASSET_POLICY}"), *AssetPolicy);
 	}
 
 	bool WriteForClient(EProtoBoyMCPClient Client, FText& OutError)

@@ -22,17 +22,18 @@ come later (see [Roadmap](#roadmap)).
    prompts: plan-feature, implement-task, record-decision
         |
         +--> Docs provider  -> Obsidian vault (or a project folder)
-        |                      Architecture doc, Design/, ADR/
+        |                      Vision, Overview, Design/, Systems/, ..., ADR/
         +--> Task provider  -> Trello board (To Do / In Progress / Done)
 ```
 
-1. **The model.** An Architecture doc (end goal, current milestone, systems, dependency rules, conventions), per-feature
-   design docs, ADRs, and tasks that link to the design doc they implement.
-2. **Tools.** Agents call `get_project_context` before designing, `locate_feature` to find the system that owns new
-   work, and docs and task tools to read and update both.
+1. **The model.** The project's docs in layers: a Vision (pitch, design pillars, non-goals), an Overview, Design docs
+   per feature with paired Tech docs, Systems, Content and Direction docs, ADRs, and tasks that link to the Design doc
+   they implement. Each doc's layer is in its own frontmatter (see [Doc map](#doc-map)).
+2. **Tools.** Agents call `get_project_context` before designing (the Vision, the Overview and the doc map),
+   `locate_feature` to find the Design or Systems doc new work belongs to, and docs and task tools to read and update both.
 3. **Workflow.** The guidance agents follow comes from three places: a managed section ProtoBoy writes into the
    project's `CLAUDE.md` / `GEMINI.md`, the MCP server's instructions, and workflow prompts that show up as slash
-   commands. A new system, or an exception to a rule, needs an ADR and your agreement first.
+   commands. A new feature or system the docs don't cover needs an ADR and your agreement first.
 
 ## Features
 
@@ -45,12 +46,12 @@ page you used):
   **Asset Sourcing** sections. Each shows its connection status and what's left to set up, with a check or a red X in
   its header (hover it for details). These are the same checks as on the Architecture page.
 - **Architecture**: two sections.
-  - **Setup Checks**: a check or warning for connecting an agent (MCP), documentation (Obsidian and the Architecture
-    doc) and a task board (Trello, with lists mapped). Each has a **Set Up...** shortcut until it's done. A fourth check,
+  - **Setup Checks**: a check or warning for connecting an agent (MCP), documentation (Obsidian, plus the Vision and
+    Overview docs) and a task board (Trello, with lists mapped). Each has a **Set Up...** shortcut until it's done. A fourth check,
     **Asset sourcing**, is always green because sourcing is optional. It shows the team's choices: whether agents source
     assets instead of generating them, the enabled sources, and the art direction note. Its **Change...** button opens the
     Setup page.
-  - **Pillars**: the pillar tree editor (see [Pillars](#pillars)). It's disabled until every setup check is green.
+  - **Doc Map**: the project's docs by layer (see [Doc map](#doc-map)). It's disabled until every setup check is green.
 - **Documentation** and **Tasks**: blank for now.
 
 ### MCP server and one-click agent setup
@@ -81,16 +82,16 @@ page you used):
 - With **Ask before each change** on, every write waits for **Allow / Deny** on an editor notification. Unanswered
   requests are denied after 2 minutes.
 - Docs are never rewritten: agents can only append to a section, create new files, or replace blocks ProtoBoy manages.
-  They can only append to the Architecture doc.
+  They can only append to the Vision and Overview.
 - Every write, including denied ones, is logged to `Saved/ProtoBoy/AgentActivity.jsonl`.
 
 ### Documentation (Obsidian)
 
 - **Connecting.** Pick a vault (ProtoBoy reads the vaults Obsidian knows about) and a docs folder inside it. ProtoBoy
   writes plain Markdown there, so Obsidian picks up changes live.
-- **The Architecture doc.** Create it from a template, or point the setting at an existing note. Its path is up to you:
-  any name or folder inside the docs folder, default `Architecture.md`. Agents read it before placing work. You can
-  open it in Obsidian from the setup window.
+- **The Vision and Overview.** Once connected, create both from ProtoBoy's templates, or give existing notes the
+  `protoboy-layer` property (`vision`, `overview`). Agents read them before designing anything. You can open the Vision
+  in Obsidian from the setup window.
 - **Fallback.** Without Obsidian, the agent tools fall back to a project folder (`DocsDirectory`, default
   `Docs/ProtoBoy`).
 
@@ -105,57 +106,62 @@ page you used):
 Trello needs an API key from a Trello Power-Up. The Trello page of **Connect Task Board** walks you through creating
 one and adding ProtoBoy's local address under **Allowed origins**.
 
-### Pillars
+### Doc map
 
-The team's architecture as a tree of **pillars**: core systems, features, content, interface, assets and tools, nested as
-deep as needed. Edit it in **Architecture > Pillars**:
+The project's docs in layers, from why the game exists down to how each piece is built. It's on the
+**Architecture > Doc Map** page:
 
-- **The tree is the dependency graph:** there's no separate dependency list; a pillar uses its children. It's a
-  framework for how the team organises the project, not a set of rules: ProtoBoy doesn't restrict where a pillar goes
-  or what type it has, beyond the game being the root.
-- **One root, the game:** the tree always starts at a root pillar named after the project, and it's the only root.
-  Every other pillar sits below it, and "top-level" means directly under it. You can't remove, move or rename the
-  root, but you can give it a description; its type is always Game. It has no pillar doc of its own: the Architecture doc is its doc, so
-  top-level pillars link to the Architecture doc as their parent. Pillar files from before the root existed get one on
-  load, with their old top-level pillars moved under it.
-- **Tree editor:** a Behavior Tree style graph with the root at the top. Add, nest, reorder and remove pillars. Each
-  pillar has a name, a type (see below; it sets the node color), a one-line description and a parent.
-- **Setup Pillars from Template / Clear Pillars:** two buttons at the top of the section. **Clear Pillars** removes
-  every pillar below the game (after asking), leaving just the root; their docs are archived like any removed pillar.
-  **Setup Pillars from Template** opens the Setup Pillars from Template window, which offers two ways to start:
-  **Build From Template** (pick a preset by game genre or size) and **Build From Existing Project** (an LLM proposes
-  pillars around the work done so far). Build From Template lists the templates with a read-only preview of the
-  selected one's tree: **Generic**; genres (**Action / Platformer**, **RPG**, **Shooter**, **Strategy / Management**,
-  **Puzzle**, **Narrative / Adventure**, **Survival / Crafting**, **Roguelike**); and by size (**Game Jam**,
-  **Prototype / Vertical Slice**, **Multiplayer**, **Live / Production**). **Next** opens a confirmation screen that shows the template again and says what it overwrites; confirming
-  replaces every pillar below the game with the template's (docs already generated for removed pillars are archived
-  as usual). Templates are JSON files in `Unreal/ProtoBoy/Resources/PillarTemplates/`, in the same format as the
-  pillar file plus a name, description, genre and sort order. They're generated by
-  `Scripts/make_pillar_templates.py`: edit the templates there and rerun it rather than editing the JSON. Build From
-  Existing Project is blank for now.
-- **Types:** what layer of the game a pillar is. Hover a type in the picker for its description.
-  - **Core:** runtime foundations features build on (save/load, input, game state, AI framework, networking).
-  - **Feature:** something the player does or experiences (combat, crafting, dialogue).
-  - **Content:** authored design data features run on (levels, quests, items, balance tables).
-  - **Interface:** how the game talks to the player (menus, HUD, feedback, onboarding).
-  - **Asset:** produced media and its style, budgets and pipeline (models, animation, audio, VFX).
-  - **Tool:** code that helps build the game but never ships (editor tools, importers, build scripts).
+```
+Vision            why the game exists           1 doc, rarely changes
+  └ Overview      what the game is, as a whole  1 doc, the master index
+      ├ Design    what each feature is (player view)       one per feature, nestable
+      │   └ Tech  how it's built                           pairs with its Design doc
+      ├ Systems   shared tech with no player face          save/load, input, networking
+      ├ Content   what exists in the game                  levels, items, quests, characters
+      ├ Direction how it looks, sounds and reads           art, audio, UX, writing style
+      └ Decisions why things are the way they are          ADRs
+```
 
-  The root is always **Game**; a new pillar starts as **None**. Types are labels: any type can sit under any other.
-  Older pillar files are migrated on load: Mechanic becomes Feature, Discipline becomes Asset, Domain
-  becomes None (the log names each pillar to re-type), "vision" becomes the description, and dependency lists are
-  dropped (the log says how many).
-- **Undo / redo:** Ctrl+Z / Ctrl+Y, or the arrows at the left of the toolbar (hover for what they'll undo). Covers
-  every pillar edit, including clearing the tree and applying a template, for the current editor session. Generated
-  docs are never undone: a pillar that undo removes has its doc archived like any removal, and one that comes back
-  picks its doc up again.
-- **Stable IDs:** each pillar keeps its ID when renamed or moved, so docs and (later) tasks keep pointing at it.
-- **Saved to a file:** `ProtoBoy/Pillars.json` in the project (configurable), meant to be committed and shared.
-- **Generate Docs...:** previews, then writes, a doc per pillar under `Pillars/` in the docs folder, nested like the
-  tree. Each doc starts from a template (Vision, Goals, Non-goals, Design, Rules, Interfaces, Art & assets, Open
-  questions). ProtoBoy only owns a header block with the type, description, and links to the parent (used by) and
-  children (uses) as Obsidian wikilinks, so the graph mirrors the tree. The Architecture doc gets a generated pillar
-  overview. Renamed pillars keep their doc; removed ones have their doc marked archived, never deleted.
+- **The docs are the model.** Each doc says which layer it's in through a few properties in its frontmatter (what
+  Obsidian shows as note properties): `protoboy-id`, `protoboy-layer`, and when needed `protoboy-parent` (the doc it
+  sits under) and `protoboy-implements` (a Tech doc's Design doc). There's no separate file to keep in sync: ProtoBoy
+  builds the map by reading the docs, and anything it changes is written into them. Edits made in Obsidian show up after
+  **Refresh**. ADRs in the `ADR/` folder are on the map even without the properties.
+- **Where docs sit.** The Vision is the top. Without a `protoboy-parent`, the Overview sits under the Vision, a Tech doc
+  under the Design doc it implements, and everything else under the Overview. Nothing restricts which layer goes under
+  which.
+- **Templates per layer.** New docs start with their layer's sections. The hints under each heading are HTML comments,
+  so they're hidden when reading in Obsidian and ignored when ProtoBoy reads the doc.
+
+  | Layer | Sections |
+  |---|---|
+  | **Vision** | Pitch · Player Fantasy · Design Pillars (3-5, one `###` each, with the feeling it gives and what it rules out) · Audience and Platform · References · Non-goals |
+  | **Overview** | Summary · Core Loop · Game Flow · Areas (generated) · Glossary |
+  | **Design** | Purpose (which pillars it serves) · Player Experience · Rules · What the Player Sees · Edge Cases · Open Questions |
+  | **Tech** | The same sections as its Design doc, each answered from the engine side |
+  | **Systems** | Responsibilities · Interface · Data · Used By |
+  | **Content** | Inventory · Authoring Rules · Where the Data Lives · Fed Into |
+  | **Direction** | Goals · Style · References · Budgets |
+
+- **Vision and Overview first.** **Create Vision and Overview** writes `Vision.md` and `Overview.md` at the top of the
+  docs folder. It's also on the Obsidian page of **Connect to Documentation**, and the documentation setup check needs
+  both. The Overview's **Areas** section is a managed block that ProtoBoy keeps listing every doc below the Overview,
+  grouped by layer; write anything else around it.
+- **Adding docs.** Type a title, then **Add Doc** and pick a layer; the doc goes under the selected one (or the
+  Overview). Design docs nest in folders the way features do (`Design/Combat/Weapons/Weapons.md`); the other layers get
+  one folder each (`Systems/`, `Content/`, `Direction/`). You can also drag off a node's bottom bar into empty space, or
+  right-click a node.
+- **Design and Tech pairs.** **Add Tech Doc** creates the selected Design doc's Tech doc next to it
+  (`Combat.tech.md`), with one section for each `##` section of the Design doc, so every design question gets its
+  engine-side answer. The details pane shows each Design doc's Tech doc, or says it has none.
+- **Existing notes.** **Map Existing Doc** lists the notes in the docs folder that aren't on the map and gives one a
+  layer. Only its frontmatter changes. Adding the properties by hand in Obsidian works too.
+- **Moving docs.** Wire a doc's bottom bar to another doc's top bar to put the second under the first. This writes
+  `protoboy-parent` into the doc; the file itself doesn't move. Unhooking a doc sends it back to its layer's default
+  place.
+- **The graph.** Behavior Tree style, colored by layer, with each doc's first written line on its node. Double-click
+  opens a doc (in Obsidian when connected). The details pane shows a doc's layer, file, the doc it's under, its Tech or
+  Design doc, the docs below it, and for the Vision, the design pillars it lists.
 
 ### Asset sourcing (optional)
 
@@ -184,7 +190,8 @@ Copy or symlink `Unreal/ProtoBoy` into your project's `Plugins/` folder and buil
 ### First-time setup
 
 1. **Documentation:** Setup > Documentation > **Connect to Documentation...**. Connect your vault, then create the
-   Architecture doc (or point to an existing one) and fill in at least the end goal and a few systems.
+   Vision and Overview and fill in at least the pitch and the design pillars. Add Design docs from **Architecture >
+   Doc Map**.
 2. **Tasks** (optional): Setup > Tasks > **Connect Task Board...** > Trello. Set up an API key, click **Connect**, then
    pick or create the project board.
 3. **Agents:** Setup > MCP > **MCP Settings...**. Start the server, allow agent changes if you want them, then click
@@ -195,8 +202,8 @@ Copy or symlink `Unreal/ProtoBoy` into your project's `Plugins/` folder and buil
 
 | What | Where | Shared? |
 |---|---|---|
-| Team settings (ports, board and list mapping, Architecture doc path, write gating, Trello API key) | `Config/DefaultProtoBoy.ini` | Yes, committed |
-| Pillar tree | `ProtoBoy/Pillars.json` (configurable) | Yes, committed |
+| Team settings (ports, board and list mapping, write gating, Trello API key) | `Config/DefaultProtoBoy.ini` | Yes, committed |
+| Docs, and each doc's place on the doc map (its frontmatter) | The docs folder (Obsidian vault, or `DocsDirectory`) | With your vault |
 | Agent guide section | `CLAUDE.md`, `GEMINI.md` in the project root (managed block only) | Yes, committed |
 | Your docs connection | `Saved/ProtoBoy/DocsConnection.json` | No |
 | Your MCP token and connected agents | `Saved/ProtoBoy/MCPConnection.json` | No |
@@ -209,67 +216,57 @@ Power-Up's secret is, and ProtoBoy never needs it.
 ## Known limitations
 
 - **Editor only.** Agents only get ProtoBoy's tools while the Unreal Editor is open with the MCP server running.
-- **`locate_feature` is a hint.** It matches keywords against the Architecture doc's systems, so treat its answer as a
+- **`locate_feature` is a hint.** It matches keywords against the Design and Systems docs, so treat its answer as a
   suggestion rather than a decision.
+- **Moving a doc on the map doesn't move its file.** Its place is stored in its frontmatter; renaming or moving files
+  is done in Obsidian.
 - **Stopping doesn't free the ports.** Stopping the MCP server (or finishing a Trello connect) leaves the port bound,
   because the engine can't close a single listener. It answers "not found" until the next start.
 - **Untested Trello calls.** The board, list and card requests haven't been tested against live Trello yet.
 - **Claude Code setup briefly freezes the editor.** Connecting Claude Code runs the `claude` CLI on the editor's main
   thread for a second or two.
 
-## Vision: the pillar tree
+## Direction: the doc layers
 
-> Partly built: the pillar tree and doc generation (step 1 below) are in. The rest is the direction; some decisions
-> are still open.
+> Partly built: the layers, the doc map, the Vision and Overview, and Design and Tech pairs (steps 1-3 below) are in.
+> The rest is the direction; some decisions are still open.
 
-Today, the Architecture doc's list of systems is what anchors agents. The plan is to replace it with a **tree of
-architectural pillars** that the team defines: gameplay, animation, art, content, or whatever fits the game. Pillars
-can be organised around mechanics, domains or disciplines, and nest as deep as needed (for example
-`gameplay/combat/abilities`). Everything else hangs off that tree.
+Large teams document a game in layers: a short vision that rarely changes, a master doc that indexes everything,
+a doc per feature written from the player's side, a technical spec that mirrors it, and content and direction docs
+alongside. Every feature traces back to the vision's design pillars, the handful of experience goals used to decide
+what gets in. ProtoBoy maps those layers so agents read them in order before they build, and keeps the technical
+layer current as they work.
 
-**Author once, generate the rest.** You build the tree on the dashboard's **Architecture** page. ProtoBoy then
-generates matching structure:
-
-- **Docs:** a doc per pillar, for example `Pillars/Gameplay/Combat.md`, from a template: Vision, Goals, Non-goals,
-  Design, Rules, Interfaces, Art & assets. ProtoBoy only owns a small managed header (parent and child links),
-  so the rest is yours. In Obsidian the links mirror the tree in the graph view.
-- **Tasks:** pillar labels on the board, plus a `Pillar: gameplay/combat` line on each card.
-- **Sync:** generation is previewed before it's applied, and follows stable pillar IDs through renames. Removing a
-  pillar archives its doc and label rather than deleting anything a person wrote.
-
-**You or the agent fill it in.** Pillars start as outlines. You can write the vision yourself, or let an agent
-interview you about the game and each pillar and draft the sections for you to approve.
-
-**Alignment comes from retrieval plus checks.** Retrieval puts the right context in front of the agent; checks catch
-what slips through.
-
-- **Structural retrieval first.** For a task or feature, ProtoBoy resolves its pillar and hands the agent that pillar's
-  doc and rules, the vision of its parent pillars, the interfaces of the pillars under it (the ones it uses), and the art direction.
-  It's predictable and easy to explain, which matters more at game-project scale than fuzzy matching.
-- **Search for everything else.** Ranked keyword search across the docs, filterable by pillar. Semantic search with
-  local embeddings may follow, opt-in and running in the daemon, since ProtoBoy deliberately holds no LLM keys.
-- **Gates:**
-  - Every task and design change names its pillar. Work that fits no pillar needs an ADR proposing one.
-  - An alignment check gives the agent the relevant vision, rules and a checklist to answer before it writes code.
-  - Deterministic checks flag code outside its pillar's folders, and code that uses a pillar outside its subtree.
-  - Asset suggestions use the pillar's art notes and the project's art direction, so prototypes fit the intended look.
+- **Links.** Beyond where a doc sits: Design docs say which pillars they serve, Content docs which features they feed,
+  Design and Tech docs which Systems they use, and ADRs which docs they decided. Each is a frontmatter property, shown
+  in a managed header block in the doc. A Design doc that serves no pillar gets a quiet note.
+- **Completeness notes.** The map shows what's missing without enforcing it: an empty section, a Design doc without a
+  Tech doc, a Tech section the Design doc no longer has.
+- **Agents read down the layers.** Before writing code, an agent reads the Vision, the Overview, the Design doc and its
+  Tech doc. Tools: `get_doc_map`, `find_doc_for(topic)`, `get_vision`.
+- **Write permissions by layer.** Agents may write Tech, Systems and Content docs, only add Open Questions to Design
+  docs, and never write the Vision or Overview (they propose an ADR instead). The design stays in human hands; the
+  technical docs stay current.
+- **Doc-set templates.** A genre template creates a whole doc set: the Vision with placeholder pillars to rewrite, the
+  Overview, and skeleton Design docs.
 
 ProtoBoy can't guarantee an agent stays aligned. The goal is to make the aligned path the easy one, and misalignment
-visible and checked.
+visible.
 
 ## Roadmap
 
-**Next: the pillar tree**
+**Next: the doc layers**
 
-1. ~~Pillar model and editor: a committed pillar file with stable IDs, a tree editor in **Architecture**, and doc
-   generation with a preview.~~ Done.
-2. Pillar-aware agents: a `get_context` tool for a task or pillar, a required pillar on task and design writes, and a
-   "define the vision" interview prompt.
-3. Task projection: pillar labels and `Pillar:` lines on the board, with a preview.
-4. Retrieval and gates: ranked search filtered by pillar, and an alignment check before code is written.
-5. Deterministic checks: read the project's real structure (modules, plugins, folders, key classes), compare it with
-   the pillar tree, and report drift. Per-pillar asset alignment.
-6. Move the MCP server and the docs and task connectors into a standalone **daemon**, so agents keep project context
+1. ~~Layers in frontmatter, and the map read from the docs.~~ Done.
+2. ~~Vision and Overview with their sections, replacing the Architecture doc.~~ Done.
+3. ~~Design and Tech pairs, and Add Tech Doc.~~ Done.
+4. Links (serves, fed into, uses, decided by) and completeness notes on the map.
+5. MCP tools for the map (`get_doc_map`, `find_doc_for`, `get_vision`) and agent write permissions by layer.
+6. Doc-set templates (replacing the old pillar templates), and migrating projects that used the pillar tree.
+7. Retrieval and checks: ranked search filtered by layer and doc, an alignment check before code is written, and
+   deterministic checks that compare the project's real structure (modules, folders, key classes) with the Tech and
+   Systems docs.
+8. Move the MCP server and the docs and task connectors into a standalone **daemon**, so agents keep project context
    without the editor open, one service can support every engine, and optional local embeddings have a home.
 
 **From the concept**
@@ -290,15 +287,15 @@ tagging with the Greybox Replacement Matrix. The earlier stubs are in git histor
 ```
 Unreal/ProtoBoy/                 Unreal Engine 5.9 editor plugin
   Resources/Icons/               Provider logos (SVG)
+  Resources/PillarTemplates/     Old pillar-tree templates, unused until doc-set templates replace them
   Source/ProtoBoy/
     Public/ & Private/
       PBModule, PBSubsystem      Module startup, dashboard tab, editor subsystem that owns the services
       PBSettings                 Project Settings > Plugins > ProtoBoy
-      Docs/                      Docs service, Markdown helpers, docs provider interface
+      Docs/                      Doc layers and the doc map, docs service, Markdown helpers, docs provider interface
         Obsidian/                Obsidian vault connector and provider
       Tasks/                     Task provider interface, task board connection store
         Trello/                  Trello connect flow and REST client
-      Architecture/              Pillar tree and pillar doc generation
       Sourcing/                  Asset sourcing policy, its MCP tools and prompts
         Fab/                     Fab source (opens fab.com searches)
       MCP/                       MCP server, tools, prompts, approvals, agent guide, client config
