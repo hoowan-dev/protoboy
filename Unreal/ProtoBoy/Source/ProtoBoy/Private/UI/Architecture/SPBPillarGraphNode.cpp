@@ -1,6 +1,5 @@
 #include "UI/Architecture/SPBPillarGraphNode.h"
 
-#include "PBSubsystem.h"
 #include "Architecture/PBPillars.h"
 #include "SGraphNodeAI.h"
 #include "SGraphPanel.h"
@@ -29,10 +28,10 @@ namespace ProtoBoyPillarGraphNode
 	const FLinearColor RootColor(0.15f, 0.15f, 0.15f);
 	const FLinearColor BorderColor(0.08f, 0.08f, 0.08f);
 
-	const FProtoBoyPillar* FindPillar(const FString& Id)
+	const FProtoBoyPillar* FindPillar(const UProtoBoyPillarGraphNode* Node)
 	{
-		const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-		return Subsystem && !Id.IsEmpty() ? Subsystem->GetPillars().Find(Id) : nullptr;
+		const UProtoBoyPillarGraph* Graph = Node ? Cast<UProtoBoyPillarGraph>(Node->GetGraph()) : nullptr;
+		return Graph ? Graph->FindPillar(Node->PillarId) : nullptr;
 	}
 }
 
@@ -212,7 +211,7 @@ FSlateColor SProtoBoyPillarGraphNode::GetBodyColor() const
 	{
 		return ProtoBoyPillarGraphNode::RootColor;
 	}
-	const FProtoBoyPillar* Pillar = ProtoBoyPillarGraphNode::FindPillar(Node->PillarId);
+	const FProtoBoyPillar* Pillar = ProtoBoyPillarGraphNode::FindPillar(Node);
 	const FString Kind = Pillar ? Pillar->Kind.ToLower() : FString();
 	if (Kind.IsEmpty())
 	{
@@ -244,13 +243,13 @@ const FSlateBrush* SProtoBoyPillarGraphNode::GetIcon() const
 FText SProtoBoyPillarGraphNode::GetKind() const
 {
 	const UProtoBoyPillarGraphNode* Node = GetPillarNode();
-	const FProtoBoyPillar* Pillar = Node ? ProtoBoyPillarGraphNode::FindPillar(Node->PillarId) : nullptr;
+	const FProtoBoyPillar* Pillar = ProtoBoyPillarGraphNode::FindPillar(Node);
 	return Pillar ? FText::FromString(Pillar->Kind) : FText::GetEmpty();
 }
 
 FText SProtoBoyPillarGraphNode::GetVision() const
 {
 	const UProtoBoyPillarGraphNode* Node = GetPillarNode();
-	const FProtoBoyPillar* Pillar = Node ? ProtoBoyPillarGraphNode::FindPillar(Node->PillarId) : nullptr;
+	const FProtoBoyPillar* Pillar = ProtoBoyPillarGraphNode::FindPillar(Node);
 	return Pillar ? FText::FromString(Pillar->Vision) : FText::GetEmpty();
 }

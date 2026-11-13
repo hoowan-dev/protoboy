@@ -12,6 +12,10 @@ const FName UProtoBoyPillarGraphNode::PinCategory(TEXT("ProtoBoyPillar"));
 
 namespace ProtoBoyPillarGraph
 {
+	/** Horizontal space per leaf, and vertical space per tree level. */
+	constexpr float ColumnWidth = SProtoBoyPillarGraphNode::NodeWidth + 40.f;
+	constexpr float LevelHeight = 190.f;
+
 	const FProtoBoyPillarService* GetService()
 	{
 		const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
@@ -47,6 +51,69 @@ namespace ProtoBoyPillarGraph
 			Editor->ReparentFromGraph(Child->PillarId, NewParentId);
 		}
 	}
+}
+
+// --- Graph --------------------------------------------------------------------------------------------------------
+
+const FProtoBoyPillar* UProtoBoyPillarGraph::FindPillar(const FString& Id) const
+{
+	if (bPreview)
+	{
+		return PreviewPillars.FindByPredicate([&Id](const FProtoBoyPillar& P) { return P.Id == Id; });
+	}
+	const FProtoBoyPillarService* Service = ProtoBoyPillarGraph::GetService();
+	return Service && !Id.IsEmpty() ? Service->Find(Id) : nullptr;
+}
+
+void UProtoBoyPillarGraph::LinkAndLayout(UProtoBoyPillarGraphNode* Root, const TMap<FString, TObjectPtr<UProtoBoyPillarGraphNode>>& NodesById,
+	TFunctionRef<TArray<FString>(const FString& ParentId)> GetChildIds)
+{
+	for (UEdGraphNode* Node : Nodes)
+	{
+		for (UEdGraphPin* Pin : Node->Pins)
+		{
+			Pin->BreakAllPinLinks();
+		}
+	}
+	if (!Root)
+	{
+		return;
+	}
+
+	TMap<FString, int32> Leaves;
+	TFunction<int32(const FString&)> CountLeaves = [&](const FString& Id) -> int32
+	{
+		int32 Count = 0;
+		for (const FString& ChildId : GetChildIds(Id))
+		{
+			Count += CountLeaves(ChildId);
+		}
+		Count = FMath::Max(1, Count);
+		Leaves.Add(Id, Count);
+		return Count;
+	};
+	CountLeaves(Root->PillarId);
+
+	TFunction<void(UProtoBoyPillarGraphNode*, int32, float)> Place = [&](UProtoBoyPillarGraphNode* Node, int32 Depth, float Left)
+	{
+		const float Width = Leaves.FindRef(Node->PillarId) * ProtoBoyPillarGraph::ColumnWidth;
+		Node->NodePosX = FMath::RoundToInt(Left + (Width - SProtoBoyPillarGraphNode::NodeWidth) * 0.5f);
+		Node->NodePosY = FMath::RoundToInt(Depth * ProtoBoyPillarGraph::LevelHeight);
+
+		float ChildLeft = Left;
+		for (const FString& ChildId : GetChildIds(Node->PillarId))
+		{
+			UProtoBoyPillarGraphNode* ChildNode = NodesById.FindRef(ChildId);
+			if (!ChildNode)
+			{
+				continue;
+			}
+			Node->GetOutputPin()->MakeLinkTo(ChildNode->GetInputPin());
+			Place(ChildNode, Depth + 1, ChildLeft);
+			ChildLeft += Leaves.FindRef(ChildId) * ProtoBoyPillarGraph::ColumnWidth;
+		}
+	};
+	Place(Root, 0, 0.f);
 }
 
 // --- Node ---------------------------------------------------------------------------------------------------------
@@ -92,13 +159,19 @@ void UProtoBoyPillarGraphNode::AllocateDefaultPins()
 
 FText UProtoBoyPillarGraphNode::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	const FProtoBoyPillarService* Service = ProtoBoyPillarGraph::GetService();
-	const FProtoBoyPillar* Pillar = Service ? Service->Find(PillarId) : nullptr;
+	const UProtoBoyPillarGraph* Graph = Cast<UProtoBoyPillarGraph>(GetGraph());
+	const FProtoBoyPillar* Pillar = Graph ? Graph->FindPillar(PillarId) : nullptr;
 	return Pillar ? FText::FromString(Pillar->Name) : FText::FromString(PillarId);
 }
 
 FText UProtoBoyPillarGraphNode::GetTooltipText() const
 {
+	const UProtoBoyPillarGraph* Graph = Cast<UProtoBoyPillarGraph>(GetGraph());
+	if (Graph && Graph->bPreview)
+	{
+		const FProtoBoyPillar* Pillar = Graph->FindPillar(PillarId);
+		return Pillar ? FText::FromString(Pillar->Vision) : FText::GetEmpty();
+	}
 	if (IsRoot())
 	{
 		return LOCTEXT("RootTip", "The game, named after the project: the root of the pillar tree. Every pillar sits below it; connect one to it to make it top-level. Double-click to open the Architecture doc.");
@@ -129,7 +202,8 @@ const FPinConnectionResponse UProtoBoyPillarGraphSchema::CanCreateConnection(con
 	const UProtoBoyPillarGraphNode* Parent = ProtoBoyPillarGraph::OwningNode(ParentPin);
 	const UProtoBoyPillarGraphNode* Child = ProtoBoyPillarGraph::OwningNode(ChildPin);
 	const FProtoBoyPillarService* Service = ProtoBoyPillarGraph::GetService();
-	if (!Parent || !Child || Child->IsRoot() || !Service)
+	const UProtoBoyPillarGraph* Graph = Parent ? Cast<UProtoBoyPillarGraph>(Parent->GetGraph()) : nullptr;
+	if (!Parent || !Child || Child->IsRoot() || !Service || !Graph || Graph->bPreview)
 	{
 		return FPinConnectionResponse(CONNECT_RESPONSE_DISALLOW, FText::GetEmpty());
 	}

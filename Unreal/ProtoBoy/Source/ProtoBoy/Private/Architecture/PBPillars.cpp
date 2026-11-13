@@ -438,6 +438,71 @@ void FProtoBoyPillarService::ClearPillars()
 	SaveAndNotify();
 }
 
+void FProtoBoyPillarService::ReplacePillars(const TArray<FProtoBoyPillar>& Pillars)
+{
+	TArray<FString> Removed;
+	for (const FProtoBoyPillar& Pillar : Tree.Pillars)
+	{
+		if (!Pillar.bRoot)
+		{
+			Removed.Add(Pillar.Id);
+		}
+	}
+	RemoveAndArchive(Removed);
+
+	// New ids first (each added right away so later ones see it), then parents and dependencies through the map.
+	TMap<FString, FString> NewIds;
+	for (const FProtoBoyPillar& Source : Pillars)
+	{
+		if (Source.bRoot)
+		{
+			NewIds.Add(Source.Id, GetRootId());
+			continue;
+		}
+		FProtoBoyPillar Pillar;
+		Pillar.Name = Source.Name.TrimStartAndEnd().IsEmpty() ? FString(TEXT("New Pillar")) : Source.Name.TrimStartAndEnd();
+		Pillar.Id = MakeUniqueId(Source.Id.IsEmpty() ? Pillar.Name : Source.Id);
+		Pillar.Kind = Source.Kind;
+		Pillar.Vision = Source.Vision;
+		Pillar.Order = Source.Order;
+		NewIds.Add(Source.Id, Pillar.Id);
+		Tree.Pillars.Add(Pillar);
+	}
+	for (const FProtoBoyPillar& Source : Pillars)
+	{
+		const FString* NewId = Source.bRoot ? nullptr : NewIds.Find(Source.Id);
+		FProtoBoyPillar* Pillar = NewId ? FindMutable(*NewId) : nullptr;
+		if (!Pillar)
+		{
+			continue;
+		}
+		const FString* NewParent = NewIds.Find(Source.ParentId);
+		Pillar->ParentId = NewParent ? *NewParent : GetRootId();
+		for (const FString& Dependency : Source.DependsOn)
+		{
+			if (const FString* NewDependency = NewIds.Find(Dependency))
+			{
+				Pillar->DependsOn.AddUnique(*NewDependency);
+			}
+		}
+	}
+
+	// A template's Order may have gaps or ties; make each sibling list 0..N-1 in that order.
+	TSet<FString> Parents;
+	for (const FProtoBoyPillar& Pillar : Tree.Pillars)
+	{
+		if (!Pillar.bRoot)
+		{
+			Parents.Add(Pillar.ParentId);
+		}
+	}
+	for (const FString& Parent : Parents)
+	{
+		Renumber(Parent);
+	}
+	SaveAndNotify();
+}
+
 void FProtoBoyPillarService::RemoveAndArchive(const TArray<FString>& Removed)
 {
 	// Pillars with a doc are remembered so the next doc generation marks the doc archived (never deleted).

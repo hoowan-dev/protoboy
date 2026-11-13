@@ -1,0 +1,88 @@
+{
+	"version": 1,
+	"id": "generic",
+	"name": "Generic",
+	"description": "A starting point for any game: the main domains (gameplay, content, UI) and disciplines (animation, art, audio). Add the systems specific to your game below them.",
+	"genre": "",
+	"scope": "",
+	"sortOrder": 0,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "gameplay",
+			"name": "Gameplay",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The core loop, mechanics and rules the player interacts with.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "animation",
+			"name": "Animation",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "How characters and objects move, and how that supports game feel.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "art",
+			"name": "Art",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "The visual style, assets and their budgets.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "audio",
+			"name": "Audio",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Music, sound effects and how they react to play.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "content",
+			"name": "Content",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Levels, encounters, items and other authored content.",
+			"dependsOn": [],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Menus, HUD and how the game communicates with the player.",
+			"dependsOn": [],
+			"order": 5,
+			"docPath": ""
+		}
+	]
+}

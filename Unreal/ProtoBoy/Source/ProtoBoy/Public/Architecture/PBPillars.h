@@ -146,6 +146,12 @@ public:
 	void RemovePillar(const FString& Id);
 	/** Remove every pillar below the root, leaving just the game. Their docs are archived on the next generation. */
 	void ClearPillars();
+	/**
+	 * Replace every pillar below the root with Pillars (a template's tree: its root is skipped, and its top-level
+	 * pillars go under this tree's root). Ids that clash with archived pillars get a suffix; parents and dependencies
+	 * follow. The removed pillars' docs are archived on the next generation. Saves once.
+	 */
+	void ReplacePillars(const TArray<FProtoBoyPillar>& Pillars);
 
 	/** Record a pillar's generated doc. */
 	void SetDocPath(const FString& Id, const FString& DocPath);

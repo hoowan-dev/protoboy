@@ -35,9 +35,6 @@
 
 namespace ProtoBoyPillarTreeLayout
 {
-	/** Horizontal space per leaf, and vertical space per tree level. */
-	constexpr float ColumnWidth = SProtoBoyPillarGraphNode::NodeWidth + 40.f;
-	constexpr float LevelHeight = 190.f;
 	constexpr float GraphHeight = 480.f;
 }
 
@@ -668,50 +665,16 @@ void SProtoBoyPillarTreeEditor::RebuildGraph()
 		return;
 	}
 
-	// Relink parent -> children in sibling order, and lay the tree out top-down (each leaf gets a column; a parent
-	// sits centered over its children), the way Behavior Trees read.
-	for (UEdGraphNode* Node : Graph->Nodes)
+	// Relink parent -> children in sibling order and lay the tree out top-down.
+	Graph->LinkAndLayout(RootNode, NodesById, [Service](const FString& ParentId)
 	{
-		for (UEdGraphPin* Pin : Node->Pins)
+		TArray<FString> Ids;
+		for (const FProtoBoyPillar* Child : Service->GetChildren(ParentId))
 		{
-			Pin->BreakAllPinLinks();
+			Ids.Add(Child->Id);
 		}
-	}
-
-	TMap<FString, int32> Leaves;
-	TFunction<int32(const FString&)> CountLeaves = [&](const FString& Id) -> int32
-	{
-		int32 Count = 0;
-		for (const FProtoBoyPillar* Child : Service->GetChildren(Id))
-		{
-			Count += CountLeaves(Child->Id);
-		}
-		Count = FMath::Max(1, Count);
-		Leaves.Add(Id, Count);
-		return Count;
-	};
-	CountLeaves(FString());
-
-	TFunction<void(UProtoBoyPillarGraphNode*, int32, float)> Place = [&](UProtoBoyPillarGraphNode* Node, int32 Depth, float Left)
-	{
-		const float Width = Leaves.FindRef(Node->PillarId) * ProtoBoyPillarTreeLayout::ColumnWidth;
-		Node->NodePosX = FMath::RoundToInt(Left + (Width - SProtoBoyPillarGraphNode::NodeWidth) * 0.5f);
-		Node->NodePosY = FMath::RoundToInt(Depth * ProtoBoyPillarTreeLayout::LevelHeight);
-
-		float ChildLeft = Left;
-		for (const FProtoBoyPillar* Child : Service->GetChildren(Node->PillarId))
-		{
-			UProtoBoyPillarGraphNode* ChildNode = NodesById.FindRef(Child->Id);
-			if (!ChildNode)
-			{
-				continue;
-			}
-			Node->GetOutputPin()->MakeLinkTo(ChildNode->GetInputPin());
-			Place(ChildNode, Depth + 1, ChildLeft);
-			ChildLeft += Leaves.FindRef(Child->Id) * ProtoBoyPillarTreeLayout::ColumnWidth;
-		}
-	};
-	Place(RootNode, 0, 0.f);
+		return Ids;
+	});
 
 	if (!Service->Find(SelectedId))
 	{
