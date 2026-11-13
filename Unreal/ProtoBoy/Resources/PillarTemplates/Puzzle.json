@@ -1,0 +1,136 @@
+{
+	"version": 1,
+	"id": "puzzle",
+	"name": "Puzzle",
+	"description": "Clear rules, a hand-tuned difficulty curve and plenty of polish. Small systems, lots of content.",
+	"genre": "Puzzle",
+	"scope": "",
+	"sortOrder": 50,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "core-rules",
+			"name": "Core Rules",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "The puzzle's logic: what's allowed, and how the player wins and loses.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "board-logic",
+			"name": "Board Logic",
+			"parentId": "core-rules",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "The grid, pieces or board state, and how moves change it.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "win-and-lose-conditions",
+			"name": "Win and Lose Conditions",
+			"parentId": "core-rules",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "When a puzzle is solved or failed.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "puzzle-content",
+			"name": "Puzzle Content",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The puzzles themselves and the order they come in.",
+			"dependsOn": [
+				"core-rules"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "level-progression",
+			"name": "Level Progression",
+			"parentId": "puzzle-content",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "How puzzles are grouped, unlocked and sequenced.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "difficulty-curve",
+			"name": "Difficulty Curve",
+			"parentId": "puzzle-content",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Introducing ideas one at a time and combining them later.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "hints-and-undo",
+			"name": "Hints and Undo",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Helping stuck players without giving the answer away: undo, restart and hints.",
+			"dependsOn": [
+				"core-rules"
+			],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "presentation",
+			"name": "Presentation",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Art, audio and juice that make simple rules satisfying to play.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "meta-progression",
+			"name": "Meta Progression",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Stars, unlocks and other reasons to keep going between puzzles.",
+			"dependsOn": [],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Menus, HUD and how the game communicates with the player.",
+			"dependsOn": [],
+			"order": 5,
+			"docPath": ""
+		}
+	]
+}

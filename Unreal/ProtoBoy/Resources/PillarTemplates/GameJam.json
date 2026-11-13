@@ -1,0 +1,66 @@
+{
+	"version": 1,
+	"id": "game-jam",
+	"name": "Game Jam",
+	"description": "Deliberately tiny: four pillars, so the tree fits a weekend. Grow it after the jam if the game sticks.",
+	"genre": "",
+	"scope": "Game Jam",
+	"sortOrder": 100,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "core-loop",
+			"name": "Core Loop",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "The one thing the player does, over and over, and why it's fun.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "art",
+			"name": "Art",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Just enough visuals to read the game and set its mood.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "audio",
+			"name": "Audio",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "A few sounds and a track that sell the core loop.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Title screen, the minimum HUD and a way to restart.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		}
+	]
+}

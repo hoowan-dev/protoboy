@@ -1,0 +1,204 @@
+{
+	"version": 1,
+	"id": "survival-crafting",
+	"name": "Survival / Crafting",
+	"description": "Survive, gather, craft and build in a hostile world. Most systems feed each other, so dependencies matter.",
+	"genre": "Survival / Crafting",
+	"scope": "",
+	"sortOrder": 70,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "survival-needs",
+			"name": "Survival Needs",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Health, hunger, thirst, temperature and how they pressure the player.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "health",
+			"name": "Health",
+			"parentId": "survival-needs",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Damage, healing and death.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "hunger-and-thirst",
+			"name": "Hunger and Thirst",
+			"parentId": "survival-needs",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Food and water as a constant pressure.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "temperature",
+			"name": "Temperature",
+			"parentId": "survival-needs",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Exposure to cold and heat, and how shelter and clothing help.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "gathering",
+			"name": "Gathering",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Collecting resources from the world: tools, nodes and yields.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "crafting",
+			"name": "Crafting",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Turning resources into tools, gear and supplies.",
+			"dependsOn": [
+				"gathering"
+			],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "recipes",
+			"name": "Recipes",
+			"parentId": "crafting",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "What can be made and how the player discovers it.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "stations",
+			"name": "Stations",
+			"parentId": "crafting",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Workbenches and other stations that gate recipes.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "building",
+			"name": "Building",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Placing structures and bases: snapping, stability and upgrades.",
+			"dependsOn": [
+				"crafting"
+			],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "world",
+			"name": "World",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The environment the player survives in.",
+			"dependsOn": [],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "world-generation",
+			"name": "World Generation",
+			"parentId": "world",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Procedural or authored terrain, biomes and resource placement.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "day-and-night",
+			"name": "Day and Night",
+			"parentId": "world",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The day/night cycle and how danger changes with it.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "weather",
+			"name": "Weather",
+			"parentId": "world",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Weather systems and how they affect survival.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "threats",
+			"name": "Threats",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Creatures and other dangers, and the AI that drives them.",
+			"dependsOn": [
+				"world"
+			],
+			"order": 5,
+			"docPath": ""
+		},
+		{
+			"id": "persistence",
+			"name": "Persistence",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Saving the world, bases and inventory, and keeping saves compatible.",
+			"dependsOn": [],
+			"order": 6,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Menus, HUD and how the game communicates with the player.",
+			"dependsOn": [],
+			"order": 7,
+			"docPath": ""
+		}
+	]
+}

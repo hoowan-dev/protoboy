@@ -1,0 +1,77 @@
+{
+	"version": 1,
+	"id": "prototype-vertical-slice",
+	"name": "Prototype / Vertical Slice",
+	"description": "One level at near-final quality to prove the game works, plus a pillar for the technical risks you're testing.",
+	"genre": "",
+	"scope": "Prototype / Vertical Slice",
+	"sortOrder": 110,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "core-loop",
+			"name": "Core Loop",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "The main gameplay loop the slice exists to prove.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "player",
+			"name": "Player",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The player character: controls, abilities and feel.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "one-level",
+			"name": "One Level",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The single level that shows the game at its intended quality.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "feel",
+			"name": "Feel",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Animation, VFX and audio polish on the core loop.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "tech-risks",
+			"name": "Tech Risks",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Technical unknowns the slice must prove out, such as performance, tools or a new system.",
+			"dependsOn": [],
+			"order": 4,
+			"docPath": ""
+		}
+	]
+}

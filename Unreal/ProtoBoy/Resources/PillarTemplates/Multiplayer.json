@@ -1,0 +1,125 @@
+{
+	"version": 1,
+	"id": "multiplayer",
+	"name": "Multiplayer",
+	"description": "Generic's pillars plus networking. Applying a template replaces your tree, so this includes the basics too; add your genre's pillars below Gameplay.",
+	"genre": "",
+	"scope": "Multiplayer",
+	"sortOrder": 120,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "gameplay",
+			"name": "Gameplay",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The core loop, mechanics and rules the player interacts with.",
+			"dependsOn": [
+				"networking"
+			],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "networking",
+			"name": "Networking",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Getting players into the same game and keeping it in sync.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "sessions-and-matchmaking",
+			"name": "Sessions and Matchmaking",
+			"parentId": "networking",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Hosting, finding and joining games, parties and invites.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "replication",
+			"name": "Replication",
+			"parentId": "networking",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "What's synced, how often, and how lag is hidden.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "authority-and-anti-cheat",
+			"name": "Authority and Anti-cheat",
+			"parentId": "networking",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Who decides what's true, and how cheating is prevented or detected.",
+			"dependsOn": [
+				"replication"
+			],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "content",
+			"name": "Content",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Levels, encounters, items and other authored content.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "art",
+			"name": "Art",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "The visual style, assets and their budgets.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "audio",
+			"name": "Audio",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Music, sound effects and how they react to play.",
+			"dependsOn": [],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Menus, HUD and how the game communicates with the player.",
+			"dependsOn": [],
+			"order": 5,
+			"docPath": ""
+		}
+	]
+}

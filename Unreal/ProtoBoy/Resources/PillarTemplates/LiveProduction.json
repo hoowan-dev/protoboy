@@ -1,0 +1,165 @@
+{
+	"version": 1,
+	"id": "live-production",
+	"name": "Live / Production",
+	"description": "For a game heading to release and beyond: the gameplay basics plus the platform, data and quality work shipping needs.",
+	"genre": "",
+	"scope": "Live / Production",
+	"sortOrder": 130,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "gameplay",
+			"name": "Gameplay",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The core loop, mechanics and rules the player interacts with.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "content",
+			"name": "Content",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Levels, encounters, items and other authored content.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "art",
+			"name": "Art",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "The visual style, assets and their budgets.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "audio",
+			"name": "Audio",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Music, sound effects and how they react to play.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Menus, HUD and how the game communicates with the player.",
+			"dependsOn": [],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "platform-and-services",
+			"name": "Platform and Services",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Platform requirements and online services.",
+			"dependsOn": [],
+			"order": 5,
+			"docPath": ""
+		},
+		{
+			"id": "saves",
+			"name": "Saves",
+			"parentId": "platform-and-services",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Local and cloud saves, and migrating them between versions.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "achievements",
+			"name": "Achievements",
+			"parentId": "platform-and-services",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Achievements and trophies on each platform.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "store",
+			"name": "Store",
+			"parentId": "platform-and-services",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Store pages, purchases, DLC and entitlements.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "analytics",
+			"name": "Analytics",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "What's measured, why, and how it informs design.",
+			"dependsOn": [],
+			"order": 6,
+			"docPath": ""
+		},
+		{
+			"id": "localization",
+			"name": "Localization",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Text, audio and culture across languages.",
+			"dependsOn": [],
+			"order": 7,
+			"docPath": ""
+		},
+		{
+			"id": "accessibility",
+			"name": "Accessibility",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Options and design that let more people play.",
+			"dependsOn": [],
+			"order": 8,
+			"docPath": ""
+		},
+		{
+			"id": "performance",
+			"name": "Performance",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Frame time, memory and load-time budgets on each target platform.",
+			"dependsOn": [],
+			"order": 9,
+			"docPath": ""
+		}
+	]
+}

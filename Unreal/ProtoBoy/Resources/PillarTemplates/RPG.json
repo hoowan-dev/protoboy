@@ -1,0 +1,277 @@
+{
+	"version": 1,
+	"id": "rpg",
+	"name": "RPG",
+	"description": "Character growth, items and a world with quests to follow. Systems-heavy, so the economy and save state get their own pillars.",
+	"genre": "RPG",
+	"scope": "",
+	"sortOrder": 20,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "character",
+			"name": "Character",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Who the player is and how they grow.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "stats",
+			"name": "Stats",
+			"parentId": "character",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Attributes and derived values, and how they feed into every other system.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "progression",
+			"name": "Progression",
+			"parentId": "character",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Experience, leveling and the pacing of power growth.",
+			"dependsOn": [
+				"stats"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "classes-and-abilities",
+			"name": "Classes and Abilities",
+			"parentId": "character",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Classes, skills and ability trees that define how characters play.",
+			"dependsOn": [
+				"stats"
+			],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "combat",
+			"name": "Combat",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "How fights play out: turns or real time, targeting, damage and status effects.",
+			"dependsOn": [
+				"character"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "items",
+			"name": "Items",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Everything the player can own, carry and use.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "inventory",
+			"name": "Inventory",
+			"parentId": "items",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "How items are stored, sorted and limited.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "equipment",
+			"name": "Equipment",
+			"parentId": "items",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Gear slots and how equipment modifies the character.",
+			"dependsOn": [
+				"inventory"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "loot-tables",
+			"name": "Loot Tables",
+			"parentId": "items",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "What drops where, and at what rarity.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "quests-and-narrative",
+			"name": "Quests and Narrative",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The story and the tasks that move the player through it.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "dialogue",
+			"name": "Dialogue",
+			"parentId": "quests-and-narrative",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Conversations, choices and how they're authored.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "quest-tracking",
+			"name": "Quest Tracking",
+			"parentId": "quests-and-narrative",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Quest states, objectives and the journal.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "story-beats",
+			"name": "Story Beats",
+			"parentId": "quests-and-narrative",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The main plot and its key moments.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "world",
+			"name": "World",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The places the player explores and who lives there.",
+			"dependsOn": [],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "regions",
+			"name": "Regions",
+			"parentId": "world",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Areas of the world, how they connect and how they gate progress.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "npcs",
+			"name": "NPCs",
+			"parentId": "world",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Non-player characters: schedules, roles and interactions.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "save-and-load",
+			"name": "Save and Load",
+			"parentId": "world",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "What persists, how it's stored and how saves stay compatible.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "economy",
+			"name": "Economy",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Currencies and the systems that make and spend them.",
+			"dependsOn": [],
+			"order": 5,
+			"docPath": ""
+		},
+		{
+			"id": "currencies",
+			"name": "Currencies",
+			"parentId": "economy",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Money and other currencies, and where they come from.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "shops",
+			"name": "Shops",
+			"parentId": "economy",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Vendors, prices and buy-back rules.",
+			"dependsOn": [
+				"currencies",
+				"items"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "crafting",
+			"name": "Crafting",
+			"parentId": "economy",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Turning materials into items: recipes and stations.",
+			"dependsOn": [
+				"items"
+			],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Menus, HUD and how the game communicates with the player.",
+			"dependsOn": [],
+			"order": 6,
+			"docPath": ""
+		}
+	]
+}

@@ -1,0 +1,125 @@
+{
+	"version": 1,
+	"id": "narrative-adventure",
+	"name": "Narrative / Adventure",
+	"description": "Story first: branching choices, characters and a world to explore and interact with.",
+	"genre": "Narrative / Adventure",
+	"scope": "",
+	"sortOrder": 60,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "story",
+			"name": "Story",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The narrative and how the player's choices shape it.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "branching",
+			"name": "Branching",
+			"parentId": "story",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "How the story forks and comes back together.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "choices-and-consequences",
+			"name": "Choices and Consequences",
+			"parentId": "story",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Which choices matter, and how and when they pay off.",
+			"dependsOn": [
+				"branching"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "dialogue",
+			"name": "Dialogue",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Conversations: authoring, presentation and choices.",
+			"dependsOn": [
+				"story"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "exploration-and-interaction",
+			"name": "Exploration and Interaction",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Moving through scenes and examining or using things in them.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "characters",
+			"name": "Characters",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The cast: who they are, how they change, and how they're performed.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "cinematics",
+			"name": "Cinematics",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Cutscenes, camera work and staging.",
+			"dependsOn": [],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "save-state",
+			"name": "Save State",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Story flags, persistence and keeping saves valid as the story changes.",
+			"dependsOn": [],
+			"order": 5,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Menus, HUD and how the game communicates with the player.",
+			"dependsOn": [],
+			"order": 6,
+			"docPath": ""
+		}
+	]
+}

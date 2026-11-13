@@ -1,0 +1,261 @@
+{
+	"version": 1,
+	"id": "action-platformer",
+	"name": "Action / Platformer",
+	"description": "Tight movement and combat through hand-built levels. Game feel is its own pillar because it makes or breaks the genre.",
+	"genre": "Action / Platformer",
+	"scope": "",
+	"sortOrder": 10,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "movement",
+			"name": "Movement",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "How the player runs, jumps and traverses; the verb everything else is built around.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "run-and-jump",
+			"name": "Run and Jump",
+			"parentId": "movement",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Ground speed, acceleration, jump arcs, coyote time and input buffering.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "dash",
+			"name": "Dash",
+			"parentId": "movement",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Burst movement: distance, cooldown and how it chains with other moves.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "wall-interactions",
+			"name": "Wall Interactions",
+			"parentId": "movement",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Wall slides, wall jumps, ledge grabs and climbing.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "combat",
+			"name": "Combat",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "How the player fights: attacks, hits and damage.",
+			"dependsOn": [
+				"movement"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "attacks",
+			"name": "Attacks",
+			"parentId": "combat",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "The player's attacks, combos and their timing windows.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "hit-reactions",
+			"name": "Hit Reactions",
+			"parentId": "combat",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Knockback, hitstun, invulnerability frames and feedback on both sides of a hit.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "damage",
+			"name": "Damage",
+			"parentId": "combat",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Health, damage values and how the player dies and respawns.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "camera",
+			"name": "Camera",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "How the camera follows, frames and leads the action.",
+			"dependsOn": [
+				"movement"
+			],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "level-design",
+			"name": "Level Design",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Hand-built levels that teach, test and reward the player's moves.",
+			"dependsOn": [
+				"movement"
+			],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "checkpoints",
+			"name": "Checkpoints",
+			"parentId": "level-design",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Where the player respawns and how much progress a death costs.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "hazards",
+			"name": "Hazards",
+			"parentId": "level-design",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Spikes, pits, moving platforms and other environmental dangers.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "secrets",
+			"name": "Secrets",
+			"parentId": "level-design",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Hidden areas and collectibles that reward mastery and exploration.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "enemies",
+			"name": "Enemies",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "What the player fights, and how each one tests a different skill.",
+			"dependsOn": [
+				"combat"
+			],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "enemy-archetypes",
+			"name": "Enemy Archetypes",
+			"parentId": "enemies",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The regular enemies: behaviors, attack patterns and placement rules.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "bosses",
+			"name": "Bosses",
+			"parentId": "enemies",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Multi-phase encounters that test everything the player has learned.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "game-feel",
+			"name": "Game Feel",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "The juice that makes actions feel good: animation, VFX, screen shake and audio cues.",
+			"dependsOn": [],
+			"order": 5,
+			"docPath": ""
+		},
+		{
+			"id": "animation",
+			"name": "Animation",
+			"parentId": "game-feel",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Character animation and how it reads and supports responsiveness.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "vfx",
+			"name": "VFX",
+			"parentId": "game-feel",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Particles and effects for hits, movement and the world.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "audio-cues",
+			"name": "Audio Cues",
+			"parentId": "game-feel",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Sound effects that confirm actions and telegraph threats.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Menus, HUD and how the game communicates with the player.",
+			"dependsOn": [],
+			"order": 6,
+			"docPath": ""
+		}
+	]
+}

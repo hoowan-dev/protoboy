@@ -1,0 +1,161 @@
+{
+	"version": 1,
+	"id": "roguelike",
+	"name": "Roguelike",
+	"description": "Short runs, procedural variety and builds that change every time, with progression between runs.",
+	"genre": "Roguelike",
+	"scope": "",
+	"sortOrder": 80,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "run-structure",
+			"name": "Run Structure",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "How a run is built and paced.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "procedural-generation",
+			"name": "Procedural Generation",
+			"parentId": "run-structure",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Generating floors, rooms and layouts that stay fair.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "encounters",
+			"name": "Encounters",
+			"parentId": "run-structure",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Fights, events and choices along the way.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "rewards",
+			"name": "Rewards",
+			"parentId": "run-structure",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "What the player is offered during a run, and when.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "combat",
+			"name": "Combat",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Moment-to-moment fighting.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "build-variety",
+			"name": "Build Variety",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "What makes each run play differently.",
+			"dependsOn": [
+				"combat"
+			],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "items",
+			"name": "Items",
+			"parentId": "build-variety",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Items and relics and their effects.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "synergies",
+			"name": "Synergies",
+			"parentId": "build-variety",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "How items and upgrades combine into builds.",
+			"dependsOn": [
+				"items",
+				"upgrades"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "upgrades",
+			"name": "Upgrades",
+			"parentId": "build-variety",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "In-run upgrades to stats and abilities.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "meta-progression",
+			"name": "Meta Progression",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Unlocks and progress that carry over between runs.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "content-pools",
+			"name": "Content Pools",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The enemies, rooms and events the generator draws from, and how they're weighted.",
+			"dependsOn": [
+				"run-structure"
+			],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Menus, HUD and how the game communicates with the player.",
+			"dependsOn": [],
+			"order": 5,
+			"docPath": ""
+		}
+	]
+}

@@ -1,0 +1,214 @@
+{
+	"version": 1,
+	"id": "shooter",
+	"name": "Shooter",
+	"description": "Weapons, movement and AI in levels built for firefights, with an optional networking pillar for multiplayer.",
+	"genre": "Shooter",
+	"scope": "",
+	"sortOrder": 30,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "weapons",
+			"name": "Weapons",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "How guns feel and differ.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "firing",
+			"name": "Firing",
+			"parentId": "weapons",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Hitscan or projectiles, fire rates and hit detection.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "recoil-and-spread",
+			"name": "Recoil and Spread",
+			"parentId": "weapons",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Recoil patterns, spread and how they reward control.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "ammo-and-reloading",
+			"name": "Ammo and Reloading",
+			"parentId": "weapons",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Magazines, reserves, reloads and pickups.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "attachments",
+			"name": "Attachments",
+			"parentId": "weapons",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Scopes, grips and other modifiers, and how they change a weapon.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "player-movement",
+			"name": "Player Movement",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Running, crouching, sliding, mantling and how movement interacts with aiming.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "ai",
+			"name": "AI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Enemies that fight back believably.",
+			"dependsOn": [
+				"weapons"
+			],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "perception",
+			"name": "Perception",
+			"parentId": "ai",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "What AI can see and hear, and how it notices the player.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "cover",
+			"name": "Cover",
+			"parentId": "ai",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Finding, using and leaving cover.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "squad-behavior",
+			"name": "Squad Behavior",
+			"parentId": "ai",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "How AI coordinates: flanking, suppression and callouts.",
+			"dependsOn": [
+				"perception",
+				"cover"
+			],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "levels",
+			"name": "Levels",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Maps built for firefights: sightlines, cover placement and flow.",
+			"dependsOn": [],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "game-modes",
+			"name": "Game Modes",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The rules of each mode: objectives, scoring and rounds.",
+			"dependsOn": [],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "networking",
+			"name": "Networking",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Multiplayer: replication, lag compensation and matchmaking. Remove if single-player.",
+			"dependsOn": [],
+			"order": 5,
+			"docPath": ""
+		},
+		{
+			"id": "replication",
+			"name": "Replication",
+			"parentId": "networking",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "What's synced, how often, and who has authority.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "matchmaking",
+			"name": "Matchmaking",
+			"parentId": "networking",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Finding, joining and balancing matches.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "audio",
+			"name": "Audio",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Discipline",
+			"vision": "Gunfire, footsteps and positional audio that the player relies on to read the fight.",
+			"dependsOn": [],
+			"order": 6,
+			"docPath": ""
+		},
+		{
+			"id": "ui-and-hud",
+			"name": "UI and HUD",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Crosshair, ammo, health, hit markers, the scoreboard and menus.",
+			"dependsOn": [],
+			"order": 7,
+			"docPath": ""
+		}
+	]
+}

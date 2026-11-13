@@ -1,0 +1,195 @@
+{
+	"version": 1,
+	"id": "strategy-management",
+	"name": "Strategy / Management",
+	"description": "A simulation the player steers from above. The UI is usually the biggest pillar, since the player reads the game through it.",
+	"genre": "Strategy / Management",
+	"scope": "",
+	"sortOrder": 40,
+	"pillars": [
+		{
+			"id": "game",
+			"name": "Game",
+			"parentId": "",
+			"bRoot": true,
+			"kind": "Game",
+			"vision": "",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "simulation",
+			"name": "Simulation",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The rules that run the world underneath the player.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "resources",
+			"name": "Resources",
+			"parentId": "simulation",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "What exists to be gathered, stored and spent.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "production-chains",
+			"name": "Production Chains",
+			"parentId": "simulation",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "How resources turn into other resources.",
+			"dependsOn": [
+				"resources"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "time-and-tick",
+			"name": "Time and Tick",
+			"parentId": "simulation",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Simulation speed, pausing and keeping it deterministic and fast.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "units-and-agents",
+			"name": "Units and Agents",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "The things that act in the world.",
+			"dependsOn": [
+				"simulation"
+			],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "agent-ai",
+			"name": "Agent AI",
+			"parentId": "units-and-agents",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "How units decide what to do.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "pathfinding",
+			"name": "Pathfinding",
+			"parentId": "units-and-agents",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "How units move across the map at scale.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "building-and-placement",
+			"name": "Building and Placement",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Mechanic",
+			"vision": "Placing, connecting and upgrading structures.",
+			"dependsOn": [
+				"simulation"
+			],
+			"order": 2,
+			"docPath": ""
+		},
+		{
+			"id": "economy-and-balancing",
+			"name": "Economy and Balancing",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Costs, rates and tuning that keep choices meaningful.",
+			"dependsOn": [
+				"simulation"
+			],
+			"order": 3,
+			"docPath": ""
+		},
+		{
+			"id": "camera-and-controls",
+			"name": "Camera and Controls",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "How the player views the map and selects and commands things.",
+			"dependsOn": [],
+			"order": 4,
+			"docPath": ""
+		},
+		{
+			"id": "map-generation",
+			"name": "Map Generation",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Hand-made or generated maps, terrain and resource placement.",
+			"dependsOn": [],
+			"order": 5,
+			"docPath": ""
+		},
+		{
+			"id": "ui",
+			"name": "UI",
+			"parentId": "game",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Information-dense panels, overlays, tooltips and notifications: the player's main window into the simulation.",
+			"dependsOn": [],
+			"order": 6,
+			"docPath": ""
+		},
+		{
+			"id": "overlays",
+			"name": "Overlays",
+			"parentId": "ui",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Map overlays that visualize simulation data.",
+			"dependsOn": [],
+			"order": 0,
+			"docPath": ""
+		},
+		{
+			"id": "panels-and-tooltips",
+			"name": "Panels and Tooltips",
+			"parentId": "ui",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Detail views, tooltips and how deep information goes.",
+			"dependsOn": [],
+			"order": 1,
+			"docPath": ""
+		},
+		{
+			"id": "notifications",
+			"name": "Notifications",
+			"parentId": "ui",
+			"bRoot": false,
+			"kind": "Domain",
+			"vision": "Alerts that pull the player's attention to what matters.",
+			"dependsOn": [],
+			"order": 2,
+			"docPath": ""
+		}
+	]
+}

@@ -121,9 +121,10 @@ deep as needed. Edit it in **Architecture > Pillars**:
   every pillar below the game (after asking), leaving just the root; their docs are archived like any removed pillar.
   **Setup Pillars from Template** opens the Setup Pillars from Template window, which offers two ways to start:
   **Build From Template** (pick a preset by game genre and scope) and **Build From Existing Project** (an LLM proposes
-  pillars around the work done so far). Build From Template lists the templates (only **Generic** for now: Gameplay,
-  Content and UI domains plus Animation, Art and Audio disciplines) with a read-only preview of the selected one's
-  tree. **Next** opens a confirmation screen that shows the template again and says what it overwrites; confirming
+  pillars around the work done so far). Build From Template lists the templates with a read-only preview of the
+  selected one's tree: **Generic**; genres (**Action / Platformer**, **RPG**, **Shooter**, **Strategy / Management**,
+  **Puzzle**, **Narrative / Adventure**, **Survival / Crafting**, **Roguelike**); and scopes (**Game Jam**,
+  **Prototype / Vertical Slice**, **Multiplayer**, **Live / Production**). **Next** opens a confirmation screen that shows the template again and says what it overwrites; confirming
   replaces every pillar below the game with the template's (docs already generated for removed pillars are archived
   as usual). Templates are JSON files in `Unreal/ProtoBoy/Resources/PillarTemplates/`, in the same format as the
   pillar file plus a name, description, genre, scope and sort order; drop in another file to add one. Build From
