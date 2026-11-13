@@ -14,24 +14,20 @@
 
 namespace ProtoBoyDocMapNode
 {
-	/** Body color per layer, from the Behavior Tree editor's palette. */
-	FLinearColor GetLayerColor(EProtoBoyDocLayer Layer)
-	{
-		switch (Layer)
-		{
-		case EProtoBoyDocLayer::Vision: return FLinearColor(0.15f, 0.15f, 0.15f);
-		case EProtoBoyDocLayer::Overview: return FLinearColor(0.3f, 0.22f, 0.0f);
-		case EProtoBoyDocLayer::Design: return FLinearColor(0.42f, 0.17f, 0.02f);
-		case EProtoBoyDocLayer::Tech: return FLinearColor(0.24f, 0.055f, 0.715f);
-		case EProtoBoyDocLayer::Systems: return FLinearColor(0.12f, 0.03f, 0.4f);
-		case EProtoBoyDocLayer::Content: return FLinearColor(0.0f, 0.28f, 0.35f);
-		case EProtoBoyDocLayer::Direction: return FLinearColor(0.0f, 0.07f, 0.4f);
-		case EProtoBoyDocLayer::Decision: return FLinearColor(0.0f, 0.3f, 0.16f);
-		}
-		return FLinearColor(0.1f, 0.1f, 0.1f);
-	}
-
 	const FLinearColor BorderColor(0.08f, 0.08f, 0.08f);
+}
+
+FLinearColor SProtoBoyDocMapNode::GetLayerColor(EProtoBoyDocLayer Layer)
+{
+	// From the Behavior Tree editor's palette.
+	switch (Layer)
+	{
+	case EProtoBoyDocLayer::Game: return FLinearColor(0.3f, 0.22f, 0.0f);
+	case EProtoBoyDocLayer::Design: return FLinearColor(0.42f, 0.17f, 0.02f);
+	case EProtoBoyDocLayer::Tech: return FLinearColor(0.24f, 0.055f, 0.715f);
+	case EProtoBoyDocLayer::Content: return FLinearColor(0.0f, 0.28f, 0.35f);
+	}
+	return FLinearColor(0.1f, 0.1f, 0.1f);
 }
 
 void SProtoBoyDocMapNode::Construct(const FArguments& InArgs, UProtoBoyDocMapGraphNode* InNode)
@@ -190,7 +186,7 @@ FSlateColor SProtoBoyDocMapNode::GetBodyColor() const
 {
 	const UProtoBoyDocMapGraphNode* Node = GetDocNode();
 	const FProtoBoyDocNode* Doc = Node ? Node->GetDoc() : nullptr;
-	return Doc ? ProtoBoyDocMapNode::GetLayerColor(Doc->Layer) : FLinearColor(0.1f, 0.1f, 0.1f);
+	return Doc ? GetLayerColor(Doc->Layer) : FLinearColor(0.1f, 0.1f, 0.1f);
 }
 
 FLinearColor SProtoBoyDocMapNode::GetOpacity() const
@@ -205,7 +201,14 @@ FText SProtoBoyDocMapNode::GetLayerText() const
 {
 	const UProtoBoyDocMapGraphNode* Node = GetDocNode();
 	const FProtoBoyDocNode* Doc = Node ? Node->GetDoc() : nullptr;
-	return Doc ? ProtoBoyDocLayers::GetDisplayName(Doc->Layer) : FText::GetEmpty();
+	if (!Doc)
+	{
+		return FText::GetEmpty();
+	}
+	// Tech without a Design doc is shared tech; say so, since it reads differently from a feature's Tech doc.
+	return Doc->Layer == EProtoBoyDocLayer::Tech && Doc->ImplementsId.IsEmpty()
+		? ProtoBoyDocLayers::GetKindName(EProtoBoyDocKind::SharedTech)
+		: ProtoBoyDocLayers::GetDisplayName(Doc->Layer);
 }
 
 FText SProtoBoyDocMapNode::GetSummary() const

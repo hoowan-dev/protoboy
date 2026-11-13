@@ -19,8 +19,8 @@ struct FProtoBoyDocSearchHit
  * Pillar 1: living technical & design documentation (Markdown, vault-first).
  *
  * Works through the active IProtoBoyDocsProvider (Obsidian when connected, else the project's DocsDirectory).
- * The docs are organised in layers (Vision, Overview, Design, Tech, ...; see PBDocLayers.h), mapped by
- * FProtoBoyDocMap. This class is the plain read/write/search layer under it, plus ADRs (ADR/ADR-NNNN-*.md).
+ * The docs are organised in layers (Game, Design, Tech, Content; see PBDocLayers.h), mapped by FProtoBoyDocMap.
+ * This class is the plain read/write/search layer under it.
  *
  * Docs must survive human edits: writes only append, create new files, or replace ProtoBoy managed blocks.
  */
@@ -30,7 +30,6 @@ public:
 	/** A safe docs-relative Markdown path: no drive, no "..", no leading '/'. Adds ".md" if missing. */
 	static bool NormalizeDocPath(const FString& Path, FString& OutNormalized, FText& OutError);
 
-	static const TCHAR* ADRFolder;
 
 	explicit FProtoBoyDocGenerator(const FProtoBoyObsidianConnector& InObsidian);
 
@@ -51,13 +50,6 @@ public:
 
 	/** Replace a ProtoBoy managed block (created inside Heading if missing). Creates the doc if it doesn't exist. */
 	bool SetManagedBlock(const FString& Path, const FString& Heading, const FString& BlockId, const FString& Content, FText& OutError);
-
-	/**
-	 * Create ADR/ADR-NNNN-<slug>.md with the next free number, on the doc map as a Decision. Returns the doc path in OutPath.
-	 * ProposedBy names who wrote it (e.g. the agent), shown in the ADR.
-	 */
-	bool CreateADR(const FString& Title, const FString& Context, const FString& Decision, const FString& Consequences,
-		const FString& Status, const FString& ProposedBy, FString& OutPath, FText& OutError);
 
 	/** Create or refresh the TDD entry for an asset. Returns the written file path. */
 	FString GenerateTDDStub(const FSoftObjectPath& AssetPath);

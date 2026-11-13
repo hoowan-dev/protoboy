@@ -14,7 +14,7 @@ class UProtoBoyDocMapGraphNode;
 struct FProtoBoyDocNode;
 
 /**
- * The doc map: the project's docs by layer, as a Behavior Tree style graph with the Vision at the top. Add docs from
+ * The doc map: the project's docs by layer, as a Behavior Tree style graph with the Game doc at the top. Add docs from
  * their layer's template, add a Design doc's Tech doc, put existing notes on the map, and wire a doc under another.
  * Every change is written into the docs (frontmatter, new files); the graph is a view rebuilt from FProtoBoyDocMap.
  * Edits made in Obsidian show up after Refresh.
@@ -62,14 +62,16 @@ private:
 	void ZoomToFitSoon();
 
 	/** Add a doc titled with the toolbar's title box under ParentId (empty = its layer's default place). */
-	void AddDoc(EProtoBoyDocLayer Layer, const FString& ParentId);
+	void AddDoc(EProtoBoyDocKind Kind, const FString& ParentId);
 	void AddTechDoc(const FString& DesignId);
 	void MapExistingDoc(const FString& Path, EProtoBoyDocLayer Layer);
 	/** Open in Obsidian when connected, else in the system's Markdown app. */
 	void OpenDoc(const FString& Id);
-	FReply OnCreateVisionClicked();
+	FReply OnCreateGameClicked();
+	/** Opens the Set Up Docs from Template window. */
+	FReply OnSetupFromTemplateClicked();
 	FReply OnRefreshClicked();
-	/** The selected doc, or the Overview when nothing is selected: where Add puts new docs. */
+	/** The selected doc, or the Game doc when nothing is selected: where Add puts new docs. */
 	FString GetAddParentId() const;
 	FString GetNewTitle() const;
 	bool CanAddTechDoc(const FString& Id) const;

@@ -2,7 +2,9 @@
 
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "Docs/PBDocGenerator.h"
+#include "Docs/PBDocTemplates.h"
 #include "Docs/PBMarkdown.h"
+#include "Misc/DateTime.h"
 #include "Misc/Paths.h"
 #include "PBModule.h"
 
@@ -101,11 +103,47 @@ namespace ProtoBoyDocMap
 		return ProtoBoyDocLayers::GetAllLayers().IndexOfByKey(Layer);
 	}
 
-	const TCHAR* VisionExamplePillar = TEXT(
+	/** ADRs from the eight-layer version: kept as files, off the map (decisions now live in each doc). */
+	bool IsRetiredDoc(const FString& Path, const ProtoBoyMarkdown::FFrontmatter& Frontmatter)
+	{
+		return ProtoBoyDocLayers::IsRetiredKey(Frontmatter.Get(ProtoBoyDocLayers::LayerKey))
+			|| (Frontmatter.Get(ProtoBoyDocLayers::LayerKey).IsEmpty() && Path.StartsWith(TEXT("ADR/ADR-"), ESearchCase::IgnoreCase));
+	}
+
+	/**
+	 * Where a new doc goes: Design docs nest in folders like the features they describe (under ParentDesignPath's folder
+	 * when the parent is a Design doc); the other kinds keep one flat folder each.
+	 */
+	FString MakeNewDocPath(EProtoBoyDocKind Kind, const FString& Title, const FString* ParentDesignPath)
+	{
+		const FString Name = ToFileName(Title);
+		const FString Folder = Kind == EProtoBoyDocKind::Design
+			? (ParentDesignPath ? FPaths::GetPath(*ParentDesignPath) : ProtoBoyDocLayers::GetFolder(Kind)) / Name
+			: ProtoBoyDocLayers::GetFolder(Kind);
+		return Folder / Name + TEXT(".md");
+	}
+
+	/** Slugify(Title), suffixed until it isn't in Used. Adds the result to Used. */
+	FString TakeUniqueId(const FString& Title, TSet<FString>& Used)
+	{
+		const FString Base = Slugify(Title);
+		FString Id = Base;
+		for (int32 Suffix = 2; Used.Contains(Id); ++Suffix)
+		{
+			Id = FString::Printf(TEXT("%s-%d"), *Base, Suffix);
+		}
+		Used.Add(Id);
+		return Id;
+	}
+
+	const TCHAR* ExamplePillar = TEXT(
 		"### Example: Every Shot Counts\n"
 		"\n"
 		"- **Feeling:** tension; each decision matters.\n"
 		"- **Rules out:** ammo pickups everywhere, spray-and-pray weapons.\n");
+
+	/** "Design Pillars" is the third Game heading. */
+	constexpr int32 PillarsHeadingIndex = 2;
 }
 
 FProtoBoyDocMap::FProtoBoyDocMap(FProtoBoyDocGenerator& InDocs)
@@ -161,18 +199,16 @@ void FProtoBoyDocMap::Load() const
 		}
 
 		const ProtoBoyMarkdown::FFrontmatter Frontmatter = ProtoBoyMarkdown::ParseFrontmatter(Text);
-		FProtoBoyDocNode Node;
-		if (!ProtoBoyDocLayers::FromKey(Frontmatter.Get(ProtoBoyDocLayers::LayerKey), Node.Layer))
+		if (ProtoBoyDocMap::IsRetiredDoc(Doc.Path, Frontmatter))
 		{
-			// ADRs written before layers existed are still decisions.
-			const FString AdrPrefix = ProtoBoyDocLayers::GetFolder(EProtoBoyDocLayer::Decision) + TEXT("/ADR-");
-			if (!Doc.Path.StartsWith(AdrPrefix, ESearchCase::IgnoreCase))
-			{
-				Unmapped.Add(Doc);
-				continue;
-			}
-			Node.Layer = EProtoBoyDocLayer::Decision;
-			Node.bInferred = true;
+			continue;
+		}
+		FProtoBoyDocNode Node;
+		Node.LayerKey = Frontmatter.Get(ProtoBoyDocLayers::LayerKey).TrimStartAndEnd().ToLower();
+		if (!ProtoBoyDocLayers::FromKey(Node.LayerKey, Node.Layer))
+		{
+			Unmapped.Add(Doc);
+			continue;
 		}
 
 		// Ids must be unique; a copied doc keeps its original's id until someone changes it, so suffix duplicates.
@@ -199,8 +235,8 @@ void FProtoBoyDocMap::Load() const
 
 void FProtoBoyDocMap::ResolveParents() const
 {
-	const FProtoBoyDocNode* Vision = GetVision();
-	if (!Vision)
+	const FProtoBoyDocNode* Root = GetGame();
+	if (!Root)
 	{
 		return;
 	}
@@ -208,19 +244,18 @@ void FProtoBoyDocMap::ResolveParents() const
 	// First the frontmatter parent if it names another doc, else the layer default.
 	for (const FProtoBoyDocNode& Node : Nodes)
 	{
-		if (&Node == Vision)
+		if (&Node == Root)
 		{
 			Parents.Add(Node.Id, FString());
 			continue;
 		}
 		const FProtoBoyDocNode* Explicit = Node.ParentId.IsEmpty() ? nullptr : Find(Node.ParentId);
 		const FProtoBoyDocNode* Parent = Explicit && Explicit != &Node ? Explicit : GetDefaultParent(Node);
-		Parents.Add(Node.Id, Parent && Parent != &Node ? Parent->Id : Vision->Id);
+		Parents.Add(Node.Id, Parent && Parent != &Node ? Parent->Id : Root->Id);
 	}
 
-	// Then break loops (A under B under A): the doc where the walk comes back around falls back to the Overview, or
-	// the Vision for the Overview itself. Each pass fixes at least one loop, and the Vision ends every chain.
-	const FProtoBoyDocNode* Overview = GetOverview();
+	// Then break loops (A under B under A): the doc where the walk comes back around goes straight under the root,
+	// which ends every chain.
 	for (const FProtoBoyDocNode& Start : Nodes)
 	{
 		TSet<FString> Seen;
@@ -229,8 +264,7 @@ void FProtoBoyDocMap::ResolveParents() const
 		{
 			if (Seen.Contains(Current))
 			{
-				const bool bIsOverview = Overview && Current == Overview->Id;
-				Parents[Current] = (!bIsOverview && Overview && !Seen.Contains(Overview->Id)) ? Overview->Id : Vision->Id;
+				Parents[Current] = Root->Id;
 				Seen.Reset();
 				Current = Start.Id;
 				continue;
@@ -267,38 +301,32 @@ const FProtoBoyDocNode* FProtoBoyDocMap::FindByPath(const FString& Path) const
 	return Nodes.FindByPredicate([&Path](const FProtoBoyDocNode& Node) { return Node.Path.Equals(Path, ESearchCase::IgnoreCase); });
 }
 
-const FProtoBoyDocNode* FProtoBoyDocMap::GetVision() const
+const FProtoBoyDocNode* FProtoBoyDocMap::GetGame() const
 {
 	EnsureLoaded();
-	return Nodes.FindByPredicate([](const FProtoBoyDocNode& Node) { return Node.Layer == EProtoBoyDocLayer::Vision; });
-}
-
-const FProtoBoyDocNode* FProtoBoyDocMap::GetOverview() const
-{
-	EnsureLoaded();
-	return Nodes.FindByPredicate([](const FProtoBoyDocNode& Node) { return Node.Layer == EProtoBoyDocLayer::Overview; });
+	// An old Vision beats an old Overview: it's the doc the pillars are in.
+	const FProtoBoyDocNode* Preferred = Nodes.FindByPredicate([](const FProtoBoyDocNode& Node)
+	{
+		return Node.Layer == EProtoBoyDocLayer::Game && Node.LayerKey != TEXT("overview");
+	});
+	return Preferred ? Preferred : Nodes.FindByPredicate([](const FProtoBoyDocNode& Node) { return Node.Layer == EProtoBoyDocLayer::Game; });
 }
 
 const FProtoBoyDocNode* FProtoBoyDocMap::GetDefaultParent(const FProtoBoyDocNode& Node) const
 {
-	const FProtoBoyDocNode* Vision = GetVision();
-	const FProtoBoyDocNode* Overview = GetOverview();
-	switch (Node.Layer)
+	const FProtoBoyDocNode* Root = GetGame();
+	if (&Node == Root)
 	{
-	case EProtoBoyDocLayer::Vision:
-	case EProtoBoyDocLayer::Overview:
-		// A second Vision or Overview sits under the real one's parent level, so it stays visible.
-		return &Node == Vision ? nullptr : Vision;
-	case EProtoBoyDocLayer::Tech:
+		return nullptr;
+	}
+	if (Node.Layer == EProtoBoyDocLayer::Tech)
+	{
 		if (const FProtoBoyDocNode* Design = Find(Node.ImplementsId))
 		{
 			return Design;
 		}
-		break;
-	default:
-		break;
 	}
-	return Overview ? Overview : Vision;
+	return Root;
 }
 
 const FProtoBoyDocNode* FProtoBoyDocMap::GetParent(const FString& Id) const
@@ -370,22 +398,23 @@ FString FProtoBoyDocMap::MakeLink(const FProtoBoyDocNode& Node)
 
 // --- Reading ------------------------------------------------------------------------------------------------------
 
-FProtoBoyVision FProtoBoyDocMap::ReadVision() const
+FProtoBoyGameDoc FProtoBoyDocMap::ReadGame() const
 {
-	FProtoBoyVision Vision;
-	const FProtoBoyDocNode* Node = GetVision();
+	FProtoBoyGameDoc Game;
+	const FProtoBoyDocNode* Node = GetGame();
 	FString Text;
 	FText Ignored;
 	if (!Node || !Docs.GetProvider().ReadDoc(Node->Path, Text, Ignored))
 	{
-		return Vision;
+		return Game;
 	}
 
-	Vision.bExists = true;
-	Vision.Path = Node->Path;
-	Vision.Pitch = ProtoBoyDocMap::Clean(ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Pitch")));
-	Vision.PlayerFantasy = ProtoBoyDocMap::Clean(ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Player Fantasy")));
-	Vision.NonGoals = ProtoBoyDocMap::Clean(ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Non-goals")));
+	Game.bExists = true;
+	Game.Path = Node->Path;
+	Game.Pitch = ProtoBoyDocMap::Clean(ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Pitch")));
+	Game.PlayerFantasy = ProtoBoyDocMap::Clean(ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Player Fantasy")));
+	Game.NonGoals = ProtoBoyDocMap::Clean(ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Non-goals")));
+	Game.CoreLoop = ProtoBoyDocMap::Clean(ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Core Loop")));
 
 	const TArray<ProtoBoyMarkdown::FSection> Sections = ProtoBoyMarkdown::ParseSections(Text);
 	if (const ProtoBoyMarkdown::FSection* PillarsSection = ProtoBoyMarkdown::FindSection(Sections, TEXT("Design Pillars")))
@@ -399,23 +428,11 @@ FProtoBoyVision FProtoBoyDocMap::ReadVision() const
 				FProtoBoyDesignPillar Pillar;
 				Pillar.Name = Section.Heading;
 				Pillar.Text = ProtoBoyDocMap::Clean(Text.Mid(Section.BodyStart, Section.End - Section.BodyStart));
-				Vision.Pillars.Add(MoveTemp(Pillar));
+				Game.Pillars.Add(MoveTemp(Pillar));
 			}
 		}
 	}
-	return Vision;
-}
-
-FString FProtoBoyDocMap::ReadOverviewSummary() const
-{
-	const FProtoBoyDocNode* Node = GetOverview();
-	FString Text;
-	FText Ignored;
-	if (!Node || !Docs.GetProvider().ReadDoc(Node->Path, Text, Ignored))
-	{
-		return FString();
-	}
-	return ProtoBoyDocMap::Clean(ProtoBoyMarkdown::GetSectionBody(Text, TEXT("Summary")));
+	return Game;
 }
 
 // --- Writing ------------------------------------------------------------------------------------------------------
@@ -424,9 +441,9 @@ void FProtoBoyDocMap::AfterWrite()
 {
 	Load();
 	FText Error;
-	if (!UpdateOverviewIndex(Error))
+	if (!UpdateAreasIndex(Error))
 	{
-		UE_LOG(LogProtoBoy, Warning, TEXT("Couldn't update the Overview's Areas list: %s"), *Error.ToString());
+		UE_LOG(LogProtoBoy, Warning, TEXT("Couldn't update the Game doc's Areas list: %s"), *Error.ToString());
 	}
 	OnChanged.Broadcast();
 }
@@ -447,47 +464,58 @@ bool FProtoBoyDocMap::WriteFrontmatter(const FString& Path, const TArray<TPair<F
 	return true;
 }
 
-bool FProtoBoyDocMap::CreateVisionAndOverview(FText& OutError)
+bool FProtoBoyDocMap::WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePillar>* Pillars, const FString& TemplateName, bool& bOutWrote, FText& OutError)
 {
 	IProtoBoyDocsProvider& Provider = Docs.GetProvider();
 	if (!Provider.IsReady(OutError))
 	{
 		return false;
 	}
-
-	auto Create = [this, &Provider, &OutError](EProtoBoyDocLayer Layer, const FString& Title, const FString& Path, const FString& Body)
+	if (GetGame())
 	{
-		if (Provider.DocExists(Path))
+		return true;
+	}
+	const FString Path = TEXT("Game.md");
+	if (Provider.DocExists(Path))
+	{
+		OutError = FText::Format(LOCTEXT("ExistsNoLayer", "{0} already exists but isn't on the map. Add it with Map Existing Doc, as the Game doc."), FText::FromString(Path));
+		return false;
+	}
+
+	// The Design Pillars section gets the template's pillars (placeholders to rewrite), or one example.
+	TArray<ProtoBoyDocLayers::FHeading> Headings = ProtoBoyDocLayers::GetHeadings(EProtoBoyDocKind::Game);
+	FString PillarsText = ProtoBoyDocMap::ExamplePillar;
+	if (Pillars && !Pillars->IsEmpty())
+	{
+		Headings[ProtoBoyDocMap::PillarsHeadingIndex].Hint = FString::Printf(TEXT("3-5 experience goals. Every feature should serve at least one. These are suggestions from the %s template: rewrite them for your game, one ### heading per pillar."), *TemplateName);
+		PillarsText.Reset();
+		for (const FProtoBoyDocTemplatePillar& Pillar : *Pillars)
 		{
-			OutError = FText::Format(LOCTEXT("ExistsNoLayer", "{0} already exists but isn't on the map. Add it with Map Existing Doc, as the {1}."),
-				FText::FromString(Path), ProtoBoyDocLayers::GetDisplayName(Layer));
-			return false;
+			PillarsText += FString::Printf(TEXT("### %s\n\n- **Feeling:** %s.\n- **Rules out:** %s.\n\n"), *Pillar.Name, *Pillar.Feeling, *Pillar.RulesOut);
 		}
-		const FString Text = ProtoBoyMarkdown::SetFrontmatterValues(Body, {
-			{ ProtoBoyDocLayers::IdKey, MakeUniqueId(Title) },
-			{ ProtoBoyDocLayers::LayerKey, ProtoBoyDocLayers::ToKey(Layer) },
-		});
-		return Provider.WriteDoc(Path, Text, /*bMustNotExist*/ true, OutError);
-	};
+		PillarsText.TrimEndInline();
+		PillarsText += TEXT("\n");
+	}
+	const FString Hint = FString::Printf(TEXT("<!-- %s -->\n"), *Headings[ProtoBoyDocMap::PillarsHeadingIndex].Hint);
+	FString Body = ProtoBoyDocLayers::MakeBody(TEXT("Game"), ProtoBoyDocLayers::GetIntro(EProtoBoyDocKind::Game), Headings);
+	Body.ReplaceInline(*Hint, *(Hint + TEXT("\n") + PillarsText));
 
+	const FString Text = ProtoBoyMarkdown::SetFrontmatterValues(Body, {
+		{ ProtoBoyDocLayers::IdKey, MakeUniqueId(TEXT("game")) },
+		{ ProtoBoyDocLayers::LayerKey, ProtoBoyDocLayers::ToKey(EProtoBoyDocLayer::Game) },
+	});
+	if (!Provider.WriteDoc(Path, Text, /*bMustNotExist*/ true, OutError))
+	{
+		return false;
+	}
+	bOutWrote = true;
+	return true;
+}
+
+bool FProtoBoyDocMap::CreateGameDoc(FText& OutError)
+{
 	bool bWrote = false;
-	bool bOk = true;
-	if (!GetVision())
-	{
-		const FString Hint = FString::Printf(TEXT("<!-- %s -->\n"), *ProtoBoyDocLayers::GetHeadings(EProtoBoyDocLayer::Vision)[2].Hint);
-		FString Body = ProtoBoyDocLayers::MakeBody(TEXT("Vision"), ProtoBoyDocLayers::GetIntro(EProtoBoyDocLayer::Vision),
-			ProtoBoyDocLayers::GetHeadings(EProtoBoyDocLayer::Vision));
-		Body.ReplaceInline(*Hint, *(Hint + TEXT("\n") + ProtoBoyDocMap::VisionExamplePillar));
-		bOk = Create(EProtoBoyDocLayer::Vision, TEXT("Vision"), TEXT("Vision.md"), Body);
-		bWrote |= bOk;
-	}
-	if (bOk && !GetOverview())
-	{
-		bOk = Create(EProtoBoyDocLayer::Overview, TEXT("Overview"), TEXT("Overview.md"),
-			ProtoBoyDocLayers::MakeBody(TEXT("Overview"), ProtoBoyDocLayers::GetIntro(EProtoBoyDocLayer::Overview),
-				ProtoBoyDocLayers::GetHeadings(EProtoBoyDocLayer::Overview)));
-		bWrote |= bOk;
-	}
+	const bool bOk = WriteMissingGameDoc(nullptr, FString(), bWrote, OutError);
 	if (bWrote)
 	{
 		AfterWrite();
@@ -495,7 +523,111 @@ bool FProtoBoyDocMap::CreateVisionAndOverview(FText& OutError)
 	return bOk;
 }
 
-bool FProtoBoyDocMap::CreateDoc(EProtoBoyDocLayer Layer, const FString& InTitle, const FString& ParentId, FString& OutId, FText& OutError)
+FProtoBoyDocTemplatePlan FProtoBoyDocMap::PlanTemplate(const FProtoBoyDocTemplate& Template) const
+{
+	FProtoBoyDocTemplatePlan Plan;
+	Plan.bCreatesGame = !GetGame();
+	Plan.NumToCreate = Plan.bCreatesGame ? 1 : 0;
+
+	const IProtoBoyDocsProvider& Provider = Docs.GetProvider();
+	TMap<FString, FString> Paths;
+	TMap<FString, int32> Depths;
+	TSet<FString> DesignIds;
+	for (const FProtoBoyDocTemplateDoc& Doc : Template.Docs)
+	{
+		FProtoBoyDocTemplatePlan::FEntry Entry;
+		ProtoBoyDocLayers::FromTemplateKey(Doc.Kind, Entry.Kind);
+		Entry.Title = Doc.Title.TrimStartAndEnd();
+		const FString* ParentPath = DesignIds.Contains(Doc.Parent) ? Paths.Find(Doc.Parent) : nullptr;
+		Entry.Path = ProtoBoyDocMap::MakeNewDocPath(Entry.Kind, Entry.Title, ParentPath);
+		Entry.Depth = Doc.Parent.IsEmpty() ? 0 : Depths.FindRef(Doc.Parent) + 1;
+		Entry.bExists = Provider.DocExists(Entry.Path);
+		Plan.NumToCreate += Entry.bExists ? 0 : 1;
+
+		Paths.Add(Doc.Id, Entry.Path);
+		Depths.Add(Doc.Id, Entry.Depth);
+		if (Entry.Kind == EProtoBoyDocKind::Design)
+		{
+			DesignIds.Add(Doc.Id);
+		}
+		Plan.Docs.Add(MoveTemp(Entry));
+	}
+	return Plan;
+}
+
+bool FProtoBoyDocMap::ApplyTemplate(const FProtoBoyDocTemplate& Template, int32& OutCreated, FText& OutError)
+{
+	OutCreated = 0;
+	bool bWrote = false;
+	if (!WriteMissingGameDoc(&Template.Pillars, Template.Name, bWrote, OutError))
+	{
+		return false;
+	}
+	OutCreated = bWrote ? 1 : 0;
+	Load();
+
+	// Written in order, so every parent exists (on disk, and in MapIds) before its children. The map is read again
+	// once at the end instead of after every doc.
+	const FProtoBoyDocNode* Root = GetGame();
+	const FString RootId = Root ? Root->Id : FString();
+	IProtoBoyDocsProvider& Provider = Docs.GetProvider();
+
+	TSet<FString> UsedIds;
+	for (const FProtoBoyDocNode& Node : Nodes)
+	{
+		UsedIds.Add(Node.Id);
+	}
+	TMap<FString, FString> MapIds;  // template doc id -> its id on the map ("" = not on the map)
+	TMap<FString, FString> Paths;
+	TSet<FString> DesignIds;
+	bool bOk = true;
+	for (const FProtoBoyDocTemplateDoc& Doc : Template.Docs)
+	{
+		EProtoBoyDocKind Kind = EProtoBoyDocKind::Design;
+		ProtoBoyDocLayers::FromTemplateKey(Doc.Kind, Kind);
+		const FString Title = Doc.Title.TrimStartAndEnd();
+		const FString* ParentPath = DesignIds.Contains(Doc.Parent) ? Paths.Find(Doc.Parent) : nullptr;
+		const FString Path = ProtoBoyDocMap::MakeNewDocPath(Kind, Title, ParentPath);
+		Paths.Add(Doc.Id, Path);
+		if (Kind == EProtoBoyDocKind::Design)
+		{
+			DesignIds.Add(Doc.Id);
+		}
+
+		// Never overwrite: keep what's there, and hang the template's children under it if it's on the map.
+		if (Provider.DocExists(Path))
+		{
+			const FProtoBoyDocNode* Existing = FindByPath(Path);
+			MapIds.Add(Doc.Id, Existing ? Existing->Id : FString());
+			continue;
+		}
+
+		const FString Id = ProtoBoyDocMap::TakeUniqueId(Title, UsedIds);
+		const FString ParentId = Doc.Parent.IsEmpty() ? FString() : MapIds.FindRef(Doc.Parent);
+		const FString Text = ProtoBoyMarkdown::SetFrontmatterValues(
+			ProtoBoyDocLayers::MakeBody(Title, ProtoBoyDocLayers::GetIntro(Kind), ProtoBoyDocLayers::GetHeadings(Kind), Doc.Summary), {
+				{ ProtoBoyDocLayers::IdKey, Id },
+				{ ProtoBoyDocLayers::LayerKey, ProtoBoyDocLayers::ToKey(ProtoBoyDocLayers::GetLayer(Kind)) },
+				{ ProtoBoyDocLayers::ParentKey, ParentId != RootId ? ParentId : FString() },
+			});
+		if (!Provider.WriteDoc(Path, Text, /*bMustNotExist*/ true, OutError))
+		{
+			bOk = false;
+			break;
+		}
+		MapIds.Add(Doc.Id, Id);
+		++OutCreated;
+		bWrote = true;
+	}
+
+	if (bWrote)
+	{
+		AfterWrite();
+	}
+	return bOk;
+}
+
+bool FProtoBoyDocMap::CreateDoc(EProtoBoyDocKind Kind, const FString& InTitle, const FString& ParentId, FString& OutId, FText& OutError)
 {
 	const FString Title = InTitle.TrimStartAndEnd();
 	if (Title.IsEmpty())
@@ -503,14 +635,15 @@ bool FProtoBoyDocMap::CreateDoc(EProtoBoyDocLayer Layer, const FString& InTitle,
 		OutError = LOCTEXT("NoTitle", "Give the doc a title.");
 		return false;
 	}
-	if (!ProtoBoyDocLayers::GetAddableLayers().Contains(Layer))
+	if (!ProtoBoyDocLayers::GetAddableKinds().Contains(Kind))
 	{
-		OutError = LOCTEXT("NotAddable", "Vision and Overview docs are created from setup, Tech docs with Add Tech Doc, and decisions as ADRs.");
+		OutError = LOCTEXT("NotAddable", "The Game doc is created from setup, and a feature's Tech doc with Add Tech Doc.");
 		return false;
 	}
-	if (!HasVisionAndOverview())
+	const FProtoBoyDocNode* Root = GetGame();
+	if (!Root)
 	{
-		OutError = LOCTEXT("NeedsVision", "Create the Vision and Overview first: every other doc hangs below them.");
+		OutError = LOCTEXT("NeedsGame", "Create the Game doc first: every other doc hangs below it.");
 		return false;
 	}
 	const FProtoBoyDocNode* Parent = ParentId.IsEmpty() ? nullptr : Find(ParentId);
@@ -520,12 +653,8 @@ bool FProtoBoyDocMap::CreateDoc(EProtoBoyDocLayer Layer, const FString& InTitle,
 		return false;
 	}
 
-	// Design docs nest like the features they describe; the other layers keep one flat folder each.
-	const FString Name = ProtoBoyDocMap::ToFileName(Title);
-	const FString Folder = Layer == EProtoBoyDocLayer::Design
-		? (Parent && Parent->Layer == EProtoBoyDocLayer::Design ? FPaths::GetPath(Parent->Path) : ProtoBoyDocLayers::GetFolder(Layer)) / Name
-		: ProtoBoyDocLayers::GetFolder(Layer);
-	const FString Path = Folder / Name + TEXT(".md");
+	const FString Path = ProtoBoyDocMap::MakeNewDocPath(Kind, Title,
+		Parent && Parent->Layer == EProtoBoyDocLayer::Design ? &Parent->Path : nullptr);
 
 	IProtoBoyDocsProvider& Provider = Docs.GetProvider();
 	if (Provider.DocExists(Path))
@@ -534,14 +663,13 @@ bool FProtoBoyDocMap::CreateDoc(EProtoBoyDocLayer Layer, const FString& InTitle,
 		return false;
 	}
 
-	// The default parent (the Overview) isn't written, so moving the Overview never strands anything.
-	const FProtoBoyDocNode* DefaultParent = GetOverview();
+	// The default parent (the Game doc) isn't written, so docs follow it if it's ever replaced.
 	OutId = MakeUniqueId(Title);
 	const FString Text = ProtoBoyMarkdown::SetFrontmatterValues(
-		ProtoBoyDocLayers::MakeBody(Title, ProtoBoyDocLayers::GetIntro(Layer), ProtoBoyDocLayers::GetHeadings(Layer)), {
+		ProtoBoyDocLayers::MakeBody(Title, ProtoBoyDocLayers::GetIntro(Kind), ProtoBoyDocLayers::GetHeadings(Kind)), {
 			{ ProtoBoyDocLayers::IdKey, OutId },
-			{ ProtoBoyDocLayers::LayerKey, ProtoBoyDocLayers::ToKey(Layer) },
-			{ ProtoBoyDocLayers::ParentKey, Parent && Parent != DefaultParent ? Parent->Id : FString() },
+			{ ProtoBoyDocLayers::LayerKey, ProtoBoyDocLayers::ToKey(ProtoBoyDocLayers::GetLayer(Kind)) },
+			{ ProtoBoyDocLayers::ParentKey, Parent && Parent != Root ? Parent->Id : FString() },
 		});
 	if (!Provider.WriteDoc(Path, Text, /*bMustNotExist*/ true, OutError))
 	{
@@ -573,21 +701,23 @@ bool FProtoBoyDocMap::CreateTechDoc(const FString& DesignId, FString& OutId, FTe
 		return false;
 	}
 
-	// One section per "## " section of the Design doc, so each design question gets its engine-side answer.
+	// One section per "## " section of the Design doc, so each design question gets its engine-side answer. The
+	// Design doc's Decisions stay there; the Tech doc gets its own.
 	TArray<ProtoBoyDocLayers::FHeading> Headings;
 	for (const ProtoBoyMarkdown::FSection& Section : ProtoBoyMarkdown::ParseSections(DesignText))
 	{
-		if (Section.Level == 2)
+		if (Section.Level == 2 && !Section.Heading.Equals(ProtoBoyDocLayers::GetDecisionsHeadingTitle(), ESearchCase::IgnoreCase))
 		{
 			Headings.Add({ Section.Heading, ProtoBoyDocLayers::GetTechSectionHint() });
 		}
 	}
 	if (Headings.IsEmpty())
 	{
-		for (const ProtoBoyDocLayers::FHeading& Heading : ProtoBoyDocLayers::GetHeadings(EProtoBoyDocLayer::Design))
-		{
-			Headings.Add({ Heading.Title, ProtoBoyDocLayers::GetTechSectionHint() });
-		}
+		Headings = ProtoBoyDocLayers::GetHeadings(EProtoBoyDocKind::FeatureTech);
+	}
+	else
+	{
+		Headings.Add(ProtoBoyDocLayers::GetDecisionsHeading());
 	}
 
 	const FString Directory = FPaths::GetPath(Design.Path);
@@ -623,9 +753,9 @@ bool FProtoBoyDocMap::SetParent(const FString& Id, const FString& NewParentId, F
 		OutError = LOCTEXT("NoDoc", "That doc is no longer on the map. Refresh and try again.");
 		return false;
 	}
-	if (Node == GetVision())
+	if (Node == GetGame())
 	{
-		OutError = LOCTEXT("MoveVision", "The Vision is the top of the map; it can't go under another doc.");
+		OutError = LOCTEXT("MoveGame", "The Game doc is the top of the map; it can't go under another doc.");
 		return false;
 	}
 	const FProtoBoyDocNode* NewParent = NewParentId.IsEmpty() ? GetDefaultParent(*Node) : Find(NewParentId);
@@ -662,17 +792,13 @@ bool FProtoBoyDocMap::AddToMap(const FString& Path, EProtoBoyDocLayer Layer, FTe
 		OutError = FText::Format(LOCTEXT("NotFound", "{0} isn't in the docs folder any more. Refresh and try again."), FText::FromString(Path));
 		return false;
 	}
-	if (Layer == EProtoBoyDocLayer::Tech)
+	if (Layer == EProtoBoyDocLayer::Game && GetGame())
 	{
-		OutError = LOCTEXT("MapTech", "Tech docs belong to a Design doc: select the Design doc and use Add Tech Doc.");
-		return false;
-	}
-	if ((Layer == EProtoBoyDocLayer::Vision && GetVision()) || (Layer == EProtoBoyDocLayer::Overview && GetOverview()))
-	{
-		OutError = FText::Format(LOCTEXT("OnlyOne", "The map already has a {0} doc."), ProtoBoyDocLayers::GetDisplayName(Layer));
+		OutError = LOCTEXT("OnlyOneGame", "The map already has a Game doc.");
 		return false;
 	}
 
+	// A mapped Tech doc is shared tech; link it to a Design doc with protoboy-implements to make it a feature's.
 	const FString Title = Doc->Title.IsEmpty() ? FPaths::GetBaseFilename(Doc->Path) : Doc->Title;
 	return WriteFrontmatter(Doc->Path, {
 		{ ProtoBoyDocLayers::IdKey, MakeUniqueId(Title) },
@@ -680,10 +806,45 @@ bool FProtoBoyDocMap::AddToMap(const FString& Path, EProtoBoyDocLayer Layer, FTe
 	}, OutError);
 }
 
-bool FProtoBoyDocMap::UpdateOverviewIndex(FText& OutError)
+bool FProtoBoyDocMap::RecordDecision(const FString& Id, const FString& Decision, const FString& Why, const FString& RulesOut, const FString& By, FText& OutError)
 {
-	const FProtoBoyDocNode* Overview = GetOverview();
-	if (!Overview)
+	const FProtoBoyDocNode* Node = Find(Id);
+	if (!Node)
+	{
+		OutError = LOCTEXT("DecisionNoDoc", "That doc isn't on the map.");
+		return false;
+	}
+	if (Decision.TrimStartAndEnd().IsEmpty())
+	{
+		OutError = LOCTEXT("DecisionEmpty", "Say what was decided.");
+		return false;
+	}
+
+	FString Entry = FString::Printf(TEXT("- **%s: %s**"), *FDateTime::Now().ToString(TEXT("%Y-%m-%d")), *Decision.TrimStartAndEnd());
+	if (!Why.TrimStartAndEnd().IsEmpty())
+	{
+		Entry += FString::Printf(TEXT(" Why: %s"), *Why.TrimStartAndEnd());
+	}
+	if (!RulesOut.TrimStartAndEnd().IsEmpty())
+	{
+		Entry += FString::Printf(TEXT(" Rules out: %s"), *RulesOut.TrimStartAndEnd());
+	}
+	if (!By.IsEmpty())
+	{
+		Entry += FString::Printf(TEXT(" _(%s)_"), *By);
+	}
+	if (!Docs.AppendToSection(Node->Path, ProtoBoyDocLayers::GetDecisionsHeadingTitle(), Entry, OutError))
+	{
+		return false;
+	}
+	AfterWrite();
+	return true;
+}
+
+bool FProtoBoyDocMap::UpdateAreasIndex(FText& OutError)
+{
+	const FProtoBoyDocNode* Root = GetGame();
+	if (!Root)
 	{
 		return true;
 	}
@@ -693,7 +854,7 @@ bool FProtoBoyDocMap::UpdateOverviewIndex(FText& OutError)
 	TFunction<void(const FProtoBoyDocNode&, int32)> AddTree = [&](const FProtoBoyDocNode& Node, int32 Depth)
 	{
 		Content += FString::ChrN(Depth, TEXT('\t')) + FString::Printf(TEXT("- %s"), *MakeLink(Node));
-		if (Depth > 0 || Node.Layer == EProtoBoyDocLayer::Tech)
+		if (Depth > 0)
 		{
 			Content += FString::Printf(TEXT(" (%s)"), *ProtoBoyDocLayers::GetDisplayName(Node.Layer).ToString());
 		}
@@ -703,7 +864,7 @@ bool FProtoBoyDocMap::UpdateOverviewIndex(FText& OutError)
 			AddTree(*Child, Depth + 1);
 		}
 	};
-	const TArray<const FProtoBoyDocNode*> TopLevel = GetChildren(Overview->Id);
+	const TArray<const FProtoBoyDocNode*> TopLevel = GetChildren(Root->Id);
 	for (const EProtoBoyDocLayer Layer : ProtoBoyDocLayers::GetAllLayers())
 	{
 		bool bHeader = false;
@@ -723,17 +884,17 @@ bool FProtoBoyDocMap::UpdateOverviewIndex(FText& OutError)
 	}
 	if (Content.IsEmpty())
 	{
-		Content = TEXT("_Nothing below the Overview yet. Add docs from ProtoBoy's doc map._\n");
+		Content = TEXT("_Nothing below the Game doc yet. Add docs from ProtoBoy's doc map._\n");
 	}
 
 	IProtoBoyDocsProvider& Provider = Docs.GetProvider();
 	FString Text;
-	if (!Provider.ReadDoc(Overview->Path, Text, OutError))
+	if (!Provider.ReadDoc(Root->Path, Text, OutError))
 	{
 		return false;
 	}
 	const FString Updated = ProtoBoyMarkdown::SetManagedBlock(Text, TEXT("Areas"), TEXT("areas"), Content);
-	return Updated == Text || Provider.WriteDoc(Overview->Path, Updated, /*bMustNotExist*/ false, OutError);
+	return Updated == Text || Provider.WriteDoc(Root->Path, Updated, /*bMustNotExist*/ false, OutError);
 }
 
 #undef LOCTEXT_NAMESPACE

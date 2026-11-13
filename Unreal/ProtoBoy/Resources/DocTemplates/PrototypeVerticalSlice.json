@@ -1,0 +1,64 @@
+{
+	"version": 1,
+	"id": "prototype-vertical-slice",
+	"name": "Prototype / Vertical Slice",
+	"description": "One level at near-final quality to prove the game works, plus docs for the technical risks and the debug tools you'll need.",
+	"genre": "",
+	"sortOrder": 110,
+	"pillars": [
+		{
+			"name": "Prove the Fun",
+			"feeling": "the core loop is fun right now",
+			"rulesOut": "features that don't test the loop"
+		},
+		{
+			"name": "Representative Quality",
+			"feeling": "this is what the full game will feel like",
+			"rulesOut": "polish that won't scale to the full game"
+		}
+	],
+	"docs": [
+		{
+			"id": "core-loop",
+			"title": "Core Loop",
+			"kind": "design",
+			"parent": "",
+			"summary": "The main gameplay loop the slice exists to prove."
+		},
+		{
+			"id": "player",
+			"title": "Player",
+			"kind": "design",
+			"parent": "",
+			"summary": "The player character: controls, abilities and feel."
+		},
+		{
+			"id": "one-level",
+			"title": "One Level",
+			"kind": "content",
+			"parent": "",
+			"summary": "The single level that shows the game at its intended quality."
+		},
+		{
+			"id": "feel",
+			"title": "Feel",
+			"kind": "style",
+			"parent": "",
+			"summary": "Animation, VFX and audio polish on the core loop."
+		},
+		{
+			"id": "tech-risks",
+			"title": "Tech Risks",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Technical unknowns the slice must prove out, such as performance or a new system."
+		},
+		{
+			"id": "debug-tools",
+			"title": "Debug Tools",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Cheats, debug views and tuning panels for iterating on the slice."
+		}
+	]
+}

@@ -1,0 +1,90 @@
+{
+	"version": 1,
+	"id": "multiplayer",
+	"name": "Multiplayer",
+	"description": "Generic's docs plus networking. Add your genre's Design docs below Gameplay.",
+	"genre": "",
+	"sortOrder": 120,
+	"pillars": [
+		{
+			"name": "Better Together",
+			"feeling": "playing with others makes it more fun",
+			"rulesOut": "features that work just as well alone"
+		},
+		{
+			"name": "Fair and Responsive",
+			"feeling": "wins and losses feel earned, and nothing lags",
+			"rulesOut": "pay-to-win, hidden netcode advantages"
+		},
+		{
+			"name": "Core Fantasy",
+			"feeling": "the one experience the whole game is built to deliver",
+			"rulesOut": "features that don't feed it"
+		}
+	],
+	"docs": [
+		{
+			"id": "gameplay",
+			"title": "Gameplay",
+			"kind": "design",
+			"parent": "",
+			"summary": "The core loop, mechanics and rules the player interacts with."
+		},
+		{
+			"id": "networking",
+			"title": "Networking",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Getting players into the same game and keeping it in sync."
+		},
+		{
+			"id": "sessions-and-matchmaking",
+			"title": "Sessions and Matchmaking",
+			"kind": "tech",
+			"parent": "networking",
+			"summary": "Hosting, finding and joining games, parties and invites."
+		},
+		{
+			"id": "replication",
+			"title": "Replication",
+			"kind": "tech",
+			"parent": "networking",
+			"summary": "What's synced, how often, and how lag is hidden."
+		},
+		{
+			"id": "authority-and-anti-cheat",
+			"title": "Authority and Anti-cheat",
+			"kind": "tech",
+			"parent": "networking",
+			"summary": "Who decides what's true, and how cheating is prevented or detected."
+		},
+		{
+			"id": "content",
+			"title": "Content",
+			"kind": "content",
+			"parent": "",
+			"summary": "Levels, encounters, items and other authored content."
+		},
+		{
+			"id": "art",
+			"title": "Art",
+			"kind": "style",
+			"parent": "",
+			"summary": "The visual style, assets and their budgets."
+		},
+		{
+			"id": "audio",
+			"title": "Audio",
+			"kind": "style",
+			"parent": "",
+			"summary": "Music, sound effects and how they react to play."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Menus, HUD and how the game communicates with the player."
+		}
+	]
+}

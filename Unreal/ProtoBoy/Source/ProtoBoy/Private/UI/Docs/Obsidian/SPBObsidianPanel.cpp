@@ -9,6 +9,7 @@
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
+#include "UI/Docs/Map/SPBSetupDocsDialog.h"
 #include "UI/PBStyle.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
@@ -184,20 +185,20 @@ void SProtoBoyObsidianPanel::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// Vision and Overview (after connecting)
+		// Game doc (after connecting)
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(0.f, 16.f, 0.f, 0.f)
 		[
-			MakeVisionCard()
+			MakeGameDocCard()
 		]
 	];
 
 	Revalidate();
-	RefreshVisionState();
+	RefreshGameDocState();
 }
 
-TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeVisionCard()
+TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeGameDocCard()
 {
 	auto IsVaultConnected = []()
 	{
@@ -218,8 +219,8 @@ TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeVisionCard()
 				SNew(STextBlock)
 				.Text_Lambda([this]()
 				{
-					return bHasVisionDocs ? LOCTEXT("VisionHeader", "Vision and Overview")
-						: LOCTEXT("VisionHeaderSetup", "Next: set up the Vision and Overview");
+					return bHasGameDoc ? LOCTEXT("GameHeader", "Game doc")
+						: LOCTEXT("GameHeaderSetup", "Next: set up the Game doc");
 				})
 				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 11))
 			]
@@ -229,7 +230,7 @@ TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeVisionCard()
 			.Padding(0.f, 4.f, 0.f, 0.f)
 			[
 				SNew(STextBlock)
-				.Text(LOCTEXT("VisionIntro", "The top of the project's docs. The Vision says why the game exists (pitch, design pillars, non-goals); the Overview says what it is and indexes every other doc. AI agents read both before designing anything. Humans own them."))
+				.Text(LOCTEXT("GameIntro", "The top of the project's docs: why the game exists (pitch, design pillars, non-goals), what it is (core loop, game flow), and an index of every other doc. AI agents read it before designing anything. Humans own it."))
 				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 				.AutoWrapText(true)
 			]
@@ -239,8 +240,8 @@ TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeVisionCard()
 			.Padding(0.f, 4.f, 0.f, 0.f)
 			[
 				SNew(STextBlock)
-				.Visibility_Lambda([this]() { return bHasVisionDocs ? EVisibility::Collapsed : EVisibility::Visible; })
-				.Text(LOCTEXT("VisionExisting", "Already have notes for these? Add \"protoboy-layer: vision\" (or \"overview\") to the note's properties instead, or map them from the dashboard's Doc Map."))
+				.Visibility_Lambda([this]() { return bHasGameDoc ? EVisibility::Collapsed : EVisibility::Visible; })
+				.Text(LOCTEXT("GameExisting", "Already have a note for this? Add \"protoboy-layer: game\" to its properties instead, or map it from the dashboard's Doc Map."))
 				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 				.AutoWrapText(true)
 			]
@@ -258,24 +259,22 @@ TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeVisionCard()
 					SNew(STextBlock)
 					.Text_Lambda([this]()
 					{
-						if (!VisionError.IsEmpty())
+						if (!GameDocError.IsEmpty())
 						{
-							return VisionError;
+							return GameDocError;
 						}
 						const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-						const FProtoBoyDocNode* Vision = Subsystem ? Subsystem->GetDocMap().GetVision() : nullptr;
-						const FProtoBoyDocNode* Overview = Subsystem ? Subsystem->GetDocMap().GetOverview() : nullptr;
-						if (bHasVisionDocs && Vision && Overview)
+						const FProtoBoyDocNode* Game = Subsystem ? Subsystem->GetDocMap().GetGame() : nullptr;
+						if (bHasGameDoc && Game)
 						{
-							return FText::Format(LOCTEXT("VisionFound", "{0} and {1} are in the vault. Keep them current as the design changes."),
-								FText::FromString(Vision->Path), FText::FromString(Overview->Path));
+							return FText::Format(LOCTEXT("GameFound", "{0} is in the vault. Keep it current as the design changes."), FText::FromString(Game->Path));
 						}
-						return LOCTEXT("VisionMissing", "Create them from ProtoBoy's templates, then fill them in in Obsidian, starting with the Vision.");
+						return LOCTEXT("GameMissing", "Set it up from a template (with a starting set of docs) or create it on its own, then fill it in in Obsidian, starting with the pitch and design pillars.");
 					})
 					.ColorAndOpacity_Lambda([this]()
 					{
-						return !VisionError.IsEmpty() ? FSlateColor(FStyleColors::Error)
-							: bHasVisionDocs ? FSlateColor(FStyleColors::Success)
+						return !GameDocError.IsEmpty() ? FSlateColor(FStyleColors::Error)
+							: bHasGameDoc ? FSlateColor(FStyleColors::Success)
 							: FSlateColor(FStyleColors::Warning);
 					})
 					.AutoWrapText(true)
@@ -287,10 +286,29 @@ TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeVisionCard()
 				.Padding(8.f, 0.f, 0.f, 0.f)
 				[
 					SNew(SButton)
-					.Visibility_Lambda([this]() { return bHasVisionDocs ? EVisibility::Collapsed : EVisibility::Visible; })
+					.Visibility_Lambda([this]() { return bHasGameDoc ? EVisibility::Collapsed : EVisibility::Visible; })
 					.ButtonStyle(FAppStyle::Get(), "PrimaryButton")
-					.Text(LOCTEXT("CreateVision", "Create Vision and Overview"))
-					.OnClicked(this, &SProtoBoyObsidianPanel::OnCreateVisionClicked)
+					.Text(LOCTEXT("SetupFromTemplate", "Set Up from Template..."))
+					.ToolTipText(LOCTEXT("SetupFromTemplateTip", "Pick a preset for your kind of game: the Game doc with suggested design pillars, and a starting set of docs below it."))
+					.OnClicked_Lambda([this]()
+					{
+						GameDocError = FText::GetEmpty();
+						SProtoBoySetupDocsDialog::Open(AsShared());
+						RefreshGameDocState();
+						return FReply::Handled();
+					})
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(6.f, 0.f, 0.f, 0.f)
+				[
+					SNew(SButton)
+					.Visibility_Lambda([this]() { return bHasGameDoc ? EVisibility::Collapsed : EVisibility::Visible; })
+					.Text(LOCTEXT("CreateGame", "Create Game Doc"))
+					.ToolTipText(LOCTEXT("CreateGameTip", "Just the Game doc, from its template."))
+					.OnClicked(this, &SProtoBoyObsidianPanel::OnCreateGameClicked)
 				]
 
 				+ SHorizontalBox::Slot()
@@ -299,40 +317,40 @@ TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeVisionCard()
 				.Padding(8.f, 0.f, 0.f, 0.f)
 				[
 					SNew(SButton)
-					.Visibility_Lambda([this]() { return bHasVisionDocs ? EVisibility::Visible : EVisibility::Collapsed; })
-					.Text(LOCTEXT("OpenVision", "Open Vision in Obsidian"))
-					.OnClicked(this, &SProtoBoyObsidianPanel::OnOpenVisionClicked)
+					.Visibility_Lambda([this]() { return bHasGameDoc ? EVisibility::Visible : EVisibility::Collapsed; })
+					.Text(LOCTEXT("OpenGame", "Open in Obsidian"))
+					.OnClicked(this, &SProtoBoyObsidianPanel::OnOpenGameClicked)
 				]
 			]
 		];
 }
 
-void SProtoBoyObsidianPanel::RefreshVisionState()
+void SProtoBoyObsidianPanel::RefreshGameDocState()
 {
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-	bHasVisionDocs = Subsystem && Subsystem->GetObsidianConnector().IsConnected() && Subsystem->GetDocMap().HasVisionAndOverview();
+	bHasGameDoc = Subsystem && Subsystem->GetObsidianConnector().IsConnected() && Subsystem->GetDocMap().HasGameDoc();
 }
 
-FReply SProtoBoyObsidianPanel::OnCreateVisionClicked()
+FReply SProtoBoyObsidianPanel::OnCreateGameClicked()
 {
-	VisionError = FText::GetEmpty();
+	GameDocError = FText::GetEmpty();
 	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 	if (Subsystem && Subsystem->GetObsidianConnector().IsConnected())
 	{
-		Subsystem->GetDocMap().CreateVisionAndOverview(VisionError);
+		Subsystem->GetDocMap().CreateGameDoc(GameDocError);
 	}
-	RefreshVisionState();
+	RefreshGameDocState();
 	return FReply::Handled();
 }
 
-FReply SProtoBoyObsidianPanel::OnOpenVisionClicked()
+FReply SProtoBoyObsidianPanel::OnOpenGameClicked()
 {
-	VisionError = FText::GetEmpty();
+	GameDocError = FText::GetEmpty();
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-	const FProtoBoyDocNode* Vision = Subsystem ? Subsystem->GetDocMap().GetVision() : nullptr;
-	if (Vision)
+	const FProtoBoyDocNode* Game = Subsystem ? Subsystem->GetDocMap().GetGame() : nullptr;
+	if (Game)
 	{
-		Subsystem->GetObsidianConnector().OpenInObsidian(Vision->Path, VisionError);
+		Subsystem->GetObsidianConnector().OpenInObsidian(Game->Path, GameDocError);
 	}
 	return FReply::Handled();
 }
@@ -402,8 +420,8 @@ FReply SProtoBoyObsidianPanel::OnConnectClicked()
 		FText Error;
 		ConnectError = Connector->Connect(GetVaultInput(), GetFolderInput(), Error) ? FText::GetEmpty() : Error;
 	}
-	VisionError = FText::GetEmpty();
-	RefreshVisionState();
+	GameDocError = FText::GetEmpty();
+	RefreshGameDocState();
 	return FReply::Handled();
 }
 
@@ -413,8 +431,8 @@ FReply SProtoBoyObsidianPanel::OnDisconnectClicked()
 	{
 		Connector->Disconnect();
 	}
-	VisionError = FText::GetEmpty();
-	RefreshVisionState();
+	GameDocError = FText::GetEmpty();
+	RefreshGameDocState();
 	return FReply::Handled();
 }
 

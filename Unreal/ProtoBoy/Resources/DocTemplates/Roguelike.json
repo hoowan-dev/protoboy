@@ -1,0 +1,111 @@
+{
+	"version": 1,
+	"id": "roguelike",
+	"name": "Roguelike",
+	"description": "Short runs, procedural variety and builds that change every time, with progression between runs.",
+	"genre": "Roguelike",
+	"sortOrder": 80,
+	"pillars": [
+		{
+			"name": "Every Run Is Different",
+			"feeling": "I can't wait to see what this run gives me",
+			"rulesOut": "runs that always play out the same"
+		},
+		{
+			"name": "Death Teaches",
+			"feeling": "losing makes me better next time",
+			"rulesOut": "deaths that feel random or unfair"
+		},
+		{
+			"name": "Builds That Break the Game",
+			"feeling": "finding a combo that goes wild",
+			"rulesOut": "items that are only small stat bumps"
+		}
+	],
+	"docs": [
+		{
+			"id": "run-structure",
+			"title": "Run Structure",
+			"kind": "content",
+			"parent": "",
+			"summary": "How a run is built and paced: generation, encounters and rewards."
+		},
+		{
+			"id": "procedural-generation",
+			"title": "Procedural Generation",
+			"kind": "tech",
+			"parent": "run-structure",
+			"summary": "Generating floors, rooms and layouts that stay fair."
+		},
+		{
+			"id": "encounters",
+			"title": "Encounters",
+			"kind": "content",
+			"parent": "run-structure",
+			"summary": "Fights, events and choices along the way."
+		},
+		{
+			"id": "rewards",
+			"title": "Rewards",
+			"kind": "design",
+			"parent": "run-structure",
+			"summary": "What the player is offered during a run, and when."
+		},
+		{
+			"id": "combat",
+			"title": "Combat",
+			"kind": "design",
+			"parent": "",
+			"summary": "Moment-to-moment fighting."
+		},
+		{
+			"id": "build-variety",
+			"title": "Build Variety",
+			"kind": "content",
+			"parent": "",
+			"summary": "What makes each run play differently: the item pool and the systems that combine it."
+		},
+		{
+			"id": "items",
+			"title": "Items",
+			"kind": "content",
+			"parent": "build-variety",
+			"summary": "Items and relics and their effects."
+		},
+		{
+			"id": "synergies",
+			"title": "Synergies",
+			"kind": "design",
+			"parent": "build-variety",
+			"summary": "How items and upgrades combine into builds."
+		},
+		{
+			"id": "upgrades",
+			"title": "Upgrades",
+			"kind": "design",
+			"parent": "build-variety",
+			"summary": "In-run upgrades to stats and abilities."
+		},
+		{
+			"id": "meta-progression",
+			"title": "Meta Progression",
+			"kind": "design",
+			"parent": "",
+			"summary": "Unlocks and progress that carry over between runs."
+		},
+		{
+			"id": "content-pools",
+			"title": "Content Pools",
+			"kind": "content",
+			"parent": "",
+			"summary": "The enemies, rooms and events the generator draws from, and how they're weighted."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Menus, HUD and how the game communicates with the player."
+		}
+	]
+}

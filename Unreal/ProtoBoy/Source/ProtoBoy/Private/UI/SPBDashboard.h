@@ -84,8 +84,8 @@ private:
 	TArray<FSetupStepState> SetupSteps;
 	int32 CountDoneSetupSteps() const;
 
-	/** Whether the Vision and Overview docs exist. Cached; refreshed with the Documentation section and on doc map changes. */
-	bool bHasVisionDocs = false;
+	/** Whether the Game doc exists. Cached; refreshed with the Documentation section and on doc map changes. */
+	bool bHasGameDoc = false;
 
 	FReply OnOpenPluginSettingsClicked();
 	FReply OnConnectDocsClicked();

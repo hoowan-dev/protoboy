@@ -1,0 +1,181 @@
+{
+	"version": 1,
+	"id": "rpg",
+	"name": "RPG",
+	"description": "Character growth, items and a world with quests to follow. Systems-heavy, so stats, inventory and saves get shared Tech docs.",
+	"genre": "RPG",
+	"sortOrder": 20,
+	"pillars": [
+		{
+			"name": "My Character, My Way",
+			"feeling": "the build is mine and it shows",
+			"rulesOut": "one optimal build everyone copies"
+		},
+		{
+			"name": "A World Worth Exploring",
+			"feeling": "curiosity is always rewarded",
+			"rulesOut": "empty zones and copy-paste locations"
+		},
+		{
+			"name": "Choices With Weight",
+			"feeling": "my decisions change what happens",
+			"rulesOut": "choices that lead to the same outcome"
+		}
+	],
+	"docs": [
+		{
+			"id": "stats",
+			"title": "Stats",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Attributes and derived values, and how they feed into every other system."
+		},
+		{
+			"id": "inventory",
+			"title": "Inventory",
+			"kind": "tech",
+			"parent": "",
+			"summary": "How items are stored, sorted and limited."
+		},
+		{
+			"id": "character",
+			"title": "Character",
+			"kind": "design",
+			"parent": "",
+			"summary": "Who the player is and how they grow."
+		},
+		{
+			"id": "progression",
+			"title": "Progression",
+			"kind": "design",
+			"parent": "character",
+			"summary": "Experience, leveling and the pacing of power growth."
+		},
+		{
+			"id": "classes-and-abilities",
+			"title": "Classes and Abilities",
+			"kind": "design",
+			"parent": "character",
+			"summary": "Classes, skills and ability trees that define how characters play."
+		},
+		{
+			"id": "combat",
+			"title": "Combat",
+			"kind": "design",
+			"parent": "",
+			"summary": "How fights play out: turns or real time, targeting, damage and status effects."
+		},
+		{
+			"id": "items",
+			"title": "Items",
+			"kind": "content",
+			"parent": "",
+			"summary": "Everything the player can own, carry and use, and where it comes from."
+		},
+		{
+			"id": "equipment",
+			"title": "Equipment",
+			"kind": "design",
+			"parent": "items",
+			"summary": "Gear slots and how equipment modifies the character."
+		},
+		{
+			"id": "loot-tables",
+			"title": "Loot Tables",
+			"kind": "content",
+			"parent": "items",
+			"summary": "What drops where, and at what rarity."
+		},
+		{
+			"id": "quests-and-narrative",
+			"title": "Quests and Narrative",
+			"kind": "content",
+			"parent": "",
+			"summary": "The story and the tasks that move the player through it."
+		},
+		{
+			"id": "dialogue",
+			"title": "Dialogue",
+			"kind": "design",
+			"parent": "quests-and-narrative",
+			"summary": "Conversations, choices and how they're authored."
+		},
+		{
+			"id": "quest-tracking",
+			"title": "Quest Tracking",
+			"kind": "design",
+			"parent": "quests-and-narrative",
+			"summary": "Quest states, objectives and the journal."
+		},
+		{
+			"id": "story-beats",
+			"title": "Story Beats",
+			"kind": "content",
+			"parent": "quests-and-narrative",
+			"summary": "The main plot and its key moments."
+		},
+		{
+			"id": "world",
+			"title": "World",
+			"kind": "content",
+			"parent": "",
+			"summary": "The places the player explores and who lives there."
+		},
+		{
+			"id": "regions",
+			"title": "Regions",
+			"kind": "content",
+			"parent": "world",
+			"summary": "Areas of the world, how they connect and how they gate progress."
+		},
+		{
+			"id": "npcs",
+			"title": "NPCs",
+			"kind": "content",
+			"parent": "world",
+			"summary": "Non-player characters: schedules, roles and interactions."
+		},
+		{
+			"id": "economy",
+			"title": "Economy",
+			"kind": "design",
+			"parent": "",
+			"summary": "Currencies and the systems that make and spend them."
+		},
+		{
+			"id": "currencies",
+			"title": "Currencies",
+			"kind": "tech",
+			"parent": "economy",
+			"summary": "Money and other currencies, and where they come from."
+		},
+		{
+			"id": "shops",
+			"title": "Shops",
+			"kind": "design",
+			"parent": "economy",
+			"summary": "Vendors, prices and buy-back rules."
+		},
+		{
+			"id": "crafting",
+			"title": "Crafting",
+			"kind": "design",
+			"parent": "economy",
+			"summary": "Turning materials into items: recipes and stations."
+		},
+		{
+			"id": "save-and-load",
+			"title": "Save and Load",
+			"kind": "tech",
+			"parent": "",
+			"summary": "What persists, how it's stored and how saves stay compatible."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Menus, HUD and how the game communicates with the player."
+		}
+	]
+}

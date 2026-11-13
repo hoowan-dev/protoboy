@@ -1,0 +1,125 @@
+{
+	"version": 1,
+	"id": "live-production",
+	"name": "Live / Production",
+	"description": "For a game heading to release and beyond: the gameplay basics plus the platform, data, quality and tooling work shipping needs.",
+	"genre": "",
+	"sortOrder": 130,
+	"pillars": [
+		{
+			"name": "Worth Coming Back To",
+			"feeling": "there's always something new to look forward to",
+			"rulesOut": "updates that only add grind"
+		},
+		{
+			"name": "Always Playable",
+			"feeling": "it runs well and never loses my progress",
+			"rulesOut": "shipping features that break saves or frame rate"
+		},
+		{
+			"name": "Core Fantasy",
+			"feeling": "the one experience the whole game is built to deliver",
+			"rulesOut": "features that don't feed it"
+		}
+	],
+	"docs": [
+		{
+			"id": "gameplay",
+			"title": "Gameplay",
+			"kind": "design",
+			"parent": "",
+			"summary": "The core loop, mechanics and rules the player interacts with."
+		},
+		{
+			"id": "content",
+			"title": "Content",
+			"kind": "content",
+			"parent": "",
+			"summary": "Levels, encounters, items and other authored content."
+		},
+		{
+			"id": "art",
+			"title": "Art",
+			"kind": "style",
+			"parent": "",
+			"summary": "The visual style, assets and their budgets."
+		},
+		{
+			"id": "audio",
+			"title": "Audio",
+			"kind": "style",
+			"parent": "",
+			"summary": "Music, sound effects and how they react to play."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Menus, HUD and how the game communicates with the player."
+		},
+		{
+			"id": "platform-and-services",
+			"title": "Platform and Services",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Platform requirements and online services."
+		},
+		{
+			"id": "saves",
+			"title": "Saves",
+			"kind": "tech",
+			"parent": "platform-and-services",
+			"summary": "Local and cloud saves, and migrating them between versions."
+		},
+		{
+			"id": "achievements",
+			"title": "Achievements",
+			"kind": "tech",
+			"parent": "platform-and-services",
+			"summary": "Achievements and trophies on each platform."
+		},
+		{
+			"id": "store",
+			"title": "Store",
+			"kind": "tech",
+			"parent": "platform-and-services",
+			"summary": "Store pages, purchases, DLC and entitlements."
+		},
+		{
+			"id": "analytics",
+			"title": "Analytics",
+			"kind": "tech",
+			"parent": "",
+			"summary": "What's measured, why, and how it informs design."
+		},
+		{
+			"id": "localization",
+			"title": "Localization",
+			"kind": "content",
+			"parent": "",
+			"summary": "Text, audio and culture across languages."
+		},
+		{
+			"id": "accessibility",
+			"title": "Accessibility",
+			"kind": "style",
+			"parent": "",
+			"summary": "Options and design that let more people play."
+		},
+		{
+			"id": "performance",
+			"title": "Performance",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Frame time, memory and load-time budgets on each target platform."
+		},
+		{
+			"id": "tools-and-pipeline",
+			"title": "Tools and Pipeline",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Editor tools, importers, and build and release automation."
+		}
+	]
+}

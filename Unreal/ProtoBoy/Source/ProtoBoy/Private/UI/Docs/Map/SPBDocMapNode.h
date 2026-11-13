@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Docs/PBDocLayers.h"
 #include "SGraphNode.h"
 
 class UProtoBoyDocMapGraphNode;
@@ -22,6 +23,9 @@ public:
 
 	/** Width every node is laid out with (the auto layout depends on it). */
 	static constexpr float NodeWidth = 220.f;
+
+	/** Body color for docs of this layer (also used by the template preview, so layers look the same everywhere). */
+	static FLinearColor GetLayerColor(EProtoBoyDocLayer Layer);
 
 private:
 	UProtoBoyDocMapGraphNode* GetDocNode() const;

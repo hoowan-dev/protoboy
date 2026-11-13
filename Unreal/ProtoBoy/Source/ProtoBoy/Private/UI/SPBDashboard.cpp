@@ -58,11 +58,11 @@ namespace ProtoBoyDashboard
 
 void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 {
-	// TODO: Status header, New ADR.
+	// TODO: Status header.
 	Pages = {
 		MakeShared<FPage>(FPage{ LOCTEXT("SetupPage", "Setup"), LOCTEXT("SetupPageTip", "Plugin settings and connections to agents, docs, task boards and asset sources."), "Icons.Settings" }),
 		MakeShared<FPage>(FPage{ LOCTEXT("ArchitecturePage", "Architecture"), LOCTEXT("ArchitecturePageTip", "Setup checklist and the map of the project's docs."), "Icons.Layout" }),
-		MakeShared<FPage>(FPage{ LOCTEXT("DocumentationPage", "Documentation"), LOCTEXT("DocumentationPageTip", "The game's design docs and ADRs."), "Icons.Documentation" }),
+		MakeShared<FPage>(FPage{ LOCTEXT("DocumentationPage", "Documentation"), LOCTEXT("DocumentationPageTip", "The game's docs."), "Icons.Documentation" }),
 		MakeShared<FPage>(FPage{ LOCTEXT("TasksPage", "Tasks"), LOCTEXT("TasksPageTip", "The team's task board."), "Icons.Clipboard" }),
 	};
 	BuildSetupSteps();
@@ -206,7 +206,7 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 	{
 		ConnectionChangedHandle = Subsystem->GetObsidianConnector().OnConnectionChanged.AddSP(
 			this, &SProtoBoyDashboard::RebuildDocsSection);
-		// Creating the Vision and Overview (from the doc map or setup) completes the docs setup step.
+		// Creating the Game doc (from the doc map or setup) completes the docs setup step.
 		DocMapChangedHandle = Subsystem->GetDocMap().OnChanged.AddSP(this, &SProtoBoyDashboard::RebuildDocsSection);
 	}
 }
@@ -538,7 +538,7 @@ void SProtoBoyDashboard::RebuildDocsSection()
 {
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 	const FProtoBoyObsidianConnector* Obsidian = Subsystem ? &Subsystem->GetObsidianConnector() : nullptr;
-	bHasVisionDocs = Obsidian && Obsidian->IsConnected() && Subsystem->GetDocMap().HasVisionAndOverview();
+	bHasGameDoc = Obsidian && Obsidian->IsConnected() && Subsystem->GetDocMap().HasGameDoc();
 	// The docs folder may have changed, which changes whether the art direction doc exists.
 	if (AssetSourcingPanel.IsValid())
 	{
@@ -591,10 +591,10 @@ void SProtoBoyDashboard::RebuildDocsSection()
 		.Padding(0.f, 4.f, 0.f, 0.f)
 		[
 			SNew(STextBlock)
-			.Text(bHasVisionDocs
-				? LOCTEXT("DocsSetupComplete", "Setup complete: the Vision and Overview are in the vault.")
-				: LOCTEXT("DocsSetupNeeded", "Setup needed: create the Vision and Overview."))
-			.ColorAndOpacity(bHasVisionDocs ? FSlateColor::UseSubduedForeground() : FSlateColor(FStyleColors::Warning))
+			.Text(bHasGameDoc
+				? LOCTEXT("DocsSetupComplete", "Setup complete: the Game doc is in the vault.")
+				: LOCTEXT("DocsSetupNeeded", "Setup needed: create the Game doc."))
+			.ColorAndOpacity(bHasGameDoc ? FSlateColor::UseSubduedForeground() : FSlateColor(FStyleColors::Warning))
 			.AutoWrapText(true)
 		];
 	}
@@ -611,7 +611,7 @@ void SProtoBoyDashboard::RebuildDocsSection()
 	}
 
 	const bool bConnected = Obsidian && Obsidian->IsConnected();
-	const bool bSetUp = bConnected && bHasVisionDocs;
+	const bool bSetUp = bConnected && bHasGameDoc;
 	Content->AddSlot()
 	.AutoHeight()
 	.HAlign(HAlign_Left)
@@ -667,12 +667,12 @@ void SProtoBoyDashboard::BuildSetupSteps()
 			OutDetail = LOCTEXT("StepDocsNone", "Obsidian isn't connected.");
 			return false;
 		}
-		if (!bHasVisionDocs)
+		if (!bHasGameDoc)
 		{
-			OutDetail = LOCTEXT("StepDocsNoVision", "Obsidian connected; the Vision and Overview aren't set up yet.");
+			OutDetail = LOCTEXT("StepDocsNoGame", "Obsidian connected; the Game doc isn't set up yet.");
 			return false;
 		}
-		OutDetail = FText::Format(LOCTEXT("StepDocsDone", "Vault \"{0}\", Vision and Overview in place."),
+		OutDetail = FText::Format(LOCTEXT("StepDocsDone", "Vault \"{0}\", Game doc in place."),
 			FText::FromString(Subsystem->GetObsidianConnector().GetVaultName()));
 		return true;
 	};
@@ -764,7 +764,14 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
 				LOCTEXT("ChangeSourcing", "Change..."))
 		];
 
-	auto IsSetupDone = [this]() { return CountDoneSetupSteps() == SetupSteps.Num(); };
+	// The doc map is where the Game doc gets created, so it only waits on the other checks and on the docs being
+	// connected; a missing Game doc doesn't lock it.
+	auto IsSetupDone = [this]()
+	{
+		FText Ignored;
+		const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+		return Subsystem && Subsystem->GetObsidianConnector().IsConnected() && AgentStep(Ignored) && TasksStep(Ignored);
+	};
 
 	const TSharedRef<SWidget> DocMap = SNew(SVerticalBox)
 
@@ -791,7 +798,7 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
 			.VAlign(VAlign_Center)
 			[
 				SNew(STextBlock)
-				.Text(LOCTEXT("DocMapLocked", "Finish the setup checks above to edit the doc map. Agents plan against the docs and task board, so those need to be connected first."))
+				.Text(LOCTEXT("DocMapLocked", "Connect an agent, documentation and a task board above to edit the doc map. Agents plan against the docs and task board, so those need to be connected first."))
 				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 				.AutoWrapText(true)
 			]
@@ -825,7 +832,7 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeDocumentationSection()
 {
-	// TODO: Browse and search design docs and ADRs.
+	// TODO: Browse and search the docs.
 	return SNullWidget::NullWidget;
 }
 

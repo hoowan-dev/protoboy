@@ -1,0 +1,50 @@
+{
+	"version": 1,
+	"id": "game-jam",
+	"name": "Game Jam",
+	"description": "Deliberately tiny: four docs, so the whole set fits a weekend. Grow it after the jam if the game sticks.",
+	"genre": "",
+	"sortOrder": 100,
+	"pillars": [
+		{
+			"name": "One Fun Verb",
+			"feeling": "the single action is fun on its own",
+			"rulesOut": "anything that isn't the verb"
+		},
+		{
+			"name": "Understood in Seconds",
+			"feeling": "anyone gets it without a tutorial",
+			"rulesOut": "systems that need explaining"
+		}
+	],
+	"docs": [
+		{
+			"id": "core-loop",
+			"title": "Core Loop",
+			"kind": "design",
+			"parent": "",
+			"summary": "The one thing the player does, over and over, and why it's fun."
+		},
+		{
+			"id": "art",
+			"title": "Art",
+			"kind": "style",
+			"parent": "",
+			"summary": "Just enough visuals to read the game and set its mood."
+		},
+		{
+			"id": "audio",
+			"title": "Audio",
+			"kind": "style",
+			"parent": "",
+			"summary": "A few sounds and a track that sell the core loop."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Title screen, the minimum HUD and a way to restart."
+		}
+	]
+}

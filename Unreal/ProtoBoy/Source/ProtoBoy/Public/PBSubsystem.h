@@ -32,7 +32,7 @@ public:
 	FProtoBoyMCPServer& GetMCPServer() const { return *MCPServer; }
 	FProtoBoyTrelloConnector& GetTrelloConnector() const { return *TrelloConnector; }
 	FProtoBoyTrelloClient& GetTrelloClient() const { return *TrelloClient; }
-	/** The docs, by layer (Vision, Overview, Design, Tech, ...), read from their frontmatter. */
+	/** The docs, by layer (Game, Design, Tech, Content), read from their frontmatter. */
 	FProtoBoyDocMap& GetDocMap() const { return *DocMap; }
 
 	/** The docs platform in use (Obsidian when connected, else the project's DocsDirectory). */

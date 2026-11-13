@@ -229,7 +229,7 @@ bool UProtoBoyDocMapGraphSchema::TryCreateConnection(UEdGraphPin* A, UEdGraphPin
 
 void UProtoBoyDocMapGraphSchema::BreakPinLinks(UEdGraphPin& TargetPin, bool bSendsNodeNotifcation) const
 {
-	// Unhooking a doc sends it back to where its layer puts it by default (the Overview, or its Design doc for Tech).
+	// Unhooking a doc sends it back to where its layer puts it by default (the Game doc, or its Design doc for a feature's Tech doc).
 	if (TargetPin.Direction == EGPD_Input)
 	{
 		ProtoBoyDocMapGraph::Reparent(ProtoBoyDocMapGraph::OwningNode(&TargetPin), FString());

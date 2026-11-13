@@ -1,0 +1,97 @@
+{
+	"version": 1,
+	"id": "puzzle",
+	"name": "Puzzle",
+	"description": "Clear rules, a hand-tuned difficulty curve and plenty of polish. Small systems, lots of content.",
+	"genre": "Puzzle",
+	"sortOrder": 50,
+	"pillars": [
+		{
+			"name": "Clear Rules",
+			"feeling": "I know exactly what's allowed",
+			"rulesOut": "hidden mechanics, unfair surprises"
+		},
+		{
+			"name": "Aha Moments",
+			"feeling": "the solution clicks, and I feel clever",
+			"rulesOut": "trial and error, pixel hunting"
+		},
+		{
+			"name": "One Idea at a Time",
+			"feeling": "each puzzle teaches or twists one thing",
+			"rulesOut": "puzzles that pile on everything at once"
+		}
+	],
+	"docs": [
+		{
+			"id": "core-rules",
+			"title": "Core Rules",
+			"kind": "tech",
+			"parent": "",
+			"summary": "The puzzle's logic: what's allowed, and how the player wins and loses."
+		},
+		{
+			"id": "board-logic",
+			"title": "Board Logic",
+			"kind": "tech",
+			"parent": "core-rules",
+			"summary": "The grid, pieces or board state, and how moves change it."
+		},
+		{
+			"id": "win-and-lose-conditions",
+			"title": "Win and Lose Conditions",
+			"kind": "tech",
+			"parent": "core-rules",
+			"summary": "When a puzzle is solved or failed."
+		},
+		{
+			"id": "puzzle-content",
+			"title": "Puzzle Content",
+			"kind": "content",
+			"parent": "",
+			"summary": "The puzzles themselves and the order they come in."
+		},
+		{
+			"id": "level-progression",
+			"title": "Level Progression",
+			"kind": "content",
+			"parent": "puzzle-content",
+			"summary": "How puzzles are grouped, unlocked and sequenced."
+		},
+		{
+			"id": "difficulty-curve",
+			"title": "Difficulty Curve",
+			"kind": "content",
+			"parent": "puzzle-content",
+			"summary": "Introducing ideas one at a time and combining them later."
+		},
+		{
+			"id": "hints-and-undo",
+			"title": "Hints and Undo",
+			"kind": "design",
+			"parent": "",
+			"summary": "Helping stuck players without giving the answer away: undo, restart and hints."
+		},
+		{
+			"id": "presentation",
+			"title": "Presentation",
+			"kind": "style",
+			"parent": "",
+			"summary": "Art, audio and juice that make simple rules satisfying to play."
+		},
+		{
+			"id": "meta-progression",
+			"title": "Meta Progression",
+			"kind": "design",
+			"parent": "",
+			"summary": "Stars, unlocks and other reasons to keep going between puzzles."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Menus, HUD and how the game communicates with the player."
+		}
+	]
+}

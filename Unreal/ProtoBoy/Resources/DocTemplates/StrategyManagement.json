@@ -1,0 +1,132 @@
+{
+	"version": 1,
+	"id": "strategy-management",
+	"name": "Strategy / Management",
+	"description": "A simulation the player steers from above. The interface is usually the biggest area, since the player reads the game through it.",
+	"genre": "Strategy / Management",
+	"sortOrder": 40,
+	"pillars": [
+		{
+			"name": "Meaningful Decisions",
+			"feeling": "every choice is a trade-off",
+			"rulesOut": "dominant strategies, choices without cost"
+		},
+		{
+			"name": "Watch It Grow",
+			"feeling": "the satisfaction of a system I built running on its own",
+			"rulesOut": "micromanagement that never ends"
+		},
+		{
+			"name": "Information at a Glance",
+			"feeling": "I can see why things happen",
+			"rulesOut": "hidden numbers, opaque simulation"
+		}
+	],
+	"docs": [
+		{
+			"id": "simulation",
+			"title": "Simulation",
+			"kind": "tech",
+			"parent": "",
+			"summary": "The rules that run the world underneath the player."
+		},
+		{
+			"id": "resources",
+			"title": "Resources",
+			"kind": "tech",
+			"parent": "simulation",
+			"summary": "What exists to be gathered, stored and spent."
+		},
+		{
+			"id": "production-chains",
+			"title": "Production Chains",
+			"kind": "tech",
+			"parent": "simulation",
+			"summary": "How resources turn into other resources."
+		},
+		{
+			"id": "time-and-tick",
+			"title": "Time and Tick",
+			"kind": "tech",
+			"parent": "simulation",
+			"summary": "Simulation speed, pausing and keeping it deterministic and fast."
+		},
+		{
+			"id": "units-and-agents",
+			"title": "Units and Agents",
+			"kind": "design",
+			"parent": "",
+			"summary": "The things that act in the world."
+		},
+		{
+			"id": "agent-ai",
+			"title": "Agent AI",
+			"kind": "design",
+			"parent": "units-and-agents",
+			"summary": "How units decide what to do."
+		},
+		{
+			"id": "pathfinding",
+			"title": "Pathfinding",
+			"kind": "tech",
+			"parent": "units-and-agents",
+			"summary": "How units move across the map at scale."
+		},
+		{
+			"id": "building-and-placement",
+			"title": "Building and Placement",
+			"kind": "design",
+			"parent": "",
+			"summary": "Placing, connecting and upgrading structures."
+		},
+		{
+			"id": "economy-and-balancing",
+			"title": "Economy and Balancing",
+			"kind": "content",
+			"parent": "",
+			"summary": "Costs, rates and tuning that keep choices meaningful."
+		},
+		{
+			"id": "camera-and-controls",
+			"title": "Camera and Controls",
+			"kind": "tech",
+			"parent": "",
+			"summary": "How the player views the map and selects and commands things."
+		},
+		{
+			"id": "map-generation",
+			"title": "Map Generation",
+			"kind": "design",
+			"parent": "",
+			"summary": "Hand-made or generated maps, terrain and resource placement."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Information-dense panels, overlays, tooltips and notifications: the player's main window into the simulation."
+		},
+		{
+			"id": "overlays",
+			"title": "Overlays",
+			"kind": "style",
+			"parent": "ui",
+			"summary": "Map overlays that visualize simulation data."
+		},
+		{
+			"id": "panels-and-tooltips",
+			"title": "Panels and Tooltips",
+			"kind": "style",
+			"parent": "ui",
+			"summary": "Detail views, tooltips and how deep information goes."
+		},
+		{
+			"id": "notifications",
+			"title": "Notifications",
+			"kind": "style",
+			"parent": "ui",
+			"summary": "Alerts that pull the player's attention to what matters."
+		}
+	]
+}

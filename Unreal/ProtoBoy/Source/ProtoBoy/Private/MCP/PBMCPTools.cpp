@@ -142,11 +142,17 @@ namespace ProtoBoyMCPTools
 		}
 	}
 
-	/** True if Path is the Vision or Overview, which humans own. */
+	/** True if Path is a Game doc, which humans own. */
 	bool IsHumanOwnedDoc(const FProtoBoyDocMap& Map, const FString& Path)
 	{
 		const FProtoBoyDocNode* Node = Map.FindByPath(Path);
-		return Node && (Node->Layer == EProtoBoyDocLayer::Vision || Node->Layer == EProtoBoyDocLayer::Overview);
+		return Node && Node->Layer == EProtoBoyDocLayer::Game;
+	}
+
+	/** Shared tech: a Tech doc that doesn't implement a Design doc. */
+	bool IsSharedTech(const FProtoBoyDocNode& Doc)
+	{
+		return Doc.Layer == EProtoBoyDocLayer::Tech && Doc.ImplementsId.IsEmpty();
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -163,50 +169,46 @@ namespace ProtoBoyMCPTools
 		IProtoBoyDocsProvider& DocsProvider = Subsystem->GetDocsProvider();
 		FProtoBoyDocMap& Map = Subsystem->GetDocMap();
 		Map.Refresh();
-		const FProtoBoyVision Vision = Map.ReadVision();
+		const FProtoBoyGameDoc Game = Map.ReadGame();
 
 		FString Out = TEXT("# Project context (ProtoBoy)\n\n");
 		Out += FString::Printf(TEXT("- **Docs:** %s\n"), *DocsProvider.GetDisplayName().ToString());
-		Out += TEXT("- **Doc layers:** Vision (why) > Overview (what, and an index) > Design (each feature, player side) > "
-			"Tech (how a Design doc is built) / Systems (shared tech) / Content (what exists) / Direction (look, sound, writing) / "
-			"Decision (ADRs). Read down the layers before building.\n");
+		Out += TEXT("- **Doc layers:** Game (why the game exists and what it is) > Design (each feature, player side) > "
+			"Tech (how it's built: a feature's Tech doc implements its Design doc; shared tech stands alone) / Content (what's in "
+			"the game, and style guides). Read down the layers before building, and check each doc's Decisions section.\n");
 
-		if (!Vision.bExists)
+		if (!Game.bExists)
 		{
-			Out += TEXT("\n**There is no Vision doc yet.** Without it you can't tell whether new work serves the game. "
-				"Ask the user to create the Vision and Overview (ProtoBoy dashboard > Architecture > Doc Map), or offer to draft "
-				"them for review.\n");
+			Out += TEXT("\n**There is no Game doc yet.** Without it you can't tell whether new work serves the game. "
+				"Ask the user to set it up (ProtoBoy dashboard > Architecture > Doc Map), or offer to draft it for review.\n");
 		}
 		else
 		{
-			Out += FString::Printf(TEXT("- **Vision:** %s (read it in full with docs_read)\n"), *Vision.Path);
-			Out += FString::Printf(TEXT("\n## Pitch\n\n%s\n"), *OrNotSet(Vision.Pitch));
+			Out += FString::Printf(TEXT("- **Game doc:** %s (read it in full with docs_read)\n"), *Game.Path);
+			Out += FString::Printf(TEXT("\n## Pitch\n\n%s\n"), *OrNotSet(Game.Pitch));
 			Out += TEXT("\n## Design pillars\n\nEvery feature should serve at least one. If a change serves none, say so before building it.\n\n");
-			if (Vision.Pillars.IsEmpty())
+			if (Game.Pillars.IsEmpty())
 			{
 				Out += TEXT("_None written yet._\n");
 			}
-			for (const FProtoBoyDesignPillar& Pillar : Vision.Pillars)
+			for (const FProtoBoyDesignPillar& Pillar : Game.Pillars)
 			{
 				Out += FString::Printf(TEXT("### %s\n\n%s\n\n"), *Pillar.Name, *OrNotSet(Pillar.Text));
 			}
-			Out += FString::Printf(TEXT("\n## Non-goals\n\n%s\n"), *OrNotSet(Vision.NonGoals));
-		}
-		if (const FProtoBoyDocNode* Overview = Map.GetOverview())
-		{
-			Out += FString::Printf(TEXT("\n## Overview (%s)\n\n%s\n"), *Overview->Path, *OrNotSet(Map.ReadOverviewSummary()));
+			Out += FString::Printf(TEXT("\n## Non-goals\n\n%s\n"), *OrNotSet(Game.NonGoals));
+			Out += FString::Printf(TEXT("\n## Core loop\n\n%s\n"), *OrNotSet(Game.CoreLoop));
 		}
 
 		Out += FString::Printf(TEXT("\n## Asset sourcing\n\n%s"), *ProtoBoyAssetSourcing::DescribePolicyForAgents());
 
 		Out += TEXT("\n## Doc map\n\n");
-		if (const FProtoBoyDocNode* Root = Map.GetVision())
+		if (const FProtoBoyDocNode* Root = Map.GetGame())
 		{
 			AppendDocTree(Map, *Root, 0, Out);
 		}
 		else
 		{
-			Out += TEXT("_No map yet (no Vision doc)._\n");
+			Out += TEXT("_No map yet (no Game doc)._\n");
 		}
 		if (!Map.GetUnmappedDocs().IsEmpty())
 		{
@@ -267,13 +269,13 @@ namespace ProtoBoyMCPTools
 		Map.Refresh();
 		const IProtoBoyDocsProvider& Provider = Subsystem->GetDocsProvider();
 
-		// Features are described in Design docs and shared tech in Systems docs: those are where new work gets placed.
+		// Features are described in Design docs and shared tech in Tech docs of its own: those are where new work goes.
 		struct FScored { const FProtoBoyDocNode* Doc; FString Text; int32 Score; };
 		TArray<FScored> Scored;
 		const TArray<FString> Words = Keywords(GetString(Call, TEXT("description")));
 		for (const FProtoBoyDocNode& Doc : Map.GetNodes())
 		{
-			if (Doc.Layer != EProtoBoyDocLayer::Design && Doc.Layer != EProtoBoyDocLayer::Systems)
+			if (Doc.Layer != EProtoBoyDocLayer::Design && !IsSharedTech(Doc))
 			{
 				continue;
 			}
@@ -293,7 +295,7 @@ namespace ProtoBoyMCPTools
 
 		if (Scored.IsEmpty())
 		{
-			Done(FProtoBoyMCPToolResult::Error(TEXT("There are no Design or Systems docs on the doc map yet, so ProtoBoy can't place this. "
+			Done(FProtoBoyMCPToolResult::Error(TEXT("There are no Design or shared Tech docs on the doc map yet, so ProtoBoy can't place this. "
 				"Ask the user where it belongs, or propose a new Design doc for them to add from the Doc Map.")));
 			return;
 		}
@@ -302,9 +304,10 @@ namespace ProtoBoyMCPTools
 		FString Out;
 		if (Scored[0].Score == 0)
 		{
-			Out = TEXT("No Design or Systems doc clearly matches this. Either it extends one of the docs below (pick the closest "
-				"and say why), or it's a new feature or system: propose a new doc to the user, check it against the Vision's "
-				"design pillars, and record the decision with adr_create before writing code.\n\n## Design and Systems docs\n\n");
+			Out = TEXT("No Design or shared Tech doc clearly matches this. Either it extends one of the docs below (pick the "
+				"closest and say why), or it's a new feature or system: propose a new doc to the user, check it against the Game "
+				"doc's design pillars, and once they agree record the decision with record_decision (in the Game doc for new "
+				"scope) before writing code.\n\n## Design and shared Tech docs\n\n");
 			for (const FScored& Entry : Scored)
 			{
 				Out += FString::Printf(TEXT("- [%s] %s: %s\n"), *ProtoBoyDocLayers::ToKey(Entry.Doc->Layer), *Entry.Doc->Path, *Entry.Doc->Title);
@@ -316,7 +319,8 @@ namespace ProtoBoyMCPTools
 			for (int32 i = 0; i < Scored.Num() && i < 3 && Scored[i].Score > 0; ++i)
 			{
 				const FProtoBoyDocNode& Doc = *Scored[i].Doc;
-				Out += FString::Printf(TEXT("\n## %s (%s, %s)\n\n"), *Doc.Title, *ProtoBoyDocLayers::GetDisplayName(Doc.Layer).ToString(), *Doc.Path);
+				Out += FString::Printf(TEXT("\n## %s (%s, %s)\n\n"), *Doc.Title,
+					*(IsSharedTech(Doc) ? ProtoBoyDocLayers::GetKindName(EProtoBoyDocKind::SharedTech) : ProtoBoyDocLayers::GetDisplayName(Doc.Layer)).ToString(), *Doc.Path);
 				if (const FProtoBoyDocNode* Tech = Doc.Layer == EProtoBoyDocLayer::Design ? Map.FindTechFor(Doc.Id) : nullptr)
 				{
 					Out += FString::Printf(TEXT("How it's built: %s (read it before changing code).\n\n"), *Tech->Path);
@@ -464,7 +468,7 @@ namespace ProtoBoyMCPTools
 			&& IsHumanOwnedDoc(Subsystem->GetDocMap(), NormalizedPath);
 		if (bHumanOwned && Mode != TEXT("append"))
 		{
-			Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("%s is the Vision or Overview, which humans own: agents may only append to it, and only when the user asks."), *NormalizedPath)));
+			Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("%s is the Game doc, which humans own: agents may only append to it, and only when the user asks."), *NormalizedPath)));
 			return;
 		}
 
@@ -496,25 +500,38 @@ namespace ProtoBoyMCPTools
 		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Updated section \"%s\" in %s (%s)."), *Heading, *Path, *Mode)));
 	}
 
-	void AdrCreate(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
+	void RecordDecision(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
 	{
 		UProtoBoySubsystem* Subsystem = GetSubsystemOrFail(Done);
-		if (!Subsystem || !Require(Call, Done, { TEXT("title"), TEXT("decision") }))
+		if (!Subsystem || !Require(Call, Done, { TEXT("path"), TEXT("decision") }))
 		{
 			return;
 		}
 
+		FProtoBoyDocMap& Map = Subsystem->GetDocMap();
+		Map.Refresh();
 		FString Path;
+		FText PathError;
+		if (!FProtoBoyDocGenerator::NormalizeDocPath(GetString(Call, TEXT("path")), Path, PathError))
+		{
+			Done(FProtoBoyMCPToolResult::Error(PathError));
+			return;
+		}
+		const FProtoBoyDocNode* Doc = Map.FindByPath(Path);
+		if (!Doc)
+		{
+			Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("%s isn't on the doc map. Record decisions in the Game, Design, Tech or Content doc they affect (get_project_context lists them)."), *Path)));
+			return;
+		}
+
 		FText Error;
-		if (!Subsystem->GetDocGenerator().CreateADR(GetString(Call, TEXT("title")), GetString(Call, TEXT("context")),
-			GetString(Call, TEXT("decision")), GetString(Call, TEXT("consequences")), GetString(Call, TEXT("status")),
-			FString::Printf(TEXT("%s via ProtoBoy"), *Call.ClientName), Path, Error))
+		if (!Map.RecordDecision(Doc->Id, GetString(Call, TEXT("decision")), GetString(Call, TEXT("why")), GetString(Call, TEXT("rules_out")),
+			FString::Printf(TEXT("%s via ProtoBoy"), *Call.ClientName), Error))
 		{
 			Done(FProtoBoyMCPToolResult::Error(Error));
 			return;
 		}
-		Subsystem->GetDocMap().Refresh();
-		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Created %s. If it changes a Design, Tech or Systems doc, propose the matching edit to the user."), *Path)));
+		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Recorded in the Decisions section of %s. If it changes what the doc says elsewhere, propose that edit to the user."), *Path)));
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -660,16 +677,16 @@ namespace ProtoBoyMCPTools
 
 		// Read
 		Add(TEXT("get_project_context"), LOCTEXT("ContextTitle", "Get project context"),
-			LOCTEXT("ContextDesc", "Start here. Returns the Vision (pitch, design pillars, non-goals), the Overview's summary, the doc map (every doc by layer) and open tasks."),
+			LOCTEXT("ContextDesc", "Start here. Returns the Game doc (pitch, design pillars, non-goals, core loop), the doc map (every doc by layer) and open tasks."),
 			false, {}, &GetProjectContext);
 
 		Add(TEXT("locate_feature"), LOCTEXT("LocateTitle", "Locate feature"),
-			LOCTEXT("LocateDesc", "Finds the Design or Systems doc a feature or change belongs to, and its Tech doc. Use before writing code."),
+			LOCTEXT("LocateDesc", "Finds the Design or shared Tech doc a feature or change belongs to, and its Tech doc. Use before writing code."),
 			false, { { TEXT("description"), TEXT("string"), TEXT("What you're about to build or change."), true } }, &LocateFeature);
 
 		Add(TEXT("docs_list"), LOCTEXT("ListTitle", "List docs"),
-			LOCTEXT("ListDesc", "Lists the project's docs (Vision, Overview, Design, Tech, ADRs, ...)."),
-			false, { { TEXT("folder"), TEXT("string"), TEXT("Only list docs under this folder, e.g. \"Design\" or \"ADR\".") } }, &DocsList);
+			LOCTEXT("ListDesc", "Lists the project's docs (Game, Design, Tech, Content, ...)."),
+			false, { { TEXT("folder"), TEXT("string"), TEXT("Only list docs under this folder, e.g. \"Design\" or \"Tech\".") } }, &DocsList);
 
 		Add(TEXT("docs_search"), LOCTEXT("SearchTitle", "Search docs"),
 			LOCTEXT("SearchDesc", "Keyword search over the project's docs."),
@@ -711,15 +728,14 @@ namespace ProtoBoyMCPTools
 				{ TEXT("block_id"), TEXT("string"), TEXT("For managed mode: block id (lowercase letters, digits, -).") },
 			}, &DocsUpdateSection);
 
-		Add(TEXT("adr_create"), LOCTEXT("AdrTitle", "Create ADR"),
-			LOCTEXT("AdrDesc", "Records an Architecture Decision Record. Required before adding a new feature, system or module the docs don't cover."),
+		Add(TEXT("record_decision"), LOCTEXT("DecisionTitle", "Record decision"),
+			LOCTEXT("DecisionDesc", "Appends a dated entry to a doc's Decisions section: what was decided, why, and what it rules out. Use the doc the decision affects (the Game doc for scope, pillars and project-wide conventions). Get the user's agreement first; required before adding a feature or system the docs don't cover."),
 			true, {
-				{ TEXT("title"), TEXT("string"), TEXT("Short decision title."), true },
-				{ TEXT("decision"), TEXT("string"), TEXT("What was decided."), true },
-				{ TEXT("context"), TEXT("string"), TEXT("Why the decision came up.") },
-				{ TEXT("consequences"), TEXT("string"), TEXT("What follows, including what gets harder.") },
-				{ TEXT("status"), TEXT("string"), TEXT("Proposed (default), Accepted, Superseded."), false, { TEXT("Proposed"), TEXT("Accepted"), TEXT("Superseded") } },
-			}, &AdrCreate);
+				{ TEXT("path"), TEXT("string"), TEXT("The doc the decision belongs to, e.g. \"Design/Combat/Combat.md\" or \"Game.md\"."), true },
+				{ TEXT("decision"), TEXT("string"), TEXT("What was decided, in a sentence."), true },
+				{ TEXT("why"), TEXT("string"), TEXT("Why: the reason or trade-off.") },
+				{ TEXT("rules_out"), TEXT("string"), TEXT("What this decision rules out.") },
+			}, &RecordDecision);
 
 		Add(TEXT("task_create"), LOCTEXT("TaskCreateTitle", "Create task"),
 			LOCTEXT("TaskCreateDesc", "Creates a task on the board. Link the design doc it implements."),

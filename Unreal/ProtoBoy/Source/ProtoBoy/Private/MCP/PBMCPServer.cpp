@@ -133,12 +133,12 @@ namespace ProtoBoyMCP
 	}
 
 	const TCHAR* Instructions = TEXT(
-		"ProtoBoy connects you to this game project's layered docs (Vision, Overview, Design, Tech, Systems, ...) and task board, from inside the Unreal Editor. "
-		"Before designing or implementing anything, call get_project_context, then locate_feature to find the Design or Systems doc the work belongs to, and read its Tech doc. "
-		"Check the work serves one of the Vision's design pillars. A new feature, system or module the docs don't cover needs an ADR (adr_create) and the user's agreement first. "
+		"ProtoBoy connects you to this game project's layered docs (Game, Design, Tech, Content) and task board, from inside the Unreal Editor. "
+		"Before designing or implementing anything, call get_project_context, then locate_feature to find the Design or shared Tech doc the work belongs to, and read its Tech doc and Decisions. "
+		"Check the work serves one of the Game doc's design pillars. A new feature, system or module the docs don't cover needs the user's agreement first, recorded with record_decision. "
 		"Work from tasks: task_get for details and the linked design doc, task_update_status as you start and finish, task_comment to report what changed. "
 		"Put out-of-scope work into new tasks (task_create) instead of growing the current one. "
-		"Keep docs current: record how things are built in Tech docs, and append to Design docs (docs_update_section). Humans own the Vision, the Overview and existing text: never rewrite them. "
+		"Keep docs current: record how things are built in Tech docs, and append to Design docs (docs_update_section). Humans own the Game doc and existing text: never rewrite them. "
 		"Write tools can require the user's approval in the editor; if a change is denied, don't retry it, ask the user. "
 		"Don't generate assets with AI when the project prefers sourced assets: check the Asset sourcing section of get_project_context. "
 		"Workflow prompts: plan-feature, implement-task, record-decision, source-assets.");

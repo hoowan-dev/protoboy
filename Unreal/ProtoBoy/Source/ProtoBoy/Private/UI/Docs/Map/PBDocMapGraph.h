@@ -11,7 +11,7 @@ class UProtoBoyDocMapGraphNode;
 struct FProtoBoyDocNode;
 
 /**
- * The doc map shown as a Behavior Tree style graph: the Vision at the top, each doc below the doc it sits under.
+ * The doc map shown as a Behavior Tree style graph: the Game doc at the top, each doc below the doc it sits under.
  * A transient view of FProtoBoyDocMap: SProtoBoyDocMapEditor rebuilds it after every change, and wiring a node under
  * another goes back through the map (which writes the doc's frontmatter).
  */
@@ -31,7 +31,7 @@ public:
 	void LinkAndLayout(UProtoBoyDocMapGraphNode* Root, const TMap<FString, TObjectPtr<UProtoBoyDocMapGraphNode>>& NodesById);
 };
 
-/** One doc. Input pin on top (the doc it sits under), output pin below (docs under it); the Vision has no input. */
+/** One doc. Input pin on top (the doc it sits under), output pin below (docs under it); the Game doc has no input. */
 UCLASS(Transient)
 class UProtoBoyDocMapGraphNode : public UEdGraphNode
 {
@@ -43,7 +43,7 @@ public:
 	UPROPERTY()
 	FString DocId;
 
-	/** The Vision (the map's root). Set before AllocateDefaultPins. */
+	/** The Game doc (the map's root). Set before AllocateDefaultPins. */
 	UPROPERTY()
 	bool bRootNode = false;
 

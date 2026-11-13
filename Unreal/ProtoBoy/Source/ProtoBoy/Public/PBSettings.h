@@ -12,7 +12,7 @@ class PROTOBOY_API UProtoBoySettings : public UDeveloperSettings
 public:
 	virtual FName GetCategoryName() const override { return TEXT("Plugins"); }
 
-	/** Folder (relative to the project directory) where living docs (GDD/TDD/ADRs) are written. */
+	/** Folder (relative to the project directory) where living docs are written when no docs platform is connected. */
 	UPROPERTY(Config, EditAnywhere, Category = "Docs")
 	FString DocsDirectory = TEXT("Docs/ProtoBoy");
 
@@ -35,7 +35,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "MCP", meta = (ClampMin = "1024", ClampMax = "65535"))
 	int32 MCPPort = 47801;
 
-	/** Let agents call tools that change docs or tasks (create docs, append sections, write ADRs, create/move/comment tasks). Read-only tools are always allowed. */
+	/** Let agents call tools that change docs or tasks (create docs, append sections, record decisions, create/move/comment tasks). Read-only tools are always allowed. */
 	UPROPERTY(Config, EditAnywhere, Category = "MCP")
 	bool bAllowMCPWriteTools = false;
 

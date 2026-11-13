@@ -1,0 +1,69 @@
+{
+	"version": 1,
+	"id": "generic",
+	"name": "Generic",
+	"description": "A starting point for any game: gameplay, content and UI, plus animation, art and audio direction. Add the features specific to your game below them.",
+	"genre": "",
+	"sortOrder": 0,
+	"pillars": [
+		{
+			"name": "Core Fantasy",
+			"feeling": "the one experience the whole game is built to deliver",
+			"rulesOut": "features that don't feed it"
+		},
+		{
+			"name": "Moment-to-Moment Fun",
+			"feeling": "what makes the next ten seconds enjoyable",
+			"rulesOut": "busywork between the good parts"
+		},
+		{
+			"name": "Reason to Return",
+			"feeling": "why the player comes back tomorrow",
+			"rulesOut": "content that's finished once seen"
+		}
+	],
+	"docs": [
+		{
+			"id": "gameplay",
+			"title": "Gameplay",
+			"kind": "design",
+			"parent": "",
+			"summary": "The core loop, mechanics and rules the player interacts with."
+		},
+		{
+			"id": "animation",
+			"title": "Animation",
+			"kind": "style",
+			"parent": "",
+			"summary": "How characters and objects move, and how that supports game feel."
+		},
+		{
+			"id": "art",
+			"title": "Art",
+			"kind": "style",
+			"parent": "",
+			"summary": "The visual style, assets and their budgets."
+		},
+		{
+			"id": "audio",
+			"title": "Audio",
+			"kind": "style",
+			"parent": "",
+			"summary": "Music, sound effects and how they react to play."
+		},
+		{
+			"id": "content",
+			"title": "Content",
+			"kind": "content",
+			"parent": "",
+			"summary": "Levels, encounters, items and other authored content."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Menus, HUD and how the game communicates with the player."
+		}
+	]
+}

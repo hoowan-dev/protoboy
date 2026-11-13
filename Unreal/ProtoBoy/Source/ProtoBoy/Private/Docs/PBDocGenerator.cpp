@@ -1,7 +1,6 @@
 #include "Docs/PBDocGenerator.h"
 
 #include "Docs/Obsidian/PBObsidianConnector.h"
-#include "Docs/PBDocLayers.h"
 #include "Docs/PBMarkdown.h"
 #include "Misc/DateTime.h"
 #include "Misc/Paths.h"
@@ -10,7 +9,6 @@
 
 #define LOCTEXT_NAMESPACE "ProtoBoyDocGenerator"
 
-const TCHAR* FProtoBoyDocGenerator::ADRFolder = TEXT("ADR");
 
 namespace ProtoBoyDocGenerator
 {
@@ -54,29 +52,6 @@ namespace ProtoBoyDocGenerator
 		return Count;
 	}
 
-	FString MakeSlug(const FString& Title)
-	{
-		FString Slug;
-		bool bDash = false;
-		for (const TCHAR C : Title)
-		{
-			if (FChar::IsAlnum(C))
-			{
-				Slug.AppendChar(FChar::ToLower(C));
-				bDash = false;
-			}
-			else if (!bDash && !Slug.IsEmpty())
-			{
-				Slug.AppendChar(TEXT('-'));
-				bDash = true;
-			}
-		}
-		while (Slug.EndsWith(TEXT("-")))
-		{
-			Slug.LeftChopInline(1);
-		}
-		return Slug.Left(60).IsEmpty() ? FString(TEXT("decision")) : Slug.Left(60);
-	}
 }
 
 FProtoBoyDocGenerator::FProtoBoyDocGenerator(const FProtoBoyObsidianConnector& InObsidian)
@@ -236,56 +211,6 @@ bool FProtoBoyDocGenerator::SetManagedBlock(const FString& Path, const FString& 
 	}
 
 	return Provider.WriteDoc(Path, ProtoBoyMarkdown::SetManagedBlock(Text, Heading, BlockId, Content), false, OutError);
-}
-
-bool FProtoBoyDocGenerator::CreateADR(const FString& Title, const FString& Context, const FString& Decision, const FString& Consequences,
-	const FString& Status, const FString& ProposedBy, FString& OutPath, FText& OutError)
-{
-	if (Title.TrimStartAndEnd().IsEmpty())
-	{
-		OutError = LOCTEXT("NoTitle", "An ADR needs a title.");
-		return false;
-	}
-
-	// Next number after the highest existing ADR-NNNN.
-	int32 Highest = 0;
-	const FString Prefix = FString(ADRFolder) + TEXT("/ADR-");
-	for (const FProtoBoyDocInfo& Doc : GetProvider().ListDocs())
-	{
-		if (Doc.Path.StartsWith(Prefix, ESearchCase::IgnoreCase))
-		{
-			Highest = FMath::Max(Highest, FCString::Atoi(*Doc.Path.Mid(Prefix.Len(), 4)));
-		}
-	}
-	const int32 Number = Highest + 1;
-
-	OutPath = FString::Printf(TEXT("%s/ADR-%04d-%s.md"), ADRFolder, Number, *ProtoBoyDocGenerator::MakeSlug(Title));
-
-	auto OrPlaceholder = [](const FString& Value) { return Value.TrimStartAndEnd().IsEmpty() ? FString(TEXT("_To be filled in._")) : Value.TrimStartAndEnd(); };
-
-	const FString Body = FString::Printf(TEXT(
-		"# ADR-%04d: %s\n"
-		"\n"
-		"- **Status:** %s\n"
-		"- **Date:** %s\n"
-		"- **Proposed by:** %s\n"
-		"\n"
-		"## Context\n\n%s\n"
-		"\n"
-		"## Decision\n\n%s\n"
-		"\n"
-		"## Consequences\n\n%s\n"),
-		Number, *Title.TrimStartAndEnd(),
-		Status.TrimStartAndEnd().IsEmpty() ? TEXT("Proposed") : *Status.TrimStartAndEnd(),
-		*FDateTime::UtcNow().ToString(TEXT("%Y-%m-%d")),
-		ProposedBy.IsEmpty() ? TEXT("unknown") : *ProposedBy,
-		*OrPlaceholder(Context), *OrPlaceholder(Decision), *OrPlaceholder(Consequences));
-	const FString Text = ProtoBoyMarkdown::SetFrontmatterValues(Body, {
-		{ ProtoBoyDocLayers::IdKey, FString::Printf(TEXT("adr-%04d"), Number) },
-		{ ProtoBoyDocLayers::LayerKey, ProtoBoyDocLayers::ToKey(EProtoBoyDocLayer::Decision) },
-	});
-
-	return GetProvider().WriteDoc(OutPath, Text, /*bMustNotExist*/ true, OutError);
 }
 
 FString FProtoBoyDocGenerator::GenerateTDDStub(const FSoftObjectPath& AssetPath)

@@ -1,0 +1,174 @@
+{
+	"version": 1,
+	"id": "action-platformer",
+	"name": "Action / Platformer",
+	"description": "Tight movement and combat through hand-built levels. Game feel gets its own doc because it makes or breaks the genre.",
+	"genre": "Action / Platformer",
+	"sortOrder": 10,
+	"pillars": [
+		{
+			"name": "Responsive Control",
+			"feeling": "the character does exactly what I meant, instantly",
+			"rulesOut": "floaty input, long animation locks"
+		},
+		{
+			"name": "Mastery Through Practice",
+			"feeling": "I get visibly better every attempt",
+			"rulesOut": "random difficulty spikes, unavoidable damage"
+		},
+		{
+			"name": "Every Screen a Challenge",
+			"feeling": "each room is a new test of what I've learned",
+			"rulesOut": "empty corridors and filler"
+		}
+	],
+	"docs": [
+		{
+			"id": "movement",
+			"title": "Movement",
+			"kind": "design",
+			"parent": "",
+			"summary": "How the player runs, jumps and traverses; the verb everything else is built around."
+		},
+		{
+			"id": "run-and-jump",
+			"title": "Run and Jump",
+			"kind": "design",
+			"parent": "movement",
+			"summary": "Ground speed, acceleration, jump arcs, coyote time and input buffering."
+		},
+		{
+			"id": "dash",
+			"title": "Dash",
+			"kind": "design",
+			"parent": "movement",
+			"summary": "Burst movement: distance, cooldown and how it chains with other moves."
+		},
+		{
+			"id": "wall-interactions",
+			"title": "Wall Interactions",
+			"kind": "design",
+			"parent": "movement",
+			"summary": "Wall slides, wall jumps, ledge grabs and climbing."
+		},
+		{
+			"id": "combat",
+			"title": "Combat",
+			"kind": "design",
+			"parent": "",
+			"summary": "How the player fights: attacks, hits and damage."
+		},
+		{
+			"id": "attacks",
+			"title": "Attacks",
+			"kind": "design",
+			"parent": "combat",
+			"summary": "The player's attacks, combos and their timing windows."
+		},
+		{
+			"id": "hit-reactions",
+			"title": "Hit Reactions",
+			"kind": "design",
+			"parent": "combat",
+			"summary": "Knockback, hitstun, invulnerability frames and feedback on both sides of a hit."
+		},
+		{
+			"id": "damage",
+			"title": "Damage",
+			"kind": "design",
+			"parent": "combat",
+			"summary": "Health, damage values and how the player dies and respawns."
+		},
+		{
+			"id": "camera",
+			"title": "Camera",
+			"kind": "tech",
+			"parent": "",
+			"summary": "How the camera follows, frames and leads the action."
+		},
+		{
+			"id": "level-design",
+			"title": "Level Design",
+			"kind": "content",
+			"parent": "",
+			"summary": "Hand-built levels that teach, test and reward the player's moves."
+		},
+		{
+			"id": "checkpoints",
+			"title": "Checkpoints",
+			"kind": "content",
+			"parent": "level-design",
+			"summary": "Where the player respawns and how much progress a death costs."
+		},
+		{
+			"id": "hazards",
+			"title": "Hazards",
+			"kind": "content",
+			"parent": "level-design",
+			"summary": "Spikes, pits, moving platforms and other environmental dangers."
+		},
+		{
+			"id": "secrets",
+			"title": "Secrets",
+			"kind": "content",
+			"parent": "level-design",
+			"summary": "Hidden areas and collectibles that reward mastery and exploration."
+		},
+		{
+			"id": "enemies",
+			"title": "Enemies",
+			"kind": "content",
+			"parent": "",
+			"summary": "What the player fights, and how each one tests a different skill."
+		},
+		{
+			"id": "enemy-archetypes",
+			"title": "Enemy Archetypes",
+			"kind": "content",
+			"parent": "enemies",
+			"summary": "The regular enemies: behaviors, attack patterns and placement rules."
+		},
+		{
+			"id": "bosses",
+			"title": "Bosses",
+			"kind": "content",
+			"parent": "enemies",
+			"summary": "Multi-phase encounters that test everything the player has learned."
+		},
+		{
+			"id": "game-feel",
+			"title": "Game Feel",
+			"kind": "style",
+			"parent": "",
+			"summary": "The juice that makes actions feel good: animation, VFX, screen shake and audio cues."
+		},
+		{
+			"id": "animation",
+			"title": "Animation",
+			"kind": "style",
+			"parent": "game-feel",
+			"summary": "Character animation and how it reads and supports responsiveness."
+		},
+		{
+			"id": "vfx",
+			"title": "VFX",
+			"kind": "style",
+			"parent": "game-feel",
+			"summary": "Particles and effects for hits, movement and the world."
+		},
+		{
+			"id": "audio-cues",
+			"title": "Audio Cues",
+			"kind": "style",
+			"parent": "game-feel",
+			"summary": "Sound effects that confirm actions and telegraph threats."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Menus, HUD and how the game communicates with the player."
+		}
+	]
+}

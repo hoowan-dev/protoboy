@@ -1,0 +1,146 @@
+{
+	"version": 1,
+	"id": "shooter",
+	"name": "Shooter",
+	"description": "Weapons, movement and AI in levels built for firefights, with an optional Networking doc for multiplayer.",
+	"genre": "Shooter",
+	"sortOrder": 30,
+	"pillars": [
+		{
+			"name": "Gunplay First",
+			"feeling": "every shot feels punchy and precise",
+			"rulesOut": "weak hit feedback, inconsistent weapons"
+		},
+		{
+			"name": "Readable Fights",
+			"feeling": "I always know where the threat is",
+			"rulesOut": "visual noise, silent or unseen attackers"
+		},
+		{
+			"name": "Enemies Worth Outsmarting",
+			"feeling": "the AI fights back and I outplay it",
+			"rulesOut": "bullet sponges, enemies that stand still"
+		}
+	],
+	"docs": [
+		{
+			"id": "weapons",
+			"title": "Weapons",
+			"kind": "design",
+			"parent": "",
+			"summary": "How guns feel and differ."
+		},
+		{
+			"id": "firing",
+			"title": "Firing",
+			"kind": "design",
+			"parent": "weapons",
+			"summary": "Hitscan or projectiles, fire rates and hit detection."
+		},
+		{
+			"id": "recoil-and-spread",
+			"title": "Recoil and Spread",
+			"kind": "design",
+			"parent": "weapons",
+			"summary": "Recoil patterns, spread and how they reward control."
+		},
+		{
+			"id": "ammo-and-reloading",
+			"title": "Ammo and Reloading",
+			"kind": "design",
+			"parent": "weapons",
+			"summary": "Magazines, reserves, reloads and pickups."
+		},
+		{
+			"id": "attachments",
+			"title": "Attachments",
+			"kind": "design",
+			"parent": "weapons",
+			"summary": "Scopes, grips and other modifiers, and how they change a weapon."
+		},
+		{
+			"id": "player-movement",
+			"title": "Player Movement",
+			"kind": "design",
+			"parent": "",
+			"summary": "Running, crouching, sliding, mantling and how movement interacts with aiming."
+		},
+		{
+			"id": "ai",
+			"title": "AI",
+			"kind": "design",
+			"parent": "",
+			"summary": "Enemies that fight back believably."
+		},
+		{
+			"id": "perception",
+			"title": "Perception",
+			"kind": "tech",
+			"parent": "ai",
+			"summary": "What AI can see and hear, and how it notices the player."
+		},
+		{
+			"id": "cover",
+			"title": "Cover",
+			"kind": "design",
+			"parent": "ai",
+			"summary": "Finding, using and leaving cover."
+		},
+		{
+			"id": "squad-behavior",
+			"title": "Squad Behavior",
+			"kind": "design",
+			"parent": "ai",
+			"summary": "How AI coordinates: flanking, suppression and callouts."
+		},
+		{
+			"id": "levels",
+			"title": "Levels",
+			"kind": "content",
+			"parent": "",
+			"summary": "Maps built for firefights: sightlines, cover placement and flow."
+		},
+		{
+			"id": "game-modes",
+			"title": "Game Modes",
+			"kind": "design",
+			"parent": "",
+			"summary": "The rules of each mode: objectives, scoring and rounds."
+		},
+		{
+			"id": "networking",
+			"title": "Networking",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Multiplayer: replication, lag compensation and matchmaking. Remove if single-player."
+		},
+		{
+			"id": "replication",
+			"title": "Replication",
+			"kind": "tech",
+			"parent": "networking",
+			"summary": "What's synced, how often, and who has authority."
+		},
+		{
+			"id": "matchmaking",
+			"title": "Matchmaking",
+			"kind": "tech",
+			"parent": "networking",
+			"summary": "Finding, joining and balancing matches."
+		},
+		{
+			"id": "audio",
+			"title": "Audio",
+			"kind": "style",
+			"parent": "",
+			"summary": "Gunfire, footsteps and positional audio that the player relies on to read the fight."
+		},
+		{
+			"id": "ui-and-hud",
+			"title": "UI and HUD",
+			"kind": "style",
+			"parent": "",
+			"summary": "Crosshair, ammo, health, hit markers, the scoreboard and menus."
+		}
+	]
+}

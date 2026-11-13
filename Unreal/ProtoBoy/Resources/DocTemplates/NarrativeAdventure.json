@@ -1,0 +1,90 @@
+{
+	"version": 1,
+	"id": "narrative-adventure",
+	"name": "Narrative / Adventure",
+	"description": "Story first: branching choices, characters and a world to explore and interact with.",
+	"genre": "Narrative / Adventure",
+	"sortOrder": 60,
+	"pillars": [
+		{
+			"name": "Characters You Care About",
+			"feeling": "I want to know what happens to them",
+			"rulesOut": "cast members who exist only to deliver exposition"
+		},
+		{
+			"name": "Choices That Matter",
+			"feeling": "the story is shaped by what I did",
+			"rulesOut": "branches that collapse straight back together"
+		},
+		{
+			"name": "Every Scene Moves the Story",
+			"feeling": "something always changes",
+			"rulesOut": "filler scenes, fetch quests"
+		}
+	],
+	"docs": [
+		{
+			"id": "story",
+			"title": "Story",
+			"kind": "content",
+			"parent": "",
+			"summary": "The narrative and how the player's choices shape it."
+		},
+		{
+			"id": "branching",
+			"title": "Branching",
+			"kind": "content",
+			"parent": "story",
+			"summary": "How the story forks and comes back together."
+		},
+		{
+			"id": "choices-and-consequences",
+			"title": "Choices and Consequences",
+			"kind": "content",
+			"parent": "story",
+			"summary": "Which choices matter, and how and when they pay off."
+		},
+		{
+			"id": "dialogue",
+			"title": "Dialogue",
+			"kind": "design",
+			"parent": "",
+			"summary": "Conversations: how they're authored, presented and chosen from."
+		},
+		{
+			"id": "exploration-and-interaction",
+			"title": "Exploration and Interaction",
+			"kind": "design",
+			"parent": "",
+			"summary": "Moving through scenes and examining or using things in them."
+		},
+		{
+			"id": "characters",
+			"title": "Characters",
+			"kind": "content",
+			"parent": "",
+			"summary": "The cast: who they are, how they change, and how they're performed."
+		},
+		{
+			"id": "cinematics",
+			"title": "Cinematics",
+			"kind": "style",
+			"parent": "",
+			"summary": "Cutscenes, camera work and staging."
+		},
+		{
+			"id": "save-state",
+			"title": "Save State",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Story flags, persistence and keeping saves valid as the story changes."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Menus, HUD and how the game communicates with the player."
+		}
+	]
+}

@@ -25,7 +25,7 @@ struct FProtoBoyMCPToolCall
 {
 	/** The call's "arguments" object (never null). */
 	TSharedPtr<FJsonObject> Args;
-	/** Self-reported agent name, for provenance in ADRs, comments and the activity log. */
+	/** Self-reported agent name, for provenance in recorded decisions, comments and the activity log. */
 	FString ClientName;
 };
 

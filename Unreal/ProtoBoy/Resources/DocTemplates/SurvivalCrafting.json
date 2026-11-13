@@ -1,0 +1,139 @@
+{
+	"version": 1,
+	"id": "survival-crafting",
+	"name": "Survival / Crafting",
+	"description": "Survive, gather, craft and build in a hostile world, on top of a simulated world with weather and a day/night cycle.",
+	"genre": "Survival / Crafting",
+	"sortOrder": 70,
+	"pillars": [
+		{
+			"name": "Scarcity Drives Decisions",
+			"feeling": "every resource is a choice",
+			"rulesOut": "infinite supplies, needs that never pressure"
+		},
+		{
+			"name": "The World Is Hostile",
+			"feeling": "venturing out is a risk",
+			"rulesOut": "safe zones everywhere, toothless threats"
+		},
+		{
+			"name": "Build Your Haven",
+			"feeling": "the base I made is home",
+			"rulesOut": "building that's only cosmetic"
+		}
+	],
+	"docs": [
+		{
+			"id": "survival-needs",
+			"title": "Survival Needs",
+			"kind": "design",
+			"parent": "",
+			"summary": "Health, hunger, thirst, temperature and how they pressure the player."
+		},
+		{
+			"id": "health",
+			"title": "Health",
+			"kind": "design",
+			"parent": "survival-needs",
+			"summary": "Damage, healing and death."
+		},
+		{
+			"id": "hunger-and-thirst",
+			"title": "Hunger and Thirst",
+			"kind": "design",
+			"parent": "survival-needs",
+			"summary": "Food and water as a constant pressure."
+		},
+		{
+			"id": "temperature",
+			"title": "Temperature",
+			"kind": "design",
+			"parent": "survival-needs",
+			"summary": "Exposure to cold and heat, and how shelter and clothing help."
+		},
+		{
+			"id": "gathering",
+			"title": "Gathering",
+			"kind": "design",
+			"parent": "",
+			"summary": "Collecting resources from the world: tools, nodes and yields."
+		},
+		{
+			"id": "crafting",
+			"title": "Crafting",
+			"kind": "design",
+			"parent": "",
+			"summary": "Turning resources into tools, gear and supplies."
+		},
+		{
+			"id": "recipes",
+			"title": "Recipes",
+			"kind": "design",
+			"parent": "crafting",
+			"summary": "Recipe unlocks: what can be made and how the player discovers it."
+		},
+		{
+			"id": "stations",
+			"title": "Stations",
+			"kind": "design",
+			"parent": "crafting",
+			"summary": "Workbenches and other stations that gate recipes."
+		},
+		{
+			"id": "building",
+			"title": "Building",
+			"kind": "design",
+			"parent": "",
+			"summary": "Placing structures and bases: snapping, stability and upgrades."
+		},
+		{
+			"id": "world",
+			"title": "World",
+			"kind": "tech",
+			"parent": "",
+			"summary": "The environment the player survives in."
+		},
+		{
+			"id": "world-generation",
+			"title": "World Generation",
+			"kind": "tech",
+			"parent": "world",
+			"summary": "Procedural or authored terrain, biomes and resource placement."
+		},
+		{
+			"id": "day-and-night",
+			"title": "Day and Night",
+			"kind": "tech",
+			"parent": "world",
+			"summary": "The day/night cycle and how danger changes with it."
+		},
+		{
+			"id": "weather",
+			"title": "Weather",
+			"kind": "tech",
+			"parent": "world",
+			"summary": "Weather systems and how they affect survival."
+		},
+		{
+			"id": "threats",
+			"title": "Threats",
+			"kind": "design",
+			"parent": "",
+			"summary": "Creatures and other dangers, and the AI that drives them."
+		},
+		{
+			"id": "persistence",
+			"title": "Persistence",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Saving the world, bases and inventory, and keeping saves compatible."
+		},
+		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "style",
+			"parent": "",
+			"summary": "Menus, HUD and how the game communicates with the player."
+		}
+	]
+}
