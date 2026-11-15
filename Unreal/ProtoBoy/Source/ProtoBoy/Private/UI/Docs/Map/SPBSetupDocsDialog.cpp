@@ -1,15 +1,20 @@
 #include "UI/Docs/Map/SPBSetupDocsDialog.h"
 
+#include "Docs/Generation/PBDocGeneration.h"
 #include "Docs/PBDocLayers.h"
 #include "Docs/PBDocMap.h"
 #include "Docs/PBDocTemplates.h"
 #include "Framework/Application/SlateApplication.h"
+#include "MCP/PBMCPClientConfig.h"
+#include "Misc/MessageDialog.h"
 #include "PBSubsystem.h"
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
 #include "UI/Docs/Map/SPBDocMapNode.h"
+#include "UI/PBStyle.h"
 #include "Widgets/Images/SImage.h"
+#include "Widgets/Images/SThrobber.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Layout/SBorder.h"
@@ -96,6 +101,15 @@ namespace ProtoBoySetupDocsDialog
 void SProtoBoySetupDocsDialog::Construct(const FArguments& InArgs)
 {
 	ParentWindow = InArgs._ParentWindow;
+	Agents = FProtoBoyDocGenerationRun::GetSetUpAgents();
+	for (const EProtoBoyMCPClient Agent : Agents)
+	{
+		FText Ignored;
+		if (!SelectedAgent.IsSet() && FProtoBoyDocGenerationRun::CanRun(Agent, Ignored))
+		{
+			SelectedAgent = Agent;
+		}
+	}
 	for (FProtoBoyDocTemplate& Template : ProtoBoyDocTemplates::LoadTemplates())
 	{
 		Templates.Add(MakeShared<FProtoBoyDocTemplate>(MoveTemp(Template)));
@@ -107,26 +121,498 @@ void SProtoBoySetupDocsDialog::Construct(const FArguments& InArgs)
 		.Padding(16.f)
 		[
 			SAssignNew(StepSwitcher, SWidgetSwitcher)
-			+ SWidgetSwitcher::Slot() [ MakeChooseStep() ]   // EStep::Choose
-			+ SWidgetSwitcher::Slot() [ MakeConfirmStep() ]  // EStep::Confirm
+			+ SWidgetSwitcher::Slot() [ MakeStartStep() ]        // EStep::Start
+			+ SWidgetSwitcher::Slot() [ MakeChooseStep() ]       // EStep::Choose
+			+ SWidgetSwitcher::Slot() [ MakeConfirmStep() ]      // EStep::Confirm
+			+ SWidgetSwitcher::Slot() [ MakeFromProjectStep() ]  // EStep::FromProject
+			+ SWidgetSwitcher::Slot() [ MakeGeneratingStep() ]   // EStep::Generating
 		]
 	];
 
-	ShowStep(EStep::Choose);
+	ShowStep(EStep::Start);
 	if (Templates.Num() > 0)
 	{
 		TemplateList->SetSelection(Templates[0]);
 	}
 }
 
+SProtoBoySetupDocsDialog::~SProtoBoySetupDocsDialog()
+{
+	// Closing mid-run (e.g. the editor shutting down) stops the agent; the run's destructor ends the process.
+}
+
 void SProtoBoySetupDocsDialog::ShowStep(EStep Step)
 {
+	CurrentStep = Step;
 	if (Step == EStep::Confirm && SelectedTemplate.IsValid())
 	{
 		ApplyError = FText::GetEmpty();
 		PlanBox->SetContent(MakePlan(*SelectedTemplate));
 	}
 	StepSwitcher->SetActiveWidgetIndex(static_cast<int32>(Step));
+}
+
+// --- Start --------------------------------------------------------------------------------------------------------
+
+TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeStartStep()
+{
+	const TSharedRef<SWidget> Body = SNew(SVerticalBox)
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 0.f, 0.f, 12.f)
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("StartIntro", "How do you want to start the project's docs?"))
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true)
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			MakeStartOption("Icons.Documentation",
+				LOCTEXT("StartTemplate", "Start from a template"),
+				LOCTEXT("StartTemplateDesc", "Pick a preset for your kind of game (by genre or by size): the Game doc with suggested design pillars, and a starting set of Design, Tech and Content docs."),
+				EStep::Choose)
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 8.f, 0.f, 0.f)
+		[
+			MakeStartOption("Icons.Search",
+				LOCTEXT("StartProject", "Generate from the Project (EXPERIMENTAL)"),
+				LOCTEXT("StartProjectDesc", "An agent reads what's already in the game (code, Blueprints, assets and levels) and writes the docs to match what exists."),
+				EStep::FromProject)
+		];
+
+	return MakeStepLayout(LOCTEXT("StartTitle", "Set Up Docs from Template"), Body, TOptional<EStep>(), SNullWidget::NullWidget);
+}
+
+TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeStartOption(const FName& Icon, const FText& Title, const FText& Description, EStep Step)
+{
+	return SNew(SButton)
+		.ButtonStyle(FAppStyle::Get(), "SimpleButton")
+		.ContentPadding(FMargin(12.f, 10.f))
+		.OnClicked_Lambda([this, Step]()
+		{
+			ShowStep(Step);
+			return FReply::Handled();
+		})
+		[
+			SNew(SBorder)
+			.BorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
+			.Padding(12.f)
+			[
+				SNew(SHorizontalBox)
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(0.f, 0.f, 12.f, 0.f)
+				[
+					SNew(SImage)
+					.Image(FAppStyle::Get().GetBrush(Icon))
+					.DesiredSizeOverride(FVector2D(24.f, 24.f))
+				]
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.f)
+				.VAlign(VAlign_Center)
+				[
+					SNew(SVerticalBox)
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
+						SNew(STextBlock)
+						.Text(Title)
+						.Font(FCoreStyle::GetDefaultFontStyle("Bold", 11))
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(0.f, 2.f, 0.f, 0.f)
+					[
+						SNew(STextBlock)
+						.Text(Description)
+						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+						.AutoWrapText(true)
+					]
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(12.f, 0.f, 0.f, 0.f)
+				[
+					SNew(SImage)
+					.Image(FAppStyle::Get().GetBrush("Icons.ChevronRight"))
+				]
+			]
+		];
+}
+
+// --- From the project ---------------------------------------------------------------------------------------------
+
+TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeFromProjectStep()
+{
+	TSharedRef<SVerticalBox> AgentList = SNew(SVerticalBox);
+	for (const EProtoBoyMCPClient Agent : Agents)
+	{
+		AgentList->AddSlot().AutoHeight().Padding(0.f, 2.f)[ MakeAgentRow(Agent) ];
+	}
+	if (Agents.IsEmpty())
+	{
+		AgentList->AddSlot()
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("NoAgents", "No agents are set up yet. Connect Claude Code or Gemini CLI in MCP Settings (Setup > MCP on the dashboard), then come back."))
+			.ColorAndOpacity(FStyleColors::Warning)
+			.AutoWrapText(true)
+		];
+	}
+
+	auto Paragraph = [](const FText& Text)
+	{
+		return SNew(STextBlock).Text(Text).AutoWrapText(true);
+	};
+
+	const TSharedRef<SWidget> Body = SNew(SScrollBox)
+
+		+ SScrollBox::Slot()
+		.Padding(0.f, 0.f, 0.f, 8.f)
+		[
+			Paragraph(LOCTEXT("FromProjectWhat", "One of your agents reads what's already in the project (the .uproject, config, C++ source and plugins, plus a summary of the Content folder's maps, Blueprints and data assets that ProtoBoy gives it) and drafts the docs from it: the Game doc with its pitch, core loop and design pillars, and Design, Tech and Content docs for the features, systems and assets it finds, nested on the doc map."))
+		]
+
+		+ SScrollBox::Slot()
+		.Padding(0.f, 0.f, 0.f, 8.f)
+		[
+			Paragraph(LOCTEXT("FromProjectHow", "The agent runs on your machine with your own account, reads files only and changes nothing in the project. ProtoBoy writes the docs it returns. You'll see its progress as it works; it can take several minutes."))
+		]
+
+		+ SScrollBox::Slot()
+		.Padding(0.f, 6.f, 0.f, 4.f)
+		[
+			ProtoBoySetupDocsDialog::MakeHeading(LOCTEXT("AgentHeading", "Agent"))
+		]
+
+		+ SScrollBox::Slot()
+		[
+			AgentList
+		]
+
+		+ SScrollBox::Slot()
+		.Padding(0.f, 8.f, 0.f, 0.f)
+		[
+			SNew(STextBlock)
+			.Visibility_Lambda([this]() { return GenerateError.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible; })
+			.Text_Lambda([this]() { return GenerateError; })
+			.ColorAndOpacity(FStyleColors::Error)
+			.AutoWrapText(true)
+		];
+
+	const TSharedRef<SWidget> Generate = SNew(SButton)
+		.ButtonStyle(&FAppStyle::Get().GetWidgetStyle<FButtonStyle>("PrimaryButton"))
+		.Text(LOCTEXT("Generate", "Generate"))
+		.ToolTipText(LOCTEXT("GenerateTip", "Replaces your docs with ones the agent drafts from the project. Asks first."))
+		.IsEnabled_Lambda([this]()
+		{
+			FText Ignored;
+			return SelectedAgent.IsSet() && FProtoBoyDocGenerationRun::CanRun(SelectedAgent.GetValue(), Ignored);
+		})
+		.OnClicked(this, &SProtoBoySetupDocsDialog::OnGenerateClicked);
+
+	return MakeStepLayout(LOCTEXT("FromProjectTitle", "Generate Docs from the Project (EXPERIMENTAL)"), Body, EStep::Start, Generate);
+}
+
+TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeAgentRow(EProtoBoyMCPClient Agent)
+{
+	FText WhyNot;
+	const bool bCanRun = FProtoBoyDocGenerationRun::CanRun(Agent, WhyNot);
+	const EProtoBoyLLMProvider Provider = Agent == EProtoBoyMCPClient::GeminiCLI ? EProtoBoyLLMProvider::Gemini : EProtoBoyLLMProvider::Claude;
+
+	return SNew(SCheckBox)
+		.Style(FAppStyle::Get(), "RadioButton")
+		.IsEnabled(bCanRun)
+		.IsChecked_Lambda([this, Agent]() { return SelectedAgent.IsSet() && SelectedAgent.GetValue() == Agent ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
+		.OnCheckStateChanged_Lambda([this, Agent](ECheckBoxState) { SelectedAgent = Agent; })
+		[
+			SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(4.f, 0.f, 6.f, 0.f)
+			[
+				SNew(SImage)
+				.Image(FProtoBoyStyle::Get().GetBrush(FProtoBoyMCPClientConfig::GetProviderIcon(Provider)))
+			]
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			.VAlign(VAlign_Center)
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(STextBlock).Text(FProtoBoyMCPClientConfig::GetClientName(Agent))
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(STextBlock)
+					.Visibility(bCanRun ? EVisibility::Collapsed : EVisibility::Visible)
+					.Text(WhyNot)
+					.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+					.AutoWrapText(true)
+				]
+			]
+		];
+}
+
+FReply SProtoBoySetupDocsDialog::OnGenerateClicked()
+{
+	FProtoBoyDocMap* Map = ProtoBoySetupDocsDialog::GetMap();
+	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	if (!Map || !Subsystem || !SelectedAgent.IsSet())
+	{
+		return FReply::Handled();
+	}
+
+	const FText Warning = FText::Format(LOCTEXT("GenerateWarning", "This overwrites all of your notes: every doc on the doc map, the Game doc included, moves to {0} before the agent starts.\n\nThe docs it writes are a good starting point, but they only describe what's in the project so far. It's recommended that you go through them afterwards and add the specific details of your game.\n\nGenerate the docs with {1}?"),
+		Subsystem->GetDocsProvider().GetDeletedDocsLocation(), FProtoBoyMCPClientConfig::GetClientName(SelectedAgent.GetValue()));
+	if (FMessageDialog::Open(EAppMsgType::YesNo, EAppReturnType::No, Warning, LOCTEXT("GenerateWarningTitle", "Overwrite Docs")) != EAppReturnType::Yes)
+	{
+		return FReply::Handled();
+	}
+
+	Run = MakeUnique<FProtoBoyDocGenerationRun>(*Map);
+	LogShown = 0;
+	LogScroll->ClearChildren();
+	GenerateError = FText::GetEmpty();
+	if (!Run->Start(SelectedAgent.GetValue(), GenerateError))
+	{
+		Run.Reset();
+		return FReply::Handled();
+	}
+	ShowStep(EStep::Generating);
+	PollGeneration();
+	RegisterActiveTimer(0.1f, FWidgetActiveTimerDelegate::CreateLambda([this](double, float)
+	{
+		PollGeneration();
+		return Run.IsValid() && !Run->IsFinished() ? EActiveTimerReturnType::Continue : EActiveTimerReturnType::Stop;
+	}));
+	return FReply::Handled();
+}
+
+TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeGeneratingStep()
+{
+	return SNew(SVerticalBox)
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("GeneratingTitle", "Generating Docs"))
+			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 14))
+		]
+
+		// Status: what's happening, with a throbber while the agent runs
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 8.f, 0.f, 6.f)
+		[
+			SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(0.f, 0.f, 8.f, 0.f)
+			[
+				SNew(SCircularThrobber)
+				.Radius(8.f)
+				.Visibility_Lambda([this]() { return Run.IsValid() && Run->IsRunning() ? EVisibility::Visible : EVisibility::Collapsed; })
+			]
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.AutoWrapText(true)
+				.Text_Lambda([this]()
+				{
+					if (!Run.IsValid() || Run->IsRunning())
+					{
+						return FText::Format(LOCTEXT("StatusRunning", "{0} is reading the project and drafting the docs..."),
+							SelectedAgent.IsSet() ? FProtoBoyMCPClientConfig::GetClientName(SelectedAgent.GetValue()) : FText::GetEmpty());
+					}
+					return Run->Succeeded()
+						? LOCTEXT("StatusDone", "Done. The docs are on the doc map: go through them and add the details of your game.")
+						: LOCTEXT("StatusFailed", "The agent didn't finish, so no docs were written. See the log for why.");
+				})
+				.ColorAndOpacity_Lambda([this]()
+				{
+					return Run.IsValid() && Run->IsFinished() && !Run->Succeeded() ? FSlateColor(FStyleColors::Error) : FSlateColor::UseForeground();
+				})
+			]
+		]
+
+		// While the agent runs: closing early cancels (red). Once it's done: complete (green). A failed run has no line
+		// here; the status above says what went wrong.
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 0.f, 0.f, 8.f)
+		[
+			SNew(STextBlock)
+			.Visibility_Lambda([this]()
+			{
+				return Run.IsValid() && (Run->IsRunning() || Run->Succeeded()) ? EVisibility::Visible : EVisibility::Collapsed;
+			})
+			.Text_Lambda([this]()
+			{
+				return Run.IsValid() && Run->Succeeded()
+					? LOCTEXT("GenerationComplete", "Doc generation is complete. Click Finish to close this window.")
+					: LOCTEXT("ExitCancels", "Exiting this window before the agent completes will cancel doc generation.");
+			})
+			.ColorAndOpacity_Lambda([this]()
+			{
+				return Run.IsValid() && Run->Succeeded() ? FSlateColor(FStyleColors::Success) : FSlateColor(FStyleColors::Error);
+			})
+			.AutoWrapText(true)
+		]
+
+		// Agent log: its own scrollable panel, so a long run never pushes the buttons off the window
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 0.f, 0.f, 4.f)
+		[
+			ProtoBoySetupDocsDialog::MakeHeading(LOCTEXT("AgentLogHeading", "Agent log"))
+		]
+
+		+ SVerticalBox::Slot()
+		.FillHeight(1.f)
+		[
+			SNew(SBorder)
+			.BorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
+			.Padding(8.f)
+			[
+				SAssignNew(LogScroll, SScrollBox)
+				.Orientation(Orient_Vertical)
+				.ScrollBarAlwaysVisible(true)
+			]
+		]
+
+		// Cancel on the left, Finish on the right
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 12.f, 0.f, 0.f)
+		[
+			SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("CancelGenerating", "Cancel"))
+				.ToolTipText(LOCTEXT("CancelGeneratingTip", "Stop the agent and clear the project's docs. Asks first."))
+				.OnClicked_Lambda([this]()
+				{
+					if (ConfirmCancelGeneration())
+					{
+						if (Run.IsValid())
+						{
+							Run->Cancel();
+						}
+						CloseWindow();
+					}
+					return FReply::Handled();
+				})
+			]
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			[
+				SNullWidget::NullWidget
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			[
+				SNew(SButton)
+				.ButtonStyle(&FAppStyle::Get().GetWidgetStyle<FButtonStyle>("PrimaryButton"))
+				.Text(LOCTEXT("Finish", "Finish"))
+				.ToolTipText(LOCTEXT("FinishTip", "Available once the agent is done."))
+				.IsEnabled_Lambda([this]() { return Run.IsValid() && Run->IsFinished(); })
+				.OnClicked_Lambda([this]()
+				{
+					CloseWindow();
+					return FReply::Handled();
+				})
+			]
+		];
+}
+
+void SProtoBoySetupDocsDialog::PollGeneration()
+{
+	if (!Run.IsValid() || !LogScroll.IsValid())
+	{
+		return;
+	}
+	Run->Tick();
+	const TArray<FString>& Log = Run->GetLog();
+	if (LogShown >= Log.Num())
+	{
+		return;
+	}
+	for (; LogShown < Log.Num(); ++LogShown)
+	{
+		LogScroll->AddSlot()
+		.Padding(0.f, 1.f)
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString(Log[LogShown]))
+			.Font(FCoreStyle::GetDefaultFontStyle("Mono", 9))
+			.AutoWrapText(true)
+		];
+	}
+	LogScroll->ScrollToEnd();
+}
+
+bool SProtoBoySetupDocsDialog::ConfirmCancelGeneration() const
+{
+	return FMessageDialog::Open(EAppMsgType::YesNo, EAppReturnType::No,
+		LOCTEXT("CancelGeneratingConfirm", "Cancel generating the docs?\n\nThe agent stops and the project's docs are cleared, including any it has written. Your previous docs are in the trash."),
+		LOCTEXT("CancelGeneratingTitle", "Cancel Generating Docs")) == EAppReturnType::Yes;
+}
+
+void SProtoBoySetupDocsDialog::OnWindowCloseRequested(const TSharedRef<SWindow>& Window)
+{
+	// While generating, the close button is Cancel: ask, stop the agent and clear the docs.
+	if (!bClosing && CurrentStep == EStep::Generating)
+	{
+		if (!ConfirmCancelGeneration())
+		{
+			return;
+		}
+		if (Run.IsValid())
+		{
+			Run->Cancel();
+		}
+	}
+	FSlateApplication::Get().RequestDestroyWindow(Window);
+}
+
+void SProtoBoySetupDocsDialog::CloseWindow()
+{
+	bClosing = true;
+	if (const TSharedPtr<SWindow> Window = ParentWindow.Pin())
+	{
+		Window->RequestDestroyWindow();
+	}
 }
 
 // --- Choose -------------------------------------------------------------------------------------------------------
@@ -202,7 +688,7 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeChooseStep()
 			return FReply::Handled();
 		});
 
-	return MakeStepLayout(LOCTEXT("ChooseTitle", "Set Up Docs from Template"), Body, TOptional<EStep>(), Next);
+	return MakeStepLayout(LOCTEXT("ChooseTitle", "Choose a Template"), Body, EStep::Start, Next);
 }
 
 TSharedRef<ITableRow> SProtoBoySetupDocsDialog::OnGenerateTemplateRow(TSharedPtr<FProtoBoyDocTemplate> Template, const TSharedRef<STableViewBase>& OwnerTable)
@@ -573,7 +1059,9 @@ void SProtoBoySetupDocsDialog::Open(const TSharedPtr<SWidget>& ParentWidget)
 		.SupportsMinimize(false)
 		.SupportsMaximize(false);
 
-	Window->SetContent(SNew(SProtoBoySetupDocsDialog).ParentWindow(Window));
+	const TSharedRef<SProtoBoySetupDocsDialog> Dialog = SNew(SProtoBoySetupDocsDialog).ParentWindow(Window);
+	Window->SetContent(Dialog);
+	Window->SetRequestDestroyWindowOverride(FRequestDestroyWindowOverride::CreateSP(Dialog, &SProtoBoySetupDocsDialog::OnWindowCloseRequested));
 	FSlateApplication::Get().AddModalWindow(Window, ParentWidget);
 }
 

@@ -61,8 +61,7 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 	// TODO: Status header.
 	Pages = {
 		MakeShared<FPage>(FPage{ LOCTEXT("SetupPage", "Setup"), LOCTEXT("SetupPageTip", "Plugin settings and connections to agents, docs, task boards and asset sources."), "Icons.Settings" }),
-		MakeShared<FPage>(FPage{ LOCTEXT("ArchitecturePage", "Architecture"), LOCTEXT("ArchitecturePageTip", "Setup checklist and the map of the project's docs."), "Icons.Layout" }),
-		MakeShared<FPage>(FPage{ LOCTEXT("DocumentationPage", "Documentation"), LOCTEXT("DocumentationPageTip", "The game's docs."), "Icons.Documentation" }),
+		MakeShared<FPage>(FPage{ LOCTEXT("DocumentationPage", "Documentation"), LOCTEXT("DocumentationPageTip", "Setup checklist and the map of the project's docs."), "Icons.Documentation" }),
 		MakeShared<FPage>(FPage{ LOCTEXT("TasksPage", "Tasks"), LOCTEXT("TasksPageTip", "The team's task board."), "Icons.Clipboard" }),
 	};
 	BuildSetupSteps();
@@ -183,17 +182,12 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 
 			+ SWidgetSwitcher::Slot()
 			[
-				MakePage(1, MakeArchitectureSection())
+				MakePage(1, MakeDocumentationSection())
 			]
 
 			+ SWidgetSwitcher::Slot()
 			[
-				MakePage(2, MakeDocumentationSection())
-			]
-
-			+ SWidgetSwitcher::Slot()
-			[
-				MakePage(3, MakeTasksSection())
+				MakePage(2, MakeTasksSection())
 			]
 		]
 	];
@@ -710,89 +704,84 @@ void SProtoBoyDashboard::BuildSetupSteps()
 	SetupSteps = { AgentStep, DocsStep, TasksStep, SourcingStep };
 }
 
-TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
+TSharedRef<SWidget> SProtoBoyDashboard::MakeDocumentationSection()
 {
-	const TSharedRef<SWidget> Checks = SNew(SVerticalBox)
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		[
-			SNew(STextBlock)
-			.Text_Lambda([this]()
-			{
-				const int32 Done = CountDoneSetupSteps();
-				return Done == SetupSteps.Num()
-					? LOCTEXT("SetupAllDone", "Setup complete. Agents can plan and build within your architecture.")
-					: FText::Format(LOCTEXT("SetupProgress", "Setup: {0} of {1} checks done"), FText::AsNumber(Done), FText::AsNumber(SetupSteps.Num()));
-			})
-			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
-		]
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		.Padding(0.f, 8.f, 0.f, 0.f)
-		[
-			MakeSetupStep(LOCTEXT("StepAgent", "Connect an agent (MCP)"), AgentStep, &SProtoBoyDashboard::OnMCPSettingsClicked)
-		]
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		.Padding(0.f, 6.f, 0.f, 0.f)
-		[
-			MakeSetupStep(LOCTEXT("StepDocs", "Connect documentation"), DocsStep, &SProtoBoyDashboard::OnConnectDocsClicked)
-		]
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		.Padding(0.f, 6.f, 0.f, 0.f)
-		[
-			MakeSetupStep(LOCTEXT("StepTasks", "Connect a task board"), TasksStep, &SProtoBoyDashboard::OnTasksSettingsClicked)
-		]
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		.Padding(0.f, 6.f, 0.f, 0.f)
-		[
-			MakeSetupStep(LOCTEXT("StepSourcing", "Asset sourcing"), SourcingStep, nullptr)
-		];
-
-	// The doc map is where the Game doc gets created, so it only waits on the other checks and on the docs being
-	// connected; a missing Game doc doesn't lock it.
-	auto IsSetupDone = [this]()
+	// The doc map is where the Game doc gets created, so it only waits on the agent, the docs connection and the task
+	// board (set up on the Setup page); a missing Game doc doesn't lock it.
+	auto MissingSetup = [this]()
 	{
 		FText Ignored;
 		const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-		return Subsystem && Subsystem->GetObsidianConnector().IsConnected() && AgentStep(Ignored) && TasksStep(Ignored);
+		TArray<FText> Missing;
+		if (!AgentStep(Ignored))
+		{
+			Missing.Add(LOCTEXT("MissingAgent", "an agent (MCP)"));
+		}
+		if (!Subsystem || !Subsystem->GetObsidianConnector().IsConnected())
+		{
+			Missing.Add(LOCTEXT("MissingDocs", "documentation"));
+		}
+		if (!TasksStep(Ignored))
+		{
+			Missing.Add(LOCTEXT("MissingTasks", "a task board"));
+		}
+		return Missing;
 	};
+	auto IsSetupDone = [MissingSetup]() { return MissingSetup().IsEmpty(); };
 
 	const TSharedRef<SWidget> DocMap = SNew(SVerticalBox)
 
-		// Why it's disabled
+		// Why it's disabled, and where to fix it
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(0.f, 0.f, 0.f, 8.f)
 		[
-			SNew(SHorizontalBox)
+			SNew(SBorder)
 			.Visibility_Lambda([IsSetupDone]() { return IsSetupDone() ? EVisibility::Collapsed : EVisibility::Visible; })
-
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			.Padding(0.f, 0.f, 6.f, 0.f)
+			.BorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
+			.Padding(10.f)
 			[
-				SNew(SImage)
-				.Image(FAppStyle::Get().GetBrush("Icons.Lock"))
-				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-			]
+				SNew(SHorizontalBox)
 
-			+ SHorizontalBox::Slot()
-			.FillWidth(1.f)
-			.VAlign(VAlign_Center)
-			[
-				SNew(STextBlock)
-				.Text(LOCTEXT("DocMapLocked", "Connect an agent, documentation and a task board above to edit the doc map. Agents plan against the docs and task board, so those need to be connected first."))
-				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-				.AutoWrapText(true)
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(0.f, 0.f, 8.f, 0.f)
+				[
+					SNew(SImage)
+					.Image(FAppStyle::Get().GetBrush("Icons.WarningWithColor"))
+				]
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.f)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text_Lambda([MissingSetup]()
+					{
+						return FText::Format(LOCTEXT("DocMapLocked", "Finish setup to use the doc map: connect {0} on the Setup page. Agents plan against the docs and task board, so those need to be connected first."),
+							FText::Join(LOCTEXT("MissingSeparator", ", "), MissingSetup()));
+					})
+					.ColorAndOpacity(FStyleColors::Warning)
+					.AutoWrapText(true)
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(8.f, 0.f, 0.f, 0.f)
+				[
+					SNew(SButton)
+					.Text(LOCTEXT("GoToSetup", "Go to Setup"))
+					.OnClicked_Lambda([this]()
+					{
+						if (PageList.IsValid() && Pages.IsValidIndex(0))
+						{
+							PageList->SetSelection(Pages[0]);
+						}
+						return FReply::Handled();
+					})
+				]
 			]
 		]
 
@@ -806,89 +795,13 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
 			]
 		];
 
-	return SNew(SVerticalBox)
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		[
-			MakeSection(LOCTEXT("SetupChecksHeader", "Setup Checks"), Checks)
-		]
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		.Padding(0.f, 12.f, 0.f, 0.f)
-		[
-			MakeSection(LOCTEXT("DocMapHeader", "Doc Map"), DocMap)
-		];
-}
-
-TSharedRef<SWidget> SProtoBoyDashboard::MakeDocumentationSection()
-{
-	// TODO: Browse and search the docs.
-	return SNullWidget::NullWidget;
+	return MakeSection(LOCTEXT("DocMapHeader", "Doc Map"), DocMap);
 }
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
 {
 	// TODO: Show the task board's lists and the tasks linked to design docs.
 	return SNullWidget::NullWidget;
-}
-
-TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupStep(const FText& Title, FSetupStepState GetState, FReply (SProtoBoyDashboard::*OnSetUp)())
-{
-	auto IsDone = [GetState]() { FText Ignored; return GetState(Ignored); };
-
-	return SNew(SHorizontalBox)
-
-		// Check (done) or warning (to do)
-		+ SHorizontalBox::Slot()
-		.AutoWidth()
-		.VAlign(VAlign_Top)
-		.Padding(0.f, 1.f, 8.f, 0.f)
-		[
-			SNew(SImage)
-			.Image_Lambda([IsDone]()
-			{
-				return FAppStyle::Get().GetBrush(IsDone() ? "Icons.SuccessWithColor" : "Icons.XCircle");
-			})
-			.ColorAndOpacity_Lambda([IsDone]() { return IsDone() ? FSlateColor::UseForeground() : FSlateColor(FStyleColors::Error); })
-			.DesiredSizeOverride(FVector2D(16.f, 16.f))
-		]
-
-		+ SHorizontalBox::Slot()
-		.FillWidth(1.f)
-		.VAlign(VAlign_Center)
-		[
-			SNew(SVerticalBox)
-
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			[
-				SNew(STextBlock)
-				.Text(Title)
-			]
-
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			.Padding(0.f, 1.f, 0.f, 0.f)
-			[
-				SNew(STextBlock)
-				.Text_Lambda([GetState]() { FText Detail; GetState(Detail); return Detail; })
-				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-				.AutoWrapText(true)
-			]
-		]
-
-		+ SHorizontalBox::Slot()
-		.AutoWidth()
-		.VAlign(VAlign_Center)
-		.Padding(8.f, 0.f, 0.f, 0.f)
-		[
-			SNew(SButton)
-			.Visibility_Lambda([IsDone, OnSetUp]() { return !OnSetUp || IsDone() ? EVisibility::Collapsed : EVisibility::Visible; })
-			.Text(LOCTEXT("SetUpStep", "Set Up..."))
-			.OnClicked_Lambda([this, OnSetUp]() { return OnSetUp ? (this->*OnSetUp)() : FReply::Handled(); })
-		];
 }
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeSection(const FText& Title, const TSharedRef<SWidget>& Body)

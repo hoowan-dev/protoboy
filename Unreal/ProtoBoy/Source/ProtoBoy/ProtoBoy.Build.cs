@@ -24,6 +24,7 @@ public class ProtoBoy : ModuleRules
 			"ToolMenus",
 			"Projects",
 			"Json",
+			"AssetRegistry",
 			"JsonUtilities",
 			"DesktopPlatform",
 			"ApplicationCore",

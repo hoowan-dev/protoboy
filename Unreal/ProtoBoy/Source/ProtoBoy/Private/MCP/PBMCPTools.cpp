@@ -181,7 +181,7 @@ namespace ProtoBoyMCPTools
 		if (!Game.bExists)
 		{
 			Out += TEXT("\n**There is no Game doc yet.** Without it you can't tell whether new work serves the game. "
-				"Ask the user to set it up (ProtoBoy dashboard > Architecture > Doc Map), or offer to draft it for review.\n");
+				"Ask the user to set it up (ProtoBoy dashboard > Documentation > Doc Map), or offer to draft it for review.\n");
 		}
 		else
 		{

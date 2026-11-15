@@ -192,7 +192,7 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeSetupRow()
 			[
 				SNew(SButton)
 				.ButtonStyle(FAppStyle::Get(), "PrimaryButton")
-				.Text(LOCTEXT("SetupFromTemplate", "Set Up from Template..."))
+				.Text(LOCTEXT("SetupFromTemplate", "Set Up Docs from Template..."))
 				.ToolTipText(LOCTEXT("SetupFromTemplateTip", "Pick a preset for your kind of game, or Blank for just the Game doc."))
 				.OnClicked(this, &SProtoBoyDocMapEditor::OnSetupFromTemplateClicked)
 			]
@@ -274,7 +274,7 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeToolbar()
 		+ SWrapBox::Slot()
 		[
 			SNew(SButton)
-			.Text(LOCTEXT("SetupFromTemplateToolbar", "Set Up from Template..."))
+			.Text(LOCTEXT("SetupFromTemplateToolbar", "Set Up Docs from Template..."))
 			.ToolTipText(LOCTEXT("SetupFromTemplateToolbarTip", "Add a preset set of docs for your kind of game. Only docs that don't exist yet are created; nothing is overwritten."))
 			.OnClicked(this, &SProtoBoyDocMapEditor::OnSetupFromTemplateClicked)
 		]

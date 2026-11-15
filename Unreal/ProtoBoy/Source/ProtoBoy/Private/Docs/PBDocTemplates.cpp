@@ -22,7 +22,6 @@ namespace ProtoBoyDocTemplates
 		return Plugin.IsValid() ? FPaths::Combine(Plugin->GetBaseDir(), TEXT("Resources"), TEXT("DocTemplates")) : FString();
 	}
 
-	/** Why a template can't be used, or empty. */
 	FString Validate(const FProtoBoyDocTemplate& Template)
 	{
 		TSet<FString> Seen;

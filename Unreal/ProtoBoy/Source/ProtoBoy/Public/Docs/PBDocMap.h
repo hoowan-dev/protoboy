@@ -159,6 +159,12 @@ public:
 	 */
 	bool RecordDecision(const FString& Id, const FString& Decision, const FString& Why, const FString& RulesOut, const FString& By, FText& OutError);
 
+	/**
+	 * Move every doc on the map (the Game doc included) to the provider's trash and remove the folders that leaves empty.
+	 * Notes that aren't on the map are kept. For replacing the docs with generated ones (FProtoBoyDocGenerationRun).
+	 */
+	bool ClearDocs(FText& OutError);
+
 	/** What ApplyTemplate would remove and create. */
 	FProtoBoyDocTemplatePlan PlanTemplate(const FProtoBoyDocTemplate& Template) const;
 
@@ -196,7 +202,7 @@ private:
 	 * Examples (from a template, optional) fill its sections.
 	 */
 	bool WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePillar>* Pillars, const FString& TemplateName, bool& bOutWrote, FText& OutError,
-		const TArray<FProtoBoyDocTemplateSection>* Examples = nullptr);
+		const TArray<FProtoBoyDocTemplateSection>* Examples = nullptr, bool bGenerated = false);
 
 	FProtoBoyDocGenerator& Docs;
 	mutable bool bLoaded = false;

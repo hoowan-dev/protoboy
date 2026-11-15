@@ -288,7 +288,7 @@ TSharedRef<SWidget> SProtoBoyObsidianPanel::MakeGameDocCard()
 					SNew(SButton)
 					.Visibility_Lambda([this]() { return bHasGameDoc ? EVisibility::Collapsed : EVisibility::Visible; })
 					.ButtonStyle(FAppStyle::Get(), "PrimaryButton")
-					.Text(LOCTEXT("SetupFromTemplate", "Set Up from Template..."))
+					.Text(LOCTEXT("SetupFromTemplate", "Set Up Docs from Template..."))
 					.ToolTipText(LOCTEXT("SetupFromTemplateTip", "Pick a preset for your kind of game: the Game doc with suggested design pillars, and a starting set of docs below it."))
 					.OnClicked_Lambda([this]()
 					{

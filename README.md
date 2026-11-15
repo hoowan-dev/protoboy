@@ -40,18 +40,18 @@ come later (see [Roadmap](#roadmap)).
 
 ### Dashboard
 
-**Tools > ProtoBoy Dashboard** has four pages, picked from the list in its sidebar (the dashboard reopens on the last
+**Tools > ProtoBoy Dashboard** has three pages, picked from the list in its sidebar (the dashboard reopens on the last
 page you used):
 
 - **Setup**: a shortcut to the plugin's Project Settings, plus the **MCP**, **Documentation**, **Tasks** and optional
   **Asset Sourcing** sections. Each shows its connection status and what's left to set up, with a check or a red X in
-  its header (hover it for details). These are the same checks as on the Architecture page.
-- **Architecture**: two sections.
-  - **Setup Checks**: a check or warning for connecting an agent (MCP), documentation (Obsidian, plus the Game doc) and a task board (Trello, with lists mapped). Each has a **Set Up...** shortcut until it's done. A fourth check,
-    **Asset sourcing**, is always green because sourcing is optional. It shows the team's choices: whether agents source
-    assets instead of generating them, the enabled sources, and that the style comes from Content docs. Change them on the Setup page.
-  - **Doc Map**: the project's docs by layer (see [Doc map](#doc-map)). It's disabled until an agent, documentation and a task board are connected (a missing Game doc doesn't lock it, since this is where you create it).
-- **Documentation** and **Tasks**: blank for now.
+  its header (hover it for details). Asset Sourcing is optional, so it's always green: it shows the team's choices
+  (whether agents source assets instead of generating them, the enabled sources, and that the style comes from Content
+  docs).
+- **Documentation**: the **Doc Map** (see [Doc map](#doc-map)). Until an agent, documentation and a task board are
+  connected, it's disabled with a warning saying what's missing and a **Go to Setup** button (a missing Game doc doesn't
+  lock it, since this is where you create it).
+- **Tasks**: blank for now.
 
 ### MCP server and one-click agent setup
 
@@ -107,7 +107,7 @@ one and adding ProtoBoy's local address under **Allowed origins**.
 
 ### Doc map
 
-The project's docs, on the **Architecture > Doc Map** page:
+The project's docs, on the **Documentation > Doc Map** page:
 
 ```
 Game         the game as a whole                       1 doc, <Project>.md: pitch, pillars, core loop, an index of the rest
@@ -136,7 +136,7 @@ Content      the assets to make it happen                and the style they must
   | **Tech** | How It Works · Code · Data · Dependencies · Constraints |
   | **Content** | Assets Needed (name, type, status, source) · Style · What to Look For (search terms, tags, technical needs) · What to Avoid · Sourcing · Where They Live |
 
-- **Set Up from Template.** A window that lists preset doc sets: **Blank** (just the Game doc) first, then by genre (Action / Platformer, RPG, Shooter, Strategy /
+- **Set Up Docs from Template.** A window whose first page asks how to start: **Start from a template**, or **Generate from the Project (EXPERIMENTAL)**: pick one of your set-up agents (Claude Code or Gemini CLI; Claude Desktop can't run on its own), confirm that it overwrites your notes, and watch its progress log. ProtoBoy runs the agent's CLI in the project folder, read-only, with a summary of the Content folder from the asset registry (maps, Blueprints and their parent classes, data assets); the agent reads the .uproject, config and C++ source itself and returns the docs as JSON, which ProtoBoy writes like a template with example content. The current docs go to the trash when it starts. **Finish** is enabled once the agent is done; **Cancel** (or the window's close button) asks first, stops the agent and clears the docs. The prompt and the agent's raw output are kept in `Saved/ProtoBoy/DocGeneration/`. The template path lists preset doc sets: **Blank** (just the Game doc) first, then by genre (Action / Platformer, RPG, Shooter, Strategy /
   Management, Puzzle, Narrative / Adventure, Survival / Crafting, Roguelike) and by size (Game Jam, Prototype / Vertical
   Slice, Multiplayer, Live / Production), plus Generic. Each preview shows the template's suggested design pillars, and its docs as a tree (Tech and Content docs under the features they serve). **A template replaces your documentation:** **Next** lists every doc that moves to the trash first
   (everything on the map, the Game doc included, plus any other file where the template writes) and every doc that will
@@ -204,7 +204,7 @@ Copy or symlink `Unreal/ProtoBoy` into your project's `Plugins/` folder and buil
 ### First-time setup
 
 1. **Documentation:** Setup > Documentation > **Connect to Documentation...**. Connect your vault, then set up the
-   Game doc (from a template, or on its own) and fill in at least the pitch and the design pillars. Add Design docs from **Architecture >
+   Game doc (from a template, or on its own) and fill in at least the pitch and the design pillars. Add Design docs from **Documentation >
    Doc Map**.
 2. **Tasks** (optional): Setup > Tasks > **Connect Task Board...** > Trello. Set up an API key, click **Connect**, then
    pick or create the project board.
@@ -273,7 +273,7 @@ visible.
 3. ~~Design and Tech pairs, and Add Tech Doc.~~ Done.
 4. Links (serves, fed into, uses) and completeness notes on the map.
 5. MCP tools for the map (`get_doc_map`, `find_doc_for`, `get_game`) and agent write permissions by layer.
-6. ~~Doc-set templates (Set Up from Template).~~ Done. Still to do: migrating projects that used the pillar tree.
+6. ~~Doc-set templates (Set Up Docs from Template).~~ Done. Still to do: migrating projects that used the pillar tree.
 7. Retrieval and checks: ranked search filtered by layer and doc, an alignment check before code is written, and
    deterministic checks that compare the project's real structure (modules, folders, key classes) with the Tech docs.
 8. Move the MCP server and the docs and task connectors into a standalone **daemon**, so agents keep project context
@@ -297,7 +297,7 @@ tagging with the Greybox Replacement Matrix. The earlier stubs are in git histor
 ```
 Unreal/ProtoBoy/                 Unreal Engine 5.9 editor plugin
   Resources/Icons/               Provider logos (SVG)
-  Resources/DocTemplates/        Doc-set templates for Set Up from Template (JSON)
+  Resources/DocTemplates/        Doc-set templates for Set Up Docs from Template (JSON)
   Source/ProtoBoy/
     Public/ & Private/
       PBModule, PBSubsystem      Module startup, dashboard tab, editor subsystem that owns the services

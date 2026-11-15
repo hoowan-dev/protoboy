@@ -99,6 +99,10 @@ struct PROTOBOY_API FProtoBoyDocTemplate
 	UPROPERTY()
 	int32 SortOrder = 0;
 
+	/** Drafted by an agent from the project (FProtoBoyDocGenerationRun), not a built-in preset: changes the notes written into the docs. */
+	UPROPERTY()
+	bool bGenerated = false;
+
 	UPROPERTY()
 	TArray<FProtoBoyDocTemplatePillar> Pillars;
 
@@ -114,6 +118,9 @@ namespace ProtoBoyDocTemplates
 {
 	/** True if applying the template with example documentation writes anything more than the blank templates. */
 	PROTOBOY_API bool HasExamples(const FProtoBoyDocTemplate& Template);
+
+	/** Why a template can't be used (bad kinds, missing or out-of-order parents, duplicate ids), or empty. */
+	PROTOBOY_API FString Validate(const FProtoBoyDocTemplate& Template);
 
 	/** The plugin's Resources/DocTemplates folder. */
 	PROTOBOY_API FString GetTemplatesDir();

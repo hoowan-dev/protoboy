@@ -1,18 +1,24 @@
 #pragma once
 
+#include "MCP/PBMCPConnection.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/SNullWidget.h"
 #include "Widgets/Views/SListView.h"
 
 struct FProtoBoyDocTemplate;
+class FProtoBoyDocGenerationRun;
 class SBox;
+class SScrollBox;
 class SWindow;
 class SWidgetSwitcher;
 
 /**
  * "Set Up Docs from Template" window, opened from the doc map (and the Obsidian page of Connect to Documentation).
- * Step one lists the doc-set templates (by genre, then by size) with a preview of the selected one: its design pillars
- * and the docs it creates. Step two shows exactly what applying it writes and what it leaves alone, then applies it.
+ * The first step picks how to start: from a template, or generated from what's already in the project. The project
+ * path explains what happens, lists the user's agents, warns that it overwrites the docs, then shows the agent's
+ * progress (FProtoBoyDocGenerationRun) until Finish. Cancel, and the window's close button, ask first and clear the docs. The template path lists the doc-set templates (by genre,
+ * then by size) with a preview of the selected one: its design pillars and the docs it creates. Its last step shows
+ * exactly what applying it writes and what it leaves alone, then applies it.
  * Applying replaces the documentation: the docs on the map go to the trash first (FProtoBoyDocMap::ApplyTemplate).
  */
 class SProtoBoySetupDocsDialog : public SCompoundWidget
@@ -23,6 +29,7 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
+	virtual ~SProtoBoySetupDocsDialog() override;
 
 	/** Opens the window as a modal over ParentWidget's window. */
 	static void Open(const TSharedPtr<SWidget>& ParentWidget);
@@ -31,11 +38,33 @@ private:
 	/** The window's steps, in StepSwitcher slot order. */
 	enum class EStep : int32
 	{
+		Start,
 		Choose,
 		Confirm,
+		FromProject,
+		Generating,
 	};
 
 	void ShowStep(EStep Step);
+
+	/** How to start: from a template (Choose) or from the project's contents (FromProject). */
+	TSharedRef<SWidget> MakeStartStep();
+	/** One large option on the start step: icon, title and description; clicking it goes to Step. */
+	TSharedRef<SWidget> MakeStartOption(const FName& Icon, const FText& Title, const FText& Description, EStep Step);
+	/** What generating from the project does, the user's agents to pick from, and Generate. */
+	TSharedRef<SWidget> MakeFromProjectStep();
+	TSharedRef<SWidget> MakeAgentRow(EProtoBoyMCPClient Agent);
+	/** Warns that the docs are overwritten, then starts the agent and shows its progress. */
+	FReply OnGenerateClicked();
+	/** The agent's progress log, with Cancel and Finish. */
+	TSharedRef<SWidget> MakeGeneratingStep();
+	/** Polls the run and adds its new log lines. Stops once it's finished. */
+	void PollGeneration();
+	/** Asks before cancelling a generation (the docs are cleared). */
+	bool ConfirmCancelGeneration() const;
+	/** The window's close button: while generating it's the same as Cancel. */
+	void OnWindowCloseRequested(const TSharedRef<SWindow>& Window);
+	void CloseWindow();
 
 	TSharedRef<SWidget> MakeChooseStep();
 	TSharedRef<ITableRow> OnGenerateTemplateRow(TSharedPtr<FProtoBoyDocTemplate> Template, const TSharedRef<STableViewBase>& OwnerTable);
@@ -66,4 +95,16 @@ private:
 	int32 PlannedRemoved = 0;
 	/** The confirm step's choice: fill the new docs' sections with the template's example content, or leave them blank. */
 	bool bWriteExamples = false;
+
+	EStep CurrentStep = EStep::Start;
+	/** Agents set up in MCP settings (FProtoBoyDocGenerationRun::GetSetUpAgents). */
+	TArray<EProtoBoyMCPClient> Agents;
+	TOptional<EProtoBoyMCPClient> SelectedAgent;
+	TUniquePtr<FProtoBoyDocGenerationRun> Run;
+	TSharedPtr<SScrollBox> LogScroll;
+	/** Log lines already added to LogScroll. */
+	int32 LogShown = 0;
+	FText GenerateError;
+	/** Set by Finish and Cancel, so closing doesn't ask again. */
+	bool bClosing = false;
 };

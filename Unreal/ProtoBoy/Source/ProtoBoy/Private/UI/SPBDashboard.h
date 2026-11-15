@@ -7,7 +7,7 @@ class SWidgetSwitcher;
 
 /**
  * ProtoBoy dashboard: a sidebar listing the pages, and the selected page beside it. Pages: Setup (plugin settings, MCP,
- * Documentation, Tasks, Asset Sourcing), Architecture (setup checklist, doc map), Documentation and Tasks (both blank
+ * Documentation, Tasks, Asset Sourcing), Documentation (the doc map) and Tasks (blank
  * for now). The open page is remembered per user.
  */
 class SProtoBoyDashboard : public SCompoundWidget
@@ -44,7 +44,7 @@ private:
 	using FSetupStepState = TFunction<bool(FText& OutDetail)>;
 
 	/**
-	 * The setup checks, shared by the Setup page's card headers and the Architecture page's checklist so both always agree.
+	 * The setup checks, shown in the Setup page's card headers and counted in the sidebar.
 	 * Built once in Construct.
 	 */
 	void BuildSetupSteps();
@@ -65,21 +65,13 @@ private:
 	/** Setup > MCP: a logo chip for each agent app this user has set up (Claude Code, Claude Desktop, Gemini CLI). */
 	TSharedRef<SWidget> MakeEnabledAgents();
 
-	/** Architecture: a checklist of the setup steps, then the doc map. */
-	TSharedRef<SWidget> MakeArchitectureSection();
-
-	/** Documentation: blank for now. */
+	/** Documentation: the doc map, disabled with a warning until setup is finished. */
 	TSharedRef<SWidget> MakeDocumentationSection();
 
 	/** Tasks: blank for now. */
 	TSharedRef<SWidget> MakeTasksSection();
 
-	/**
-	 * One checklist row. GetState returns true when done and fills Detail; OnSetUp opens the window to finish it.
-	 * The "Set Up..." button hides once the step is done, and isn't shown at all when OnSetUp is null.
-	 */
-	TSharedRef<SWidget> MakeSetupStep(const FText& Title, FSetupStepState GetState, FReply (SProtoBoyDashboard::*OnSetUp)());
-
+	
 	/** The checklist's steps, in order (also used for the "N of M" count). */
 	TArray<FSetupStepState> SetupSteps;
 	int32 CountDoneSetupSteps() const;

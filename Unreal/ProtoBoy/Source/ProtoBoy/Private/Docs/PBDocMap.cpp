@@ -168,10 +168,27 @@ namespace ProtoBoyDocMap
 		return Out;
 	}
 
-	/** The line under a doc's summary that says its sections hold examples. */
-	FString MakeExampleNote(const FString& TemplateName)
+	/** The line under a doc's summary that says its sections hold examples (or were drafted by an agent). */
+	FString MakeExampleNote(const FString& TemplateName, bool bGenerated = false)
 	{
-		return FString::Printf(TEXT("_The sections below hold example content from the %s template. Rewrite them for your game, or delete what doesn't apply._"), *TemplateName);
+		return bGenerated
+			? FString::Printf(TEXT("_Drafted by an agent from the project's contents on %s. It's a starting point: check it, and add the details of your game._"), *FDateTime::Now().ToString(TEXT("%Y-%m-%d")))
+			: FString::Printf(TEXT("_The sections below hold example content from the %s template. Rewrite them for your game, or delete what doesn't apply._"), *TemplateName);
+	}
+
+	/** The kind folders templates write to, plus older versions' ones: emptied folders in them are removed on replace. */
+	TSet<FString> GetReplaceableFolders(const TArray<FString>& RemovedPaths)
+	{
+		TSet<FString> Folders = { TEXT("Design"), TEXT("Tech"), TEXT("Content"), TEXT("Systems"), TEXT("Direction") };
+		for (const FString& Removed : RemovedPaths)
+		{
+			FString Top;
+			if (Removed.Split(TEXT("/"), &Top, nullptr))
+			{
+				Folders.Add(Top);
+			}
+		}
+		return Folders;
 	}
 
 	const TCHAR* ExamplePillar = TEXT(
@@ -493,7 +510,7 @@ bool FProtoBoyDocMap::WriteFrontmatter(const FString& Path, const TArray<TPair<F
 }
 
 bool FProtoBoyDocMap::WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePillar>* Pillars, const FString& TemplateName, bool& bOutWrote, FText& OutError,
-	const TArray<FProtoBoyDocTemplateSection>* Examples)
+	const TArray<FProtoBoyDocTemplateSection>* Examples, bool bGenerated)
 {
 	IProtoBoyDocsProvider& Provider = Docs.GetProvider();
 	if (!Provider.IsReady(OutError))
@@ -516,7 +533,9 @@ bool FProtoBoyDocMap::WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePilla
 	FString PillarsText = ProtoBoyDocMap::ExamplePillar;
 	if (Pillars && !Pillars->IsEmpty())
 	{
-		Headings[ProtoBoyDocMap::PillarsHeadingIndex].Hint = FString::Printf(TEXT("3-5 experience goals. Every feature should serve at least one. These are suggestions from the %s template: rewrite them for your game, one ### heading per pillar."), *TemplateName);
+		Headings[ProtoBoyDocMap::PillarsHeadingIndex].Hint = bGenerated
+			? FString(TEXT("3-5 experience goals. Every feature should serve at least one. An agent drafted these from the project: check them, one ### heading per pillar."))
+			: FString::Printf(TEXT("3-5 experience goals. Every feature should serve at least one. These are suggestions from the %s template: rewrite them for your game, one ### heading per pillar."), *TemplateName);
 		PillarsText.Reset();
 		for (const FProtoBoyDocTemplatePillar& Pillar : *Pillars)
 		{
@@ -528,7 +547,7 @@ bool FProtoBoyDocMap::WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePilla
 	const FString Hint = FString::Printf(TEXT("<!-- %s -->\n"), *Headings[ProtoBoyDocMap::PillarsHeadingIndex].Hint);
 	const bool bExamples = Examples && !Examples->IsEmpty();
 	FString Body = ProtoBoyDocLayers::MakeBody(GetProjectTitle(), ProtoBoyDocLayers::GetIntro(EProtoBoyDocKind::Game), Headings,
-		bExamples ? ProtoBoyDocMap::MakeExampleNote(TemplateName) : FString(), ProtoBoyDocMap::ToSectionText(Examples));
+		bExamples ? ProtoBoyDocMap::MakeExampleNote(TemplateName, bGenerated) : FString(), ProtoBoyDocMap::ToSectionText(Examples));
 	Body.ReplaceInline(*Hint, *(Hint + TEXT("\n") + PillarsText));
 
 	const FString Text = ProtoBoyMarkdown::SetFrontmatterValues(Body, {
@@ -779,6 +798,32 @@ bool FProtoBoyDocMap::CreateGameDoc(FText& OutError)
 	return bOk;
 }
 
+bool FProtoBoyDocMap::ClearDocs(FText& OutError)
+{
+	IProtoBoyDocsProvider& Provider = Docs.GetProvider();
+	if (!Provider.IsReady(OutError))
+	{
+		return false;
+	}
+	Load();
+	TArray<FString> Paths;
+	for (const FProtoBoyDocNode& Node : Nodes)
+	{
+		Paths.Add(Node.Path);
+	}
+	bool bOk = true;
+	for (const FString& Path : Paths)
+	{
+		bOk &= Provider.DeleteDoc(Path, OutError);
+	}
+	for (const FString& Folder : ProtoBoyDocMap::GetReplaceableFolders(Paths))
+	{
+		Provider.PruneEmptyFolders(Folder);
+	}
+	AfterWrite();
+	return bOk;
+}
+
 FProtoBoyDocTemplatePlan FProtoBoyDocMap::PlanTemplate(const FProtoBoyDocTemplate& Template) const
 {
 	// Read the docs again, so notes added, moved or renamed in Obsidian since the last refresh are replaced too.
@@ -841,7 +886,7 @@ bool FProtoBoyDocMap::ApplyTemplate(const FProtoBoyDocTemplate& Template, bool b
 	Load();
 
 	bool bWrote = false;
-	if (!WriteMissingGameDoc(&Template.Pillars, Template.Name, bWrote, OutError, bExamples ? &Template.GameExamples : nullptr))
+	if (!WriteMissingGameDoc(&Template.Pillars, Template.Name, bWrote, OutError, bExamples ? &Template.GameExamples : nullptr, Template.bGenerated))
 	{
 		AfterWrite();
 		return false;
@@ -874,7 +919,7 @@ bool FProtoBoyDocMap::ApplyTemplate(const FProtoBoyDocTemplate& Template, bool b
 		const FString ParentId = Doc.Parent.IsEmpty() ? FString() : MapIds.FindRef(Doc.Parent);
 		const FString Text = ProtoBoyMarkdown::SetFrontmatterValues(
 			ProtoBoyDocLayers::MakeBody(Title, ProtoBoyDocLayers::GetIntro(Kind), ProtoBoyDocLayers::GetHeadings(Kind),
-				bExamples && !Doc.Examples.IsEmpty() ? Doc.Summary + TEXT("\n\n") + ProtoBoyDocMap::MakeExampleNote(Template.Name) : Doc.Summary,
+				bExamples && !Doc.Examples.IsEmpty() ? Doc.Summary + TEXT("\n\n") + ProtoBoyDocMap::MakeExampleNote(Template.Name, Template.bGenerated) : Doc.Summary,
 				ProtoBoyDocMap::ToSectionText(bExamples ? &Doc.Examples : nullptr)), {
 				{ ProtoBoyDocLayers::IdKey, Id },
 				{ ProtoBoyDocLayers::LayerKey, ProtoBoyDocLayers::ToKey(ProtoBoyDocLayers::GetLayer(Kind)) },
@@ -893,16 +938,7 @@ bool FProtoBoyDocMap::ApplyTemplate(const FProtoBoyDocTemplate& Template, bool b
 	// Folders the old docs leave empty go too, so the old structure doesn't linger. Each delete already removes the
 	// folders it empties; this also catches folders emptied earlier (or kept by Obsidian holding them open), but only
 	// under the top-level folders the removed docs were in and the kind folders, so other empty folders stay.
-	TSet<FString> Folders = { TEXT("Design"), TEXT("Tech"), TEXT("Content"), TEXT("Systems"), TEXT("Direction") };
-	for (const FString& Removed : Plan.Removed)
-	{
-		FString Top;
-		if (Removed.Split(TEXT("/"), &Top, nullptr))
-		{
-			Folders.Add(Top);
-		}
-	}
-	for (const FString& Folder : Folders)
+	for (const FString& Folder : ProtoBoyDocMap::GetReplaceableFolders(Plan.Removed))
 	{
 		Provider.PruneEmptyFolders(Folder);
 	}
