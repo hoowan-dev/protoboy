@@ -21,6 +21,21 @@ struct PROTOBOY_API FProtoBoyDocTemplatePillar
 	FString RulesOut;
 };
 
+/** Example text for one "## " section of a doc, written when a template is applied with example documentation. */
+USTRUCT()
+struct PROTOBOY_API FProtoBoyDocTemplateSection
+{
+	GENERATED_BODY()
+
+	/** The section's heading, as the doc's kind names it (e.g. "The Player Can"). Sections the kind doesn't have are skipped. */
+	UPROPERTY()
+	FString Heading;
+
+	/** Markdown written under the heading's hint. */
+	UPROPERTY()
+	FString Text;
+};
+
 /** One doc a template creates below the Game doc. */
 USTRUCT()
 struct PROTOBOY_API FProtoBoyDocTemplateDoc
@@ -45,6 +60,10 @@ struct PROTOBOY_API FProtoBoyDocTemplateDoc
 	/** One line on what the doc covers, written as its first paragraph. */
 	UPROPERTY()
 	FString Summary;
+
+	/** Example content for its sections, written only when the team asks for example documentation. */
+	UPROPERTY()
+	TArray<FProtoBoyDocTemplateSection> Examples;
 };
 
 /**
@@ -83,12 +102,19 @@ struct PROTOBOY_API FProtoBoyDocTemplate
 	UPROPERTY()
 	TArray<FProtoBoyDocTemplatePillar> Pillars;
 
+	/** Example content for the Game doc's sections (pitch, core loop, ...), written only with example documentation. */
+	UPROPERTY()
+	TArray<FProtoBoyDocTemplateSection> GameExamples;
+
 	UPROPERTY()
 	TArray<FProtoBoyDocTemplateDoc> Docs;
 };
 
 namespace ProtoBoyDocTemplates
 {
+	/** True if applying the template with example documentation writes anything more than the blank templates. */
+	PROTOBOY_API bool HasExamples(const FProtoBoyDocTemplate& Template);
+
 	/** The plugin's Resources/DocTemplates folder. */
 	PROTOBOY_API FString GetTemplatesDir();
 

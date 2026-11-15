@@ -7,6 +7,7 @@
 class FProtoBoyDocGenerator;
 struct FProtoBoyDocTemplate;
 struct FProtoBoyDocTemplatePillar;
+struct FProtoBoyDocTemplateSection;
 
 /** One doc on the map, read from its frontmatter (see ProtoBoyDocLayers for the keys). */
 struct FProtoBoyDocNode
@@ -164,9 +165,10 @@ public:
 	/**
 	 * Replace the documentation with a template's: every doc on the map (the Game doc included) goes to the provider's
 	 * trash, then a new Game doc (with the template's design pillars) and the template's docs are written, in the same places CreateDoc would put them. Notes that aren't on the map are kept, unless one sits where a template doc goes.
+	 * With bExamples, each doc's sections also get the template's example content (otherwise just the headings and hints).
 	 * OutCreated counts the docs written.
 	 */
-	bool ApplyTemplate(const FProtoBoyDocTemplate& Template, int32& OutCreated, FText& OutError);
+	bool ApplyTemplate(const FProtoBoyDocTemplate& Template, bool bExamples, int32& OutCreated, FText& OutError);
 
 	/** Rewrite the Game doc's managed "areas" block (under "## Areas") with every doc below it. No-op without a Game doc. */
 	bool UpdateAreasIndex(FText& OutError);
@@ -189,8 +191,12 @@ private:
 	bool WriteFrontmatter(const FString& Path, const TArray<TPair<FString, FString>>& Values, FText& OutError);
 	/** Refresh, update the Areas index (errors there are logged, not returned) and notify. */
 	void AfterWrite();
-	/** Write <Project>.md if there's no Game doc, without refreshing. Pillars (from a template) replace the example pillar. */
-	bool WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePillar>* Pillars, const FString& TemplateName, bool& bOutWrote, FText& OutError);
+	/**
+	 * Write <Project>.md if there's no Game doc, without refreshing. Pillars (from a template) replace the example pillar;
+	 * Examples (from a template, optional) fill its sections.
+	 */
+	bool WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePillar>* Pillars, const FString& TemplateName, bool& bOutWrote, FText& OutError,
+		const TArray<FProtoBoyDocTemplateSection>* Examples = nullptr);
 
 	FProtoBoyDocGenerator& Docs;
 	mutable bool bLoaded = false;

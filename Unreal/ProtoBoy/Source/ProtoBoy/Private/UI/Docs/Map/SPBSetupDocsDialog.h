@@ -64,4 +64,6 @@ private:
 	int32 PlannedCount = 0;
 	/** Docs the selected template would move to the trash first. */
 	int32 PlannedRemoved = 0;
+	/** The confirm step's choice: fill the new docs' sections with the template's example content, or leave them blank. */
+	bool bWriteExamples = false;
 };

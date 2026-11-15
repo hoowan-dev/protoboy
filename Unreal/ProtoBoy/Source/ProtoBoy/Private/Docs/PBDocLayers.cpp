@@ -218,7 +218,8 @@ namespace ProtoBoyDocLayers
 		return FString();
 	}
 
-	FString MakeBody(const FString& Title, const FString& Intro, const TArray<FHeading>& Headings, const FString& Lead)
+	FString MakeBody(const FString& Title, const FString& Intro, const TArray<FHeading>& Headings, const FString& Lead,
+		const TArray<TPair<FString, FString>>& SectionText)
 	{
 		FString Out = FString::Printf(TEXT("# %s\n"), *Title);
 		if (!Intro.IsEmpty())
@@ -235,6 +236,14 @@ namespace ProtoBoyDocLayers
 			if (!Heading.Hint.IsEmpty())
 			{
 				Out += FString::Printf(TEXT("<!-- %s -->\n"), *Heading.Hint);
+			}
+			const TPair<FString, FString>* Text = SectionText.FindByPredicate([&Heading](const TPair<FString, FString>& Entry)
+			{
+				return Entry.Key.Equals(Heading.Title, ESearchCase::IgnoreCase);
+			});
+			if (Text && !Text->Value.TrimStartAndEnd().IsEmpty())
+			{
+				Out += FString::Printf(TEXT("\n%s\n"), *Text->Value.TrimStartAndEnd());
 			}
 		}
 		return Out;

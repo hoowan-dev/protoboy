@@ -10,6 +10,12 @@
 
 namespace ProtoBoyDocTemplates
 {
+	bool HasExamples(const FProtoBoyDocTemplate& Template)
+	{
+		return !Template.GameExamples.IsEmpty()
+			|| Template.Docs.ContainsByPredicate([](const FProtoBoyDocTemplateDoc& Doc) { return !Doc.Examples.IsEmpty(); });
+	}
+
 	FString GetTemplatesDir()
 	{
 		const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("ProtoBoy"));

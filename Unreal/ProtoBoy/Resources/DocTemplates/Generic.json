@@ -22,83 +22,267 @@
 			"rulesOut": "content that's finished once seen"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "A short, replayable game where every session ends with the player wanting one more go."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Pick a goal for the session.\n2. Play the core mechanic to reach it.\n3. Earn a reward.\n4. Spend it to unlock a new option."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Open-world exploration.\n- Online multiplayer."
+		}
+	],
 	"docs": [
 		{
 			"id": "core-gameplay",
 			"title": "Core Gameplay",
 			"kind": "design",
 			"parent": "",
-			"summary": "What the player does over and over: the core loop's mechanics and rules."
+			"summary": "What the player does over and over: the core loop's mechanics and rules.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can understand the goal of a session within a minute.\n- As a player, I can play the core mechanic in different ways.\n- As a player, I can see my progress toward the session's goal."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A clear goal at the start.\n- Feedback on every success and failure."
+				},
+				{
+					"heading": "Rules",
+					"text": "- A session lasts 10-20 minutes.\n- Losing keeps some progress so the next attempt starts ahead."
+				}
+			]
 		},
 		{
 			"id": "gameplay-framework",
 			"title": "Gameplay Framework",
 			"kind": "tech",
 			"parent": "core-gameplay",
-			"summary": "Game mode, player controller and pawn, and how the core loop runs in code."
+			"summary": "Game mode, player controller and pawn, and how the core loop runs in code.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "The game mode sets the rules of a session, the player controller turns input into actions, and the pawn is what the player controls. Game state holds what everyone needs to know about the match."
+				},
+				{
+					"heading": "Code",
+					"text": "- `AProjectGameMode`: starts and ends sessions, spawns players\n- `AProjectPlayerController`: input mapping and UI\n- `AProjectCharacter`: the player's pawn\n- `AProjectGameState`: session state everyone can read"
+				},
+				{
+					"heading": "Data",
+					"text": "- Input actions and mapping contexts.\n- Session rules (time limit, win condition) in a data asset."
+				}
+			]
 		},
 		{
 			"id": "characters",
 			"title": "Characters",
 			"kind": "content",
 			"parent": "core-gameplay",
-			"summary": "Player and NPC meshes, rigs and animations."
+			"summary": "Player and NPC meshes, rigs and animations.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Player character mesh | Mesh | Placeholder | To source |\n| Player animation set | Animation | Placeholder | To source |\n| NPC meshes | Mesh | Placeholder | To source |\n| Shared skeleton | Rig | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Readable silhouettes and slightly exaggerated proportions so characters read from the gameplay camera."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Characters on the engine's standard skeleton (or retargetable to it).\n- Modular outfits that share one skeleton.\n- Animation packs with locomotion, combat and reactions."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Characters with very different levels of detail side by side.\n- Rigs that can't be retargeted.\n- Hyper-realistic faces next to stylized bodies."
+				}
+			]
 		},
 		{
 			"id": "levels",
 			"title": "Levels",
 			"kind": "design",
 			"parent": "",
-			"summary": "Where the player plays, and what they can do and see there."
+			"summary": "Where the player plays, and what they can do and see there.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can move through each level and always know where to go next.\n- As a player, I can find side paths that reward curiosity.\n- As a player, I can see where I've been and where I haven't."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Landmarks visible from far away.\n- Light and color that guide me toward the main path."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every level has a clear start, goal and one optional reward.\n- Levels teach a new idea before testing it."
+				}
+			]
 		},
 		{
 			"id": "level-streaming",
 			"title": "Level Streaming",
 			"kind": "tech",
 			"parent": "levels",
-			"summary": "How levels load, stream and transition."
+			"summary": "How levels load, stream and transition.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Each level is a persistent level with streamed sublevels; World Partition loads cells around the player. Transitions between levels go through a loading screen that waits for the next level to be ready."
+				},
+				{
+					"heading": "Code",
+					"text": "- `ULevelTransitionSubsystem`: loads the next level behind a loading screen\n- `World Partition data layers`: what loads where"
+				},
+				{
+					"heading": "Data",
+					"text": "- Streaming distances per cell size.\n- The level list and their loading screens in a data asset."
+				}
+			]
 		},
 		{
 			"id": "environment-art",
 			"title": "Environment Art",
 			"kind": "content",
 			"parent": "levels",
-			"summary": "Meshes, materials, props and lighting setups the levels are built from."
+			"summary": "Meshes, materials, props and lighting setups the levels are built from.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Modular kit (walls, floors, stairs) | Mesh | Placeholder | To source |\n| Props | Mesh | Placeholder | To source |\n| Materials and textures | Material | Placeholder | To source |\n| Lighting presets | Lighting | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "One consistent material language: the same texel density, wear and color palette across every kit."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Modular kits built on a grid.\n- Packs with Nanite-ready meshes and trim sheets.\n- Prop packs from the same artist as the kit."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing kits from different artists in one area.\n- Photoscanned assets next to hand-painted ones.\n- Props at a different scale from the kit."
+				}
+			]
 		},
 		{
 			"id": "ui",
 			"title": "UI",
 			"kind": "design",
 			"parent": "",
-			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start, pause and quit from clear menus.\n- As a player, I can change graphics, audio and control settings.\n- As a player, I can see the information I need during play without it covering the action."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A title screen, pause menu and settings screens.\n- A HUD with only what matters right now.\n- Button prompts that match my input device."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every screen can be used with a gamepad as well as mouse and keyboard.\n- Pausing stops gameplay time.\n- Settings save immediately."
+				}
+			]
 		},
 		{
 			"id": "ui-framework",
 			"title": "UI Framework",
 			"kind": "tech",
 			"parent": "ui",
-			"summary": "How screens and widgets are built, opened, navigated and fed data."
+			"summary": "How screens and widgets are built, opened, navigated and fed data.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Screens are UMG widgets pushed onto a stack by a UI manager subsystem. The top screen gets input; popping it returns to the one below. Gameplay talks to the HUD through events, never directly."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProjectUISubsystem`: owns the screen stack and opens and closes screens\n- `UScreenWidget`: base class for every full screen (menus, settings)\n- `UHUDWidget`: the in-game HUD; listens to gameplay events"
+				},
+				{
+					"heading": "Data",
+					"text": "- Screen classes and their input modes in a data asset.\n- Settings in the game user settings, saved per user."
+				}
+			]
 		},
 		{
 			"id": "ui-art",
 			"title": "UI Art",
 			"kind": "content",
 			"parent": "ui",
-			"summary": "Icons, fonts, panels and widget skins."
+			"summary": "Icons, fonts, panels and widget skins.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Icons | UI | Placeholder | To source |\n| Fonts (headings, body) | UI | Placeholder | To source |\n| Panel and button skins | UI | Placeholder | To source |\n| Input prompt icons | UI | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Clean and readable first: flat shapes, high contrast, one accent color. Icons share one line weight and perspective."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- UI kits with matching icons, buttons and panels.\n- Fonts licensed for games, with the character sets we localize to.\n- Input prompt packs covering keyboard, Xbox and PlayStation."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing icon packs with different styles.\n- Ornate frames that crowd the screen.\n- Fonts that are hard to read at small sizes."
+				}
+			]
 		},
 		{
 			"id": "music-and-sound",
 			"title": "Music and Sound",
 			"kind": "content",
 			"parent": "",
-			"summary": "Music, sound effects and ambience, and where each is used."
+			"summary": "Music, sound effects and ambience, and where each is used.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main theme | Music | Placeholder | To source |\n| Gameplay loops | Music | Placeholder | To source |\n| UI sounds (click, back, confirm) | Sound | Placeholder | To source |\n| Ambience beds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Music sets the mood of each area; sound effects are short and punchy so they read over the music."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Music packs with loopable stems.\n- Sound effect libraries with variations of each sound.\n- Licenses that allow commercial use and streaming."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Tracks that don't loop cleanly.\n- Effects with long tails that muddy fast moments.\n- Mixing many libraries with different loudness."
+				}
+			]
 		},
 		{
 			"id": "save-and-load",
 			"title": "Save and Load",
 			"kind": "tech",
 			"parent": "",
-			"summary": "What persists between sessions, how it's stored, and how saves stay compatible."
+			"summary": "What persists between sessions, how it's stored, and how saves stay compatible.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "A save game object holds everything that persists. Systems register what they need saved; saving serializes it to a slot, loading restores it before the level starts. Saves carry a version number so old saves can be migrated."
+				},
+				{
+					"heading": "Code",
+					"text": "- `USaveSubsystem`: saves and loads slots, runs migrations\n- `UProjectSaveGame`: the saved data, with a version field\n- `ISaveable`: interface for systems that write and read their part"
+				},
+				{
+					"heading": "Data",
+					"text": "- Save slots in the platform's save location.\n- A version number per save, bumped on every breaking change."
+				}
+			]
 		}
 	]
 }

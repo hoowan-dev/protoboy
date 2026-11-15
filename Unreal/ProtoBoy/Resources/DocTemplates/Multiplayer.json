@@ -22,104 +22,330 @@
 			"rulesOut": "features that don't feed it"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "A four-player co-op game where friends defend a base together against waves of enemies."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Join a session with friends.\n2. Prepare defenses.\n3. Hold off a wave together.\n4. Upgrade between waves."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Player-versus-player.\n- Single-player campaign."
+		}
+	],
 	"docs": [
 		{
 			"id": "core-gameplay",
 			"title": "Core Gameplay",
 			"kind": "design",
 			"parent": "",
-			"summary": "What the player does over and over: the core loop's mechanics and rules."
+			"summary": "What the player does over and over: the core loop's mechanics and rules.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can understand the goal of a session within a minute.\n- As a player, I can play the core mechanic in different ways.\n- As a player, I can see my progress toward the session's goal."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A clear goal at the start.\n- Feedback on every success and failure."
+				},
+				{
+					"heading": "Rules",
+					"text": "- A session lasts 10-20 minutes.\n- Losing keeps some progress so the next attempt starts ahead."
+				}
+			]
 		},
 		{
 			"id": "gameplay-framework",
 			"title": "Gameplay Framework",
 			"kind": "tech",
 			"parent": "core-gameplay",
-			"summary": "Game mode, game state, player state and what runs on the server."
+			"summary": "Game mode, game state, player state and what runs on the server.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "The game mode sets the rules of a session, the player controller turns input into actions, and the pawn is what the player controls. Game state holds what everyone needs to know about the match."
+				},
+				{
+					"heading": "Code",
+					"text": "- `AProjectGameMode`: starts and ends sessions, spawns players\n- `AProjectPlayerController`: input mapping and UI\n- `AProjectCharacter`: the player's pawn\n- `AProjectGameState`: session state everyone can read"
+				},
+				{
+					"heading": "Data",
+					"text": "- Input actions and mapping contexts.\n- Session rules (time limit, win condition) in a data asset."
+				}
+			]
 		},
 		{
 			"id": "characters",
 			"title": "Characters",
 			"kind": "content",
 			"parent": "core-gameplay",
-			"summary": "Player meshes, rigs, animations and team colors."
+			"summary": "Player meshes, rigs, animations and team colors.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Player character mesh | Mesh | Placeholder | To source |\n| Player animation set | Animation | Placeholder | To source |\n| NPC meshes | Mesh | Placeholder | To source |\n| Shared skeleton | Rig | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Readable silhouettes and slightly exaggerated proportions so characters read from the gameplay camera."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Characters on the engine's standard skeleton (or retargetable to it).\n- Modular outfits that share one skeleton.\n- Animation packs with locomotion, combat and reactions."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Characters with very different levels of detail side by side.\n- Rigs that can't be retargeted.\n- Hyper-realistic faces next to stylized bodies."
+				}
+			]
 		},
 		{
 			"id": "sessions",
 			"title": "Sessions",
 			"kind": "design",
 			"parent": "",
-			"summary": "Hosting, finding and joining games, parties and invites, as the player sees them."
+			"summary": "Hosting, finding and joining games, parties and invites, as the player sees them.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can invite friends and join their games.\n- As a player, I can join a game in progress."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Friends' sessions in a list."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Up to four players per session."
+				}
+			]
 		},
 		{
 			"id": "matchmaking",
 			"title": "Matchmaking",
 			"kind": "tech",
 			"parent": "sessions",
-			"summary": "Online subsystem, sessions and matchmaking."
+			"summary": "Online subsystem, sessions and matchmaking.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Players create or join sessions through the online subsystem. A host advertises a session; others search and join it. Parties travel together."
+				},
+				{
+					"heading": "Code",
+					"text": "- `USessionSubsystem`: creates, finds and joins sessions\n- `UPartyComponent`: keeps friends together when joining"
+				},
+				{
+					"heading": "Data",
+					"text": "- Session settings (max players, map, mode).\n- Platform online subsystem config."
+				}
+			]
 		},
 		{
 			"id": "networking",
 			"title": "Networking",
 			"kind": "tech",
 			"parent": "",
-			"summary": "Keeping every player's game in sync."
+			"summary": "Keeping every player's game in sync.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "The server is authoritative; clients predict their own movement and the server corrects them. Only what the client needs is replicated."
+				},
+				{
+					"heading": "Code",
+					"text": "- `Replicated properties and RPCs`: on gameplay actors\n- `UNetworkSettings`: tick rates and relevancy distances"
+				},
+				{
+					"heading": "Data",
+					"text": "- Net update frequencies per actor class.\n- Bandwidth budget per player."
+				}
+			]
 		},
 		{
 			"id": "replication",
 			"title": "Replication",
 			"kind": "tech",
 			"parent": "networking",
-			"summary": "What's synced, how often, and how lag is hidden."
+			"summary": "What's synced, how often, and how lag is hidden.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Actors replicate state with replicated properties and events with RPCs. Relevancy keeps far-away actors from being sent."
+				},
+				{
+					"heading": "Code",
+					"text": "- `GetLifetimeReplicatedProps`: declares replicated state per actor\n- `Server RPCs`: client requests the server validates"
+				},
+				{
+					"heading": "Data",
+					"text": "- Net update frequency and priority per actor class.\n- Which properties replicate to owner only."
+				}
+			]
 		},
 		{
 			"id": "authority-and-anti-cheat",
 			"title": "Authority and Anti-cheat",
 			"kind": "tech",
 			"parent": "networking",
-			"summary": "Who decides what's true, and how cheating is prevented or detected."
+			"summary": "Who decides what's true, and how cheating is prevented or detected.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "The server validates every gameplay action; clients only send inputs and requests."
+				},
+				{
+					"heading": "Code",
+					"text": "- `Server RPC validation`: rejects impossible actions"
+				},
+				{
+					"heading": "Data",
+					"text": "- Validation rules per action."
+				}
+			]
 		},
 		{
 			"id": "levels",
 			"title": "Levels",
 			"kind": "design",
 			"parent": "",
-			"summary": "The maps players meet in."
+			"summary": "The maps players meet in.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can move through each level and always know where to go next.\n- As a player, I can find side paths that reward curiosity.\n- As a player, I can see where I've been and where I haven't."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Landmarks visible from far away.\n- Light and color that guide me toward the main path."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every level has a clear start, goal and one optional reward.\n- Levels teach a new idea before testing it."
+				}
+			]
 		},
 		{
 			"id": "environment-art",
 			"title": "Environment Art",
 			"kind": "content",
 			"parent": "levels",
-			"summary": "Meshes, materials and props the maps are built from."
+			"summary": "Meshes, materials and props the maps are built from.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Modular kit (walls, floors, stairs) | Mesh | Placeholder | To source |\n| Props | Mesh | Placeholder | To source |\n| Materials and textures | Material | Placeholder | To source |\n| Lighting presets | Lighting | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "One consistent material language: the same texel density, wear and color palette across every kit."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Modular kits built on a grid.\n- Packs with Nanite-ready meshes and trim sheets.\n- Prop packs from the same artist as the kit."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing kits from different artists in one area.\n- Photoscanned assets next to hand-painted ones.\n- Props at a different scale from the kit."
+				}
+			]
 		},
 		{
 			"id": "ui",
 			"title": "UI",
 			"kind": "design",
 			"parent": "",
-			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start, pause and quit from clear menus.\n- As a player, I can change graphics, audio and control settings.\n- As a player, I can see the information I need during play without it covering the action."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A title screen, pause menu and settings screens.\n- A HUD with only what matters right now.\n- Button prompts that match my input device."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every screen can be used with a gamepad as well as mouse and keyboard.\n- Pausing stops gameplay time.\n- Settings save immediately."
+				}
+			]
 		},
 		{
 			"id": "ui-framework",
 			"title": "UI Framework",
 			"kind": "tech",
 			"parent": "ui",
-			"summary": "How screens and widgets are built, opened, navigated and fed data."
+			"summary": "How screens and widgets are built, opened, navigated and fed data.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Screens are UMG widgets pushed onto a stack by a UI manager subsystem. The top screen gets input; popping it returns to the one below. Gameplay talks to the HUD through events, never directly."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProjectUISubsystem`: owns the screen stack and opens and closes screens\n- `UScreenWidget`: base class for every full screen (menus, settings)\n- `UHUDWidget`: the in-game HUD; listens to gameplay events"
+				},
+				{
+					"heading": "Data",
+					"text": "- Screen classes and their input modes in a data asset.\n- Settings in the game user settings, saved per user."
+				}
+			]
 		},
 		{
 			"id": "ui-art",
 			"title": "UI Art",
 			"kind": "content",
 			"parent": "ui",
-			"summary": "Icons, fonts, panels and widget skins."
+			"summary": "Icons, fonts, panels and widget skins.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Icons | UI | Placeholder | To source |\n| Fonts (headings, body) | UI | Placeholder | To source |\n| Panel and button skins | UI | Placeholder | To source |\n| Input prompt icons | UI | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Clean and readable first: flat shapes, high contrast, one accent color. Icons share one line weight and perspective."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- UI kits with matching icons, buttons and panels.\n- Fonts licensed for games, with the character sets we localize to.\n- Input prompt packs covering keyboard, Xbox and PlayStation."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing icon packs with different styles.\n- Ornate frames that crowd the screen.\n- Fonts that are hard to read at small sizes."
+				}
+			]
 		},
 		{
 			"id": "music-and-sound",
 			"title": "Music and Sound",
 			"kind": "content",
 			"parent": "",
-			"summary": "Music, sound effects and ambience, and where each is used."
+			"summary": "Music, sound effects and ambience, and where each is used.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main theme | Music | Placeholder | To source |\n| Gameplay loops | Music | Placeholder | To source |\n| UI sounds (click, back, confirm) | Sound | Placeholder | To source |\n| Ambience beds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Music sets the mood of each area; sound effects are short and punchy so they read over the music."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Music packs with loopable stems.\n- Sound effect libraries with variations of each sound.\n- Licenses that allow commercial use and streaming."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Tracks that don't loop cleanly.\n- Effects with long tails that muddy fast moments.\n- Mixing many libraries with different loudness."
+				}
+			]
 		}
 	]
 }

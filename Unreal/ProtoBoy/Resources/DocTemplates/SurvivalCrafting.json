@@ -22,167 +22,531 @@
 			"rulesOut": "building that's only cosmetic"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "A survival game set in a frozen wilderness where the player scavenges, crafts and builds a shelter to outlast the winter."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Venture out to gather.\n2. Survive the cold and the creatures.\n3. Return to base and craft.\n4. Build up the base and prepare for night."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Story campaign.\n- Competitive multiplayer."
+		}
+	],
 	"docs": [
 		{
 			"id": "survival-needs",
 			"title": "Survival Needs",
 			"kind": "design",
 			"parent": "",
-			"summary": "Health, hunger, thirst, temperature and how they pressure the player."
+			"summary": "Health, hunger, thirst, temperature and how they pressure the player.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can keep my character fed, warm and healthy.\n- As a player, I can see which need is most urgent."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Need meters that flash when low."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Needs drain slowly but never stop.\n- No need kills instantly."
+				}
+			]
 		},
 		{
 			"id": "needs-system",
 			"title": "Needs System",
 			"kind": "tech",
 			"parent": "survival-needs",
-			"summary": "How needs tick, interact and are saved."
+			"summary": "How needs tick, interact and are saved.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Each need is a value that drains over time; modifiers (shelter, clothing, weather) change the drain rate."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UNeedsComponent`: need values and drain\n- `UNeedModifier`: a change to drain rates"
+				},
+				{
+					"heading": "Data",
+					"text": "- Drain rates in a data asset."
+				}
+			]
 		},
 		{
 			"id": "gathering",
 			"title": "Gathering",
 			"kind": "design",
 			"parent": "",
-			"summary": "Collecting resources from the world: tools, nodes and yields."
+			"summary": "Collecting resources from the world: tools, nodes and yields.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can gather resources with tools.\n- As a player, I can see how much a node has left."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Nodes that visibly deplete."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Better tools gather faster.\n- Nodes regrow after a few days."
+				}
+			]
 		},
 		{
 			"id": "resource-nodes",
 			"title": "Resource Nodes",
 			"kind": "content",
 			"parent": "gathering",
-			"summary": "Trees, rocks and other node meshes, with their depleted states."
+			"summary": "Trees, rocks and other node meshes, with their depleted states.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Trees | Mesh | Placeholder | To source |\n| Rocks and ore | Mesh | Placeholder | To source |\n| Depleted states | Mesh | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Resources stand out from the landscape by shape and color."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Survival resource packs with depleted states."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Resources that blend into the terrain."
+				}
+			]
 		},
 		{
 			"id": "crafting",
 			"title": "Crafting",
 			"kind": "design",
 			"parent": "",
-			"summary": "Turning resources into tools, gear and supplies."
+			"summary": "Turning resources into tools, gear and supplies.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can combine materials into items.\n- As a player, I can see which recipes I can make right now.\n- As a player, I can queue several crafts."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A recipe list with missing materials highlighted.\n- A progress bar for each craft."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Some recipes need a station.\n- Crafting can't be cancelled after it finishes."
+				}
+			]
 		},
 		{
 			"id": "recipes",
 			"title": "Recipes",
 			"kind": "design",
 			"parent": "crafting",
-			"summary": "What can be made, and how the player discovers it."
+			"summary": "What can be made, and how the player discovers it.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can discover recipes by finding materials.\n- As a player, I can see what a recipe needs."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- New recipes announced when unlocked."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Recipes unlock when the player picks up a needed material."
+				}
+			]
 		},
 		{
 			"id": "crafting-system",
 			"title": "Crafting System",
 			"kind": "tech",
 			"parent": "crafting",
-			"summary": "Recipe data, stations and crafting queues."
+			"summary": "Recipe data, stations and crafting queues.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Recipes are data assets; crafting stations have queues that consume inputs and produce outputs over time."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UCraftingComponent`: queues and timers\n- `URecipeData`: inputs, outputs, station and time"
+				},
+				{
+					"heading": "Data",
+					"text": "- Recipes as data assets."
+				}
+			]
 		},
 		{
 			"id": "item-assets",
 			"title": "Item Assets",
 			"kind": "content",
 			"parent": "crafting",
-			"summary": "Tool, gear and supply meshes and icons."
+			"summary": "Tool, gear and supply meshes and icons.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Item meshes | Mesh | Placeholder | To source |\n| Item icons | UI | Placeholder | To source |\n| Item data | Data | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Items read clearly at icon size; rarity is shown through color and glow, not detail."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Item packs that include both meshes and matching icons.\n- Icon packs with a consistent background and lighting."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Icons rendered with different camera angles.\n- Mixing realistic and cartoon items."
+				}
+			]
 		},
 		{
 			"id": "building",
 			"title": "Building",
 			"kind": "design",
 			"parent": "",
-			"summary": "Placing structures and bases: snapping, stability and upgrades."
+			"summary": "Placing structures and bases: snapping, stability and upgrades.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can place structures where I want.\n- As a player, I can see if a placement is valid before confirming.\n- As a player, I can upgrade or remove what I built."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A ghost preview, green when valid and red when not.\n- Costs shown before placing."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Structures snap to a grid.\n- Removing returns part of the cost."
+				}
+			]
 		},
 		{
 			"id": "building-system",
 			"title": "Building System",
 			"kind": "tech",
 			"parent": "building",
-			"summary": "Snapping, stability checks and how bases are stored."
+			"summary": "Snapping, stability checks and how bases are stored.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Building pieces snap to sockets; a stability check walks from the foundation to each piece."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UBuildingPieceComponent`: sockets and stability\n- `UBuildingSubsystem`: saves and loads bases"
+				},
+				{
+					"heading": "Data",
+					"text": "- Piece definitions and costs in data assets."
+				}
+			]
 		},
 		{
 			"id": "building-pieces",
 			"title": "Building Pieces",
 			"kind": "content",
 			"parent": "building",
-			"summary": "Walls, floors, roofs and furniture in each material tier."
+			"summary": "Walls, floors, roofs and furniture in each material tier.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Walls, floors and roofs | Mesh | Placeholder | To source |\n| Doors and windows | Mesh | Placeholder | To source |\n| Furniture | Mesh | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Rough, hand-built look; each material tier (wood, stone, metal) reads clearly."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Modular survival building packs with several material tiers."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Pieces that don't snap on a shared grid."
+				}
+			]
 		},
 		{
 			"id": "world",
 			"title": "World",
 			"kind": "design",
 			"parent": "",
-			"summary": "The environment the player survives in, and how it changes."
+			"summary": "The environment the player survives in, and how it changes.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can explore distinct regions.\n- As a player, I can find my way back to places I've been.\n- As a player, I can notice that the world reacts to what I've done."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Each region has its own look and landmarks.\n- A map that fills in as I explore."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Regions open up as the story progresses.\n- Fast travel only between places I've visited."
+				}
+			]
 		},
 		{
 			"id": "world-generation",
 			"title": "World Generation",
 			"kind": "tech",
 			"parent": "world",
-			"summary": "Procedural or authored terrain, biomes and resource placement."
+			"summary": "Procedural or authored terrain, biomes and resource placement.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "The world is generated from a seed with biomes placed by temperature and moisture maps."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UWorldGenerator`: terrain, biomes and points of interest"
+				},
+				{
+					"heading": "Data",
+					"text": "- Biome rules in data assets."
+				}
+			]
 		},
 		{
 			"id": "day-and-night",
 			"title": "Day and Night",
 			"kind": "tech",
 			"parent": "world",
-			"summary": "The day/night cycle and weather, and how they change danger."
+			"summary": "The day/night cycle and weather, and how they change danger.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "A time-of-day system drives the sun, sky and temperature; weather is chosen from a weighted list each day."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UTimeOfDaySubsystem`: clock, sun and temperature\n- `UWeatherSubsystem`: weather states and transitions"
+				},
+				{
+					"heading": "Data",
+					"text": "- Day length and weather weights in data assets."
+				}
+			]
 		},
 		{
 			"id": "biomes",
 			"title": "Biomes",
 			"kind": "content",
 			"parent": "world",
-			"summary": "Landscape materials, foliage and props for each biome."
+			"summary": "Landscape materials, foliage and props for each biome.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Snow landscape | Material | Placeholder | To source |\n| Pine forest foliage | Mesh | Placeholder | To source |\n| Frozen lake props | Mesh | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Cold, desaturated landscapes with warm light from fires and shelters."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Winter environment packs.\n- Foliage with snow variants."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Lush, green foliage."
+				}
+			]
 		},
 		{
 			"id": "threats",
 			"title": "Threats",
 			"kind": "design",
 			"parent": "",
-			"summary": "Creatures and other dangers."
+			"summary": "Creatures and other dangers.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can face creatures that hunt at night.\n- As a player, I can hide or fight."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Sounds that warn of a creature nearby."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Creatures are more dangerous at night.\n- Fire keeps most creatures away."
+				}
+			]
 		},
 		{
 			"id": "creature-ai",
 			"title": "Creature AI",
 			"kind": "tech",
 			"parent": "threats",
-			"summary": "How creatures perceive, hunt and flee."
+			"summary": "How creatures perceive, hunt and flee.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Creatures use behavior trees with hunt, flee and wander branches; perception includes smell (players near food)."
+				},
+				{
+					"heading": "Code",
+					"text": "- `ACreatureController`: behavior tree and perception"
+				},
+				{
+					"heading": "Data",
+					"text": "- Creature stats in data assets."
+				}
+			]
 		},
 		{
 			"id": "creatures",
 			"title": "Creatures",
 			"kind": "content",
 			"parent": "threats",
-			"summary": "Creature meshes, animations and sounds."
+			"summary": "Creature meshes, animations and sounds.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Wolves | Mesh | Placeholder | To source |\n| Creature animations | Animation | Placeholder | To source |\n| Creature sounds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Believable animals with a slightly menacing edge."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Animal packs with hunting animations."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Cartoon creatures."
+				}
+			]
 		},
 		{
 			"id": "ui",
 			"title": "UI",
 			"kind": "design",
 			"parent": "",
-			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start, pause and quit from clear menus.\n- As a player, I can change graphics, audio and control settings.\n- As a player, I can see the information I need during play without it covering the action."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A title screen, pause menu and settings screens.\n- A HUD with only what matters right now.\n- Button prompts that match my input device."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every screen can be used with a gamepad as well as mouse and keyboard.\n- Pausing stops gameplay time.\n- Settings save immediately."
+				}
+			]
 		},
 		{
 			"id": "ui-framework",
 			"title": "UI Framework",
 			"kind": "tech",
 			"parent": "ui",
-			"summary": "How screens and widgets are built, opened, navigated and fed data."
+			"summary": "How screens and widgets are built, opened, navigated and fed data.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Screens are UMG widgets pushed onto a stack by a UI manager subsystem. The top screen gets input; popping it returns to the one below. Gameplay talks to the HUD through events, never directly."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProjectUISubsystem`: owns the screen stack and opens and closes screens\n- `UScreenWidget`: base class for every full screen (menus, settings)\n- `UHUDWidget`: the in-game HUD; listens to gameplay events"
+				},
+				{
+					"heading": "Data",
+					"text": "- Screen classes and their input modes in a data asset.\n- Settings in the game user settings, saved per user."
+				}
+			]
 		},
 		{
 			"id": "ui-art",
 			"title": "UI Art",
 			"kind": "content",
 			"parent": "ui",
-			"summary": "Icons, fonts, panels and widget skins."
+			"summary": "Icons, fonts, panels and widget skins.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Icons | UI | Placeholder | To source |\n| Fonts (headings, body) | UI | Placeholder | To source |\n| Panel and button skins | UI | Placeholder | To source |\n| Input prompt icons | UI | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Clean and readable first: flat shapes, high contrast, one accent color. Icons share one line weight and perspective."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- UI kits with matching icons, buttons and panels.\n- Fonts licensed for games, with the character sets we localize to.\n- Input prompt packs covering keyboard, Xbox and PlayStation."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing icon packs with different styles.\n- Ornate frames that crowd the screen.\n- Fonts that are hard to read at small sizes."
+				}
+			]
 		},
 		{
 			"id": "music-and-sound",
 			"title": "Music and Sound",
 			"kind": "content",
 			"parent": "",
-			"summary": "Music, sound effects and ambience, and where each is used."
+			"summary": "Music, sound effects and ambience, and where each is used.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main theme | Music | Placeholder | To source |\n| Gameplay loops | Music | Placeholder | To source |\n| UI sounds (click, back, confirm) | Sound | Placeholder | To source |\n| Ambience beds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Music sets the mood of each area; sound effects are short and punchy so they read over the music."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Music packs with loopable stems.\n- Sound effect libraries with variations of each sound.\n- Licenses that allow commercial use and streaming."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Tracks that don't loop cleanly.\n- Effects with long tails that muddy fast moments.\n- Mixing many libraries with different loudness."
+				}
+			]
 		},
 		{
 			"id": "save-and-load",
 			"title": "Save and Load",
 			"kind": "tech",
 			"parent": "",
-			"summary": "Saving the world, bases and inventory, and keeping saves compatible."
+			"summary": "Saving the world, bases and inventory, and keeping saves compatible.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "A save game object holds everything that persists. Systems register what they need saved; saving serializes it to a slot, loading restores it before the level starts. Saves carry a version number so old saves can be migrated."
+				},
+				{
+					"heading": "Code",
+					"text": "- `USaveSubsystem`: saves and loads slots, runs migrations\n- `UProjectSaveGame`: the saved data, with a version field\n- `ISaveable`: interface for systems that write and read their part"
+				},
+				{
+					"heading": "Data",
+					"text": "- Save slots in the platform's save location.\n- A version number per save, bumped on every breaking change."
+				}
+			]
 		}
 	]
 }

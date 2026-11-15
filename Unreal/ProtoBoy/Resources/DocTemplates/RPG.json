@@ -22,202 +22,636 @@
 			"rulesOut": "choices that lead to the same outcome"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "A party-based fantasy RPG where the player builds a character their way and shapes the fate of a fractured kingdom."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Take a quest.\n2. Explore a region and fight what's in it.\n3. Earn experience and loot.\n4. Level up, change gear, and pick the next quest."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Multiplayer.\n- Real-time twitch combat.\n- Crafting as a main activity."
+		}
+	],
 	"docs": [
 		{
 			"id": "character",
 			"title": "Character",
 			"kind": "design",
 			"parent": "",
-			"summary": "Who the player is and how they grow."
+			"summary": "Who the player is and how they grow.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can create a character and choose their look and class.\n- As a player, I can see my character's stats and gear."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A character screen with stats, gear and abilities."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Appearance can be changed later; class can't."
+				}
+			]
 		},
 		{
 			"id": "progression",
 			"title": "Progression",
 			"kind": "design",
 			"parent": "character",
-			"summary": "Experience, leveling and the pacing of power growth."
+			"summary": "Experience, leveling and the pacing of power growth.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can gain experience and level up.\n- As a player, I can choose how to spend skill points."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- An experience bar and a level-up moment."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Leveling slows down after the main story's level range.\n- Points can be refunded for a cost."
+				}
+			]
 		},
 		{
 			"id": "classes-and-abilities",
 			"title": "Classes and Abilities",
 			"kind": "design",
 			"parent": "character",
-			"summary": "Classes, skills and ability trees that define how characters play."
+			"summary": "Classes, skills and ability trees that define how characters play.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can pick a class with its own playstyle.\n- As a player, I can unlock and upgrade abilities in a tree."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- An ability tree with locked, available and learned abilities."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Each class has three ability branches.\n- Abilities have cooldowns, not mana."
+				}
+			]
 		},
 		{
 			"id": "stats",
 			"title": "Stats",
 			"kind": "tech",
 			"parent": "character",
-			"summary": "Attributes and derived values, and how they feed into every other system."
+			"summary": "Attributes and derived values, and how they feed into every other system.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Each character has base attributes; derived stats are calculated from attributes, gear and active effects whenever one changes."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UStatsComponent`: attributes, derived stats and modifiers\n- `FStatModifier`: an additive or multiplicative change from gear or effects"
+				},
+				{
+					"heading": "Data",
+					"text": "- Attribute definitions and formulas in a data asset.\n- Level curves in a curve table."
+				}
+			]
 		},
 		{
 			"id": "ability-system",
 			"title": "Ability System",
 			"kind": "tech",
 			"parent": "character",
-			"summary": "How abilities, cooldowns and effects are implemented."
+			"summary": "How abilities, cooldowns and effects are implemented.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Abilities are built on the Gameplay Ability System: each ability is a gameplay ability, effects change attributes, and tags block abilities from overlapping."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProjectAbilitySystemComponent`: on every character\n- `UProjectGameplayAbility`: base class for abilities\n- `UProjectAttributeSet`: health, mana and combat attributes"
+				},
+				{
+					"heading": "Data",
+					"text": "- Ability and effect assets per class.\n- Gameplay tags for states and blocks."
+				}
+			]
 		},
 		{
 			"id": "character-models",
 			"title": "Character Models",
 			"kind": "content",
 			"parent": "character",
-			"summary": "Player and companion meshes, rigs, animations and customization parts."
+			"summary": "Player and companion meshes, rigs, animations and customization parts.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Player body meshes | Mesh | Placeholder | To source |\n| Armor sets | Mesh | Placeholder | To source |\n| Hair and faces | Mesh | Placeholder | To source |\n| Combat animations | Animation | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Grounded fantasy: worn materials, muted colors, gear that shows its history."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Modular fantasy character packs on one skeleton.\n- Armor sets that cover the same body parts.\n- Animation packs for sword, bow and magic."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Sci-fi or modern clothing.\n- Packs on different skeletons.\n- Overly glossy materials."
+				}
+			]
 		},
 		{
 			"id": "combat",
 			"title": "Combat",
 			"kind": "design",
 			"parent": "",
-			"summary": "How fights play out: turns or real time, targeting, damage and status effects."
+			"summary": "How fights play out: turns or real time, targeting, damage and status effects.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can attack, dodge and block with simple inputs.\n- As a player, I can read what an enemy is about to do.\n- As a player, I can feel each hit land."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Wind-up animations before enemy attacks.\n- Hit flashes, sounds and a short pause on impact."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every enemy attack can be avoided.\n- Damage numbers stay small enough to reason about."
+				}
+			]
 		},
 		{
 			"id": "combat-code",
 			"title": "Combat Code",
 			"kind": "tech",
 			"parent": "combat",
-			"summary": "Turn order or real-time loop, damage calculation and status effects."
+			"summary": "Turn order or real-time loop, damage calculation and status effects.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Attacks spawn hitboxes for a few frames; overlaps send damage events to anything with a health component. Status effects are applied as timed modifiers."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UCombatComponent`: starts attacks and spawns hitboxes\n- `UHealthComponent`: takes damage, fires death events\n- `UStatusEffect`: a timed modifier (burn, slow, stun)"
+				},
+				{
+					"heading": "Data",
+					"text": "- Attack data (damage, frames, hitbox size) in data assets.\n- Status effects in a DataTable."
+				}
+			]
 		},
 		{
 			"id": "combat-effects",
 			"title": "Combat Effects",
 			"kind": "content",
 			"parent": "combat",
-			"summary": "Spell and hit VFX, combat sounds and animations."
+			"summary": "Spell and hit VFX, combat sounds and animations.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Hit sparks | VFX | Placeholder | To source |\n| Impact sounds | Sound | Placeholder | To source |\n| Camera shakes | Data | Placeholder | To source |\n| Death effects | VFX | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Short, bright and readable: effects confirm a hit without hiding the next threat."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Niagara VFX packs with hits, slashes and explosions.\n- Impact sound libraries with light, medium and heavy variations."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Long-lasting particles that clutter the screen.\n- Effects in a different style from the characters."
+				}
+			]
 		},
 		{
 			"id": "items",
 			"title": "Items",
 			"kind": "design",
 			"parent": "",
-			"summary": "Everything the player can own, carry and use, and where it comes from."
+			"summary": "Everything the player can own, carry and use, and where it comes from.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can pick up, equip and use items.\n- As a player, I can compare an item with what I have.\n- As a player, I can drop or sell items I don't need."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Item rarity shown by color.\n- Stat comparisons when hovering an item."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Inventory has a weight or slot limit.\n- Quest items can't be dropped."
+				}
+			]
 		},
 		{
 			"id": "equipment",
 			"title": "Equipment",
 			"kind": "design",
 			"parent": "items",
-			"summary": "Gear slots and how equipment changes the character."
+			"summary": "Gear slots and how equipment changes the character.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can equip weapons, armor and accessories.\n- As a player, I can see how gear changes my stats."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Gear visible on the character.\n- Green and red stat changes when comparing."
+				},
+				{
+					"heading": "Rules",
+					"text": "- One item per slot.\n- Some gear needs a minimum level."
+				}
+			]
 		},
 		{
 			"id": "inventory",
 			"title": "Inventory",
 			"kind": "tech",
 			"parent": "items",
-			"summary": "How items are stored, sorted and limited, and the item data format."
+			"summary": "How items are stored, sorted and limited, and the item data format.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "An inventory component holds item instances in slots; item definitions are data assets, and instances store only what changes (count, durability)."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UInventoryComponent`: slots, add, remove and move\n- `UItemDefinition`: data asset per item\n- `FItemInstance`: count, durability and rolls"
+				},
+				{
+					"heading": "Data",
+					"text": "- Item definitions as data assets.\n- Inventory saved as a list of item instances."
+				}
+			]
 		},
 		{
 			"id": "item-assets",
 			"title": "Item Assets",
 			"kind": "content",
 			"parent": "items",
-			"summary": "Item meshes, icons and the item data tables."
+			"summary": "Item meshes, icons and the item data tables.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Item meshes | Mesh | Placeholder | To source |\n| Item icons | UI | Placeholder | To source |\n| Item data | Data | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Items read clearly at icon size; rarity is shown through color and glow, not detail."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Item packs that include both meshes and matching icons.\n- Icon packs with a consistent background and lighting."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Icons rendered with different camera angles.\n- Mixing realistic and cartoon items."
+				}
+			]
 		},
 		{
 			"id": "quests",
 			"title": "Quests",
 			"kind": "design",
 			"parent": "",
-			"summary": "The story and the tasks that move the player through it."
+			"summary": "The story and the tasks that move the player through it.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can accept quests from characters.\n- As a player, I can track several quests at once.\n- As a player, I can see where to go next."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A journal with active and completed quests.\n- Map markers for tracked objectives."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Main quests can't be abandoned.\n- Side quests can be done in any order."
+				}
+			]
 		},
 		{
 			"id": "dialogue",
 			"title": "Dialogue",
 			"kind": "design",
 			"parent": "quests",
-			"summary": "Conversations and choices, and how the player sees them."
+			"summary": "Conversations and choices, and how the player sees them.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can talk to characters and choose what to say.\n- As a player, I can see who's speaking.\n- As a player, I can review what was said."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Subtitles with the speaker's name.\n- Choices that hint at their tone."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Important choices can't be skipped.\n- Dialogue can be advanced but never auto-skips choices."
+				}
+			]
 		},
 		{
 			"id": "quest-system",
 			"title": "Quest System",
 			"kind": "tech",
 			"parent": "quests",
-			"summary": "Quest states, objectives, triggers and the journal."
+			"summary": "Quest states, objectives, triggers and the journal.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Quests are data assets with ordered objectives. Objectives listen for gameplay events (kill, collect, talk) and advance when their conditions are met."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UQuestSubsystem`: active quests and their states\n- `UQuestDefinition`: data asset with objectives and rewards\n- `UQuestObjective`: listens for one kind of event"
+				},
+				{
+					"heading": "Data",
+					"text": "- Quest definitions as data assets.\n- Quest states saved per quest."
+				}
+			]
 		},
 		{
 			"id": "story-assets",
 			"title": "Story Assets",
 			"kind": "content",
 			"parent": "quests",
-			"summary": "Dialogue scripts, voice lines and cutscenes."
+			"summary": "Dialogue scripts, voice lines and cutscenes.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Dialogue scripts | Data | Placeholder | To source |\n| Voice lines | Sound | Placeholder | To source |\n| Cutscenes | Animation | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Dialogue is warm and grounded; voices match the characters' ages and backgrounds."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Voice actors with a range of character voices.\n- Cinematic animation packs for conversations."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Modern slang in a fantasy setting.\n- Text-to-speech placeholders shipping in the final game."
+				}
+			]
 		},
 		{
 			"id": "world",
 			"title": "World",
 			"kind": "design",
 			"parent": "",
-			"summary": "The places the player explores and who lives there."
+			"summary": "The places the player explores and who lives there.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can explore distinct regions.\n- As a player, I can find my way back to places I've been.\n- As a player, I can notice that the world reacts to what I've done."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Each region has its own look and landmarks.\n- A map that fills in as I explore."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Regions open up as the story progresses.\n- Fast travel only between places I've visited."
+				}
+			]
 		},
 		{
 			"id": "npcs",
 			"title": "NPCs",
 			"kind": "design",
 			"parent": "world",
-			"summary": "Non-player characters: schedules, roles and interactions."
+			"summary": "Non-player characters: schedules, roles and interactions.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can talk to townsfolk.\n- As a player, I can trade with merchants.\n- As a player, I can notice NPCs going about their day."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- NPCs with names and roles shown on hover."
+				},
+				{
+					"heading": "Rules",
+					"text": "- NPCs follow daily schedules.\n- Important NPCs can't be killed."
+				}
+			]
 		},
 		{
 			"id": "regions",
 			"title": "Regions",
 			"kind": "content",
 			"parent": "world",
-			"summary": "Environment kits, props and landscapes for each region."
+			"summary": "Environment kits, props and landscapes for each region.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Forest kit | Mesh | Placeholder | To source |\n| Town kit | Mesh | Placeholder | To source |\n| Landscape materials | Material | Placeholder | To source |\n| Foliage | Mesh | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Each region has its own palette and landmark shapes, on a shared grounded-fantasy material base."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Fantasy environment packs with towns, forests and ruins.\n- Foliage packs that work with the engine's foliage tools."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Stylized cartoon packs.\n- Regions so similar the player can't tell them apart."
+				}
+			]
 		},
 		{
 			"id": "economy",
 			"title": "Economy",
 			"kind": "design",
 			"parent": "",
-			"summary": "Currencies, shops and crafting, and how they balance."
+			"summary": "Currencies, shops and crafting, and how they balance.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can earn gold from quests and loot.\n- As a player, I can spend it on gear and services."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Gold always visible in menus."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Prices scale with the region.\n- Selling returns a quarter of an item's value."
+				}
+			]
 		},
 		{
 			"id": "shops",
 			"title": "Shops",
 			"kind": "design",
 			"parent": "economy",
-			"summary": "Vendors, prices and buy-back rules."
+			"summary": "Vendors, prices and buy-back rules.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can buy and sell items at shops.\n- As a player, I can buy back something I sold by mistake."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A shop screen with my inventory beside the shop's."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Shops restock daily.\n- Buy-back keeps the last ten sold items."
+				}
+			]
 		},
 		{
 			"id": "crafting",
 			"title": "Crafting",
 			"kind": "design",
 			"parent": "economy",
-			"summary": "Turning materials into items: recipes and stations."
+			"summary": "Turning materials into items: recipes and stations.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can combine materials into items.\n- As a player, I can see which recipes I can make right now.\n- As a player, I can queue several crafts."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A recipe list with missing materials highlighted.\n- A progress bar for each craft."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Some recipes need a station.\n- Crafting can't be cancelled after it finishes."
+				}
+			]
 		},
 		{
 			"id": "ui",
 			"title": "UI",
 			"kind": "design",
 			"parent": "",
-			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start, pause and quit from clear menus.\n- As a player, I can change graphics, audio and control settings.\n- As a player, I can see the information I need during play without it covering the action."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A title screen, pause menu and settings screens.\n- A HUD with only what matters right now.\n- Button prompts that match my input device."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every screen can be used with a gamepad as well as mouse and keyboard.\n- Pausing stops gameplay time.\n- Settings save immediately."
+				}
+			]
 		},
 		{
 			"id": "ui-framework",
 			"title": "UI Framework",
 			"kind": "tech",
 			"parent": "ui",
-			"summary": "How screens and widgets are built, opened, navigated and fed data."
+			"summary": "How screens and widgets are built, opened, navigated and fed data.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Screens are UMG widgets pushed onto a stack by a UI manager subsystem. The top screen gets input; popping it returns to the one below. Gameplay talks to the HUD through events, never directly."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProjectUISubsystem`: owns the screen stack and opens and closes screens\n- `UScreenWidget`: base class for every full screen (menus, settings)\n- `UHUDWidget`: the in-game HUD; listens to gameplay events"
+				},
+				{
+					"heading": "Data",
+					"text": "- Screen classes and their input modes in a data asset.\n- Settings in the game user settings, saved per user."
+				}
+			]
 		},
 		{
 			"id": "ui-art",
 			"title": "UI Art",
 			"kind": "content",
 			"parent": "ui",
-			"summary": "Icons, fonts, panels and widget skins."
+			"summary": "Icons, fonts, panels and widget skins.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Icons | UI | Placeholder | To source |\n| Fonts (headings, body) | UI | Placeholder | To source |\n| Panel and button skins | UI | Placeholder | To source |\n| Input prompt icons | UI | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Clean and readable first: flat shapes, high contrast, one accent color. Icons share one line weight and perspective."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- UI kits with matching icons, buttons and panels.\n- Fonts licensed for games, with the character sets we localize to.\n- Input prompt packs covering keyboard, Xbox and PlayStation."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing icon packs with different styles.\n- Ornate frames that crowd the screen.\n- Fonts that are hard to read at small sizes."
+				}
+			]
 		},
 		{
 			"id": "music-and-sound",
 			"title": "Music and Sound",
 			"kind": "content",
 			"parent": "",
-			"summary": "Music, sound effects and ambience, and where each is used."
+			"summary": "Music, sound effects and ambience, and where each is used.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main theme | Music | Placeholder | To source |\n| Gameplay loops | Music | Placeholder | To source |\n| UI sounds (click, back, confirm) | Sound | Placeholder | To source |\n| Ambience beds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Music sets the mood of each area; sound effects are short and punchy so they read over the music."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Music packs with loopable stems.\n- Sound effect libraries with variations of each sound.\n- Licenses that allow commercial use and streaming."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Tracks that don't loop cleanly.\n- Effects with long tails that muddy fast moments.\n- Mixing many libraries with different loudness."
+				}
+			]
 		},
 		{
 			"id": "save-and-load",
 			"title": "Save and Load",
 			"kind": "tech",
 			"parent": "",
-			"summary": "What persists between sessions, how it's stored, and how saves stay compatible."
+			"summary": "What persists between sessions, how it's stored, and how saves stay compatible.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "A save game object holds everything that persists. Systems register what they need saved; saving serializes it to a slot, loading restores it before the level starts. Saves carry a version number so old saves can be migrated."
+				},
+				{
+					"heading": "Code",
+					"text": "- `USaveSubsystem`: saves and loads slots, runs migrations\n- `UProjectSaveGame`: the saved data, with a version field\n- `ISaveable`: interface for systems that write and read their part"
+				},
+				{
+					"heading": "Data",
+					"text": "- Save slots in the platform's save location.\n- A version number per save, bumped on every breaking change."
+				}
+			]
 		}
 	]
 }

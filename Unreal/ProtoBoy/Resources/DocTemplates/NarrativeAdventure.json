@@ -22,132 +22,422 @@
 			"rulesOut": "filler scenes, fetch quests"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "A story-driven adventure where the player's choices decide who survives a long night in a small town."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Explore a scene.\n2. Talk to characters and examine clues.\n3. Make a choice.\n4. See its consequences in the next scene."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Combat.\n- Grinding or stats."
+		}
+	],
 	"docs": [
 		{
 			"id": "story",
 			"title": "Story",
 			"kind": "design",
 			"parent": "",
-			"summary": "The narrative and how the player's choices shape it."
+			"summary": "The narrative and how the player's choices shape it.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can follow a story that changes with my choices.\n- As a player, I can replay to see other outcomes."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A chapter summary after each chapter."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every chapter ends with a major choice."
+				}
+			]
 		},
 		{
 			"id": "choices-and-consequences",
 			"title": "Choices and Consequences",
 			"kind": "design",
 			"parent": "story",
-			"summary": "Which choices matter, and how and when they pay off."
+			"summary": "Which choices matter, and how and when they pay off.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can make choices that matter later.\n- As a player, I can see a hint that a choice was remembered."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A small notification when a choice will have consequences."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Consequences show up within two chapters."
+				}
+			]
 		},
 		{
 			"id": "story-state",
 			"title": "Story State",
 			"kind": "tech",
 			"parent": "story",
-			"summary": "Story flags, branching logic, and keeping saves valid as the story changes."
+			"summary": "Story flags, branching logic, and keeping saves valid as the story changes.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Story flags are gameplay tags stored in a story subsystem. Dialogue, quests and scenes check flags to decide what happens."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UStorySubsystem`: story flags and chapter state"
+				},
+				{
+					"heading": "Data",
+					"text": "- Story flags saved with the game."
+				}
+			]
 		},
 		{
 			"id": "script",
 			"title": "Script",
 			"kind": "content",
 			"parent": "story",
-			"summary": "The written story: scenes, branches and dialogue lines."
+			"summary": "The written story: scenes, branches and dialogue lines.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Chapter scripts | Data | Placeholder | To source |\n| Branch outlines | Data | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Grounded, small-town dialogue; characters speak in their own voices."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Writers familiar with branching narrative tools."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Exposition dumps."
+				}
+			]
 		},
 		{
 			"id": "dialogue",
 			"title": "Dialogue",
 			"kind": "design",
 			"parent": "",
-			"summary": "Conversations: how they're presented and chosen from."
+			"summary": "Conversations: how they're presented and chosen from.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can talk to characters and choose what to say.\n- As a player, I can see who's speaking.\n- As a player, I can review what was said."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Subtitles with the speaker's name.\n- Choices that hint at their tone."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Important choices can't be skipped.\n- Dialogue can be advanced but never auto-skips choices."
+				}
+			]
 		},
 		{
 			"id": "dialogue-system",
 			"title": "Dialogue System",
 			"kind": "tech",
 			"parent": "dialogue",
-			"summary": "How dialogue is authored, triggered and displayed."
+			"summary": "How dialogue is authored, triggered and displayed.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Dialogue is authored as graphs; nodes are lines and choices, with conditions on story flags."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UDialogueGraph`: an authored conversation\n- `UDialogueComponent`: plays a dialogue on an actor"
+				},
+				{
+					"heading": "Data",
+					"text": "- Dialogue graphs as assets.\n- Localization strings per line."
+				}
+			]
 		},
 		{
 			"id": "voice-over",
 			"title": "Voice Over",
 			"kind": "content",
 			"parent": "dialogue",
-			"summary": "Recorded lines, by character and scene."
+			"summary": "Recorded lines, by character and scene.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Recorded lines per character | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Natural, understated performances."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Voice actors with experience in games.\n- Recording at a consistent quality."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Overacted performances."
+				}
+			]
 		},
 		{
 			"id": "exploration",
 			"title": "Exploration",
 			"kind": "design",
 			"parent": "",
-			"summary": "Moving through scenes and examining or using things in them."
+			"summary": "Moving through scenes and examining or using things in them.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can walk through scenes and examine objects.\n- As a player, I can find clues that open new options."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Interactable objects highlight when I look at them."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Nothing important is hidden behind pixel hunting."
+				}
+			]
 		},
 		{
 			"id": "interaction-system",
 			"title": "Interaction System",
 			"kind": "tech",
 			"parent": "exploration",
-			"summary": "Interactables, prompts and examine views."
+			"summary": "Interactables, prompts and examine views.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "The player traces for interactables; the closest one shows a prompt, and interacting runs its action."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UInteractionComponent`: finds interactables and shows prompts\n- `IInteractable`: interface for anything that can be used"
+				},
+				{
+					"heading": "Data",
+					"text": "- Interaction ranges and prompts per object."
+				}
+			]
 		},
 		{
 			"id": "environments",
 			"title": "Environments",
 			"kind": "content",
 			"parent": "exploration",
-			"summary": "Scene art, props and lighting for each location."
+			"summary": "Scene art, props and lighting for each location.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Town scenes | Mesh | Placeholder | To source |\n| Interior props | Mesh | Placeholder | To source |\n| Lighting setups | Lighting | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Moody, lived-in spaces with warm interiors and cold exteriors."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Small-town environment packs.\n- Interior prop packs."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Clean, untouched spaces."
+				}
+			]
 		},
 		{
 			"id": "characters",
 			"title": "Characters",
 			"kind": "design",
 			"parent": "",
-			"summary": "The cast: who they are, how they change, and how the player meets them."
+			"summary": "The cast: who they are, how they change, and how the player meets them.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can meet a cast with distinct personalities.\n- As a player, I can see characters change through the story."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Character portraits in dialogue."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every main character has an arc."
+				}
+			]
 		},
 		{
 			"id": "character-assets",
 			"title": "Character Assets",
 			"kind": "content",
 			"parent": "characters",
-			"summary": "Character meshes, faces, rigs and animations."
+			"summary": "Character meshes, faces, rigs and animations.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main cast meshes | Mesh | Placeholder | To source |\n| Facial rigs | Rig | Placeholder | To source |\n| Conversation animations | Animation | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Expressive faces and natural body language."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Character packs with facial rigs or MetaHuman-compatible heads."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Characters without facial animation support."
+				}
+			]
 		},
 		{
 			"id": "cinematics",
 			"title": "Cinematics",
 			"kind": "design",
 			"parent": "",
-			"summary": "Cutscenes, camera work and staging."
+			"summary": "Cutscenes, camera work and staging.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can watch short scenes at key moments.\n- As a player, I can skip scenes I've already seen."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Letterboxing during cutscenes."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Cutscenes are under two minutes."
+				}
+			]
 		},
 		{
 			"id": "sequencer-setup",
 			"title": "Sequencer Setup",
 			"kind": "tech",
 			"parent": "cinematics",
-			"summary": "How cinematics are built and triggered with Sequencer."
+			"summary": "How cinematics are built and triggered with Sequencer.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Cinematics are Level Sequences triggered by story events; the player camera blends into the sequence and back."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UCinematicSubsystem`: plays sequences and handles skipping"
+				},
+				{
+					"heading": "Data",
+					"text": "- One Level Sequence per cutscene."
+				}
+			]
 		},
 		{
 			"id": "ui",
 			"title": "UI",
 			"kind": "design",
 			"parent": "",
-			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start, pause and quit from clear menus.\n- As a player, I can change graphics, audio and control settings.\n- As a player, I can see the information I need during play without it covering the action."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A title screen, pause menu and settings screens.\n- A HUD with only what matters right now.\n- Button prompts that match my input device."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every screen can be used with a gamepad as well as mouse and keyboard.\n- Pausing stops gameplay time.\n- Settings save immediately."
+				}
+			]
 		},
 		{
 			"id": "ui-framework",
 			"title": "UI Framework",
 			"kind": "tech",
 			"parent": "ui",
-			"summary": "How screens and widgets are built, opened, navigated and fed data."
+			"summary": "How screens and widgets are built, opened, navigated and fed data.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Screens are UMG widgets pushed onto a stack by a UI manager subsystem. The top screen gets input; popping it returns to the one below. Gameplay talks to the HUD through events, never directly."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProjectUISubsystem`: owns the screen stack and opens and closes screens\n- `UScreenWidget`: base class for every full screen (menus, settings)\n- `UHUDWidget`: the in-game HUD; listens to gameplay events"
+				},
+				{
+					"heading": "Data",
+					"text": "- Screen classes and their input modes in a data asset.\n- Settings in the game user settings, saved per user."
+				}
+			]
 		},
 		{
 			"id": "ui-art",
 			"title": "UI Art",
 			"kind": "content",
 			"parent": "ui",
-			"summary": "Icons, fonts, panels and widget skins."
+			"summary": "Icons, fonts, panels and widget skins.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Icons | UI | Placeholder | To source |\n| Fonts (headings, body) | UI | Placeholder | To source |\n| Panel and button skins | UI | Placeholder | To source |\n| Input prompt icons | UI | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Clean and readable first: flat shapes, high contrast, one accent color. Icons share one line weight and perspective."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- UI kits with matching icons, buttons and panels.\n- Fonts licensed for games, with the character sets we localize to.\n- Input prompt packs covering keyboard, Xbox and PlayStation."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing icon packs with different styles.\n- Ornate frames that crowd the screen.\n- Fonts that are hard to read at small sizes."
+				}
+			]
 		},
 		{
 			"id": "music-and-sound",
 			"title": "Music and Sound",
 			"kind": "content",
 			"parent": "",
-			"summary": "Music, sound effects and ambience, and where each is used."
+			"summary": "Music, sound effects and ambience, and where each is used.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main theme | Music | Placeholder | To source |\n| Gameplay loops | Music | Placeholder | To source |\n| UI sounds (click, back, confirm) | Sound | Placeholder | To source |\n| Ambience beds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Music sets the mood of each area; sound effects are short and punchy so they read over the music."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Music packs with loopable stems.\n- Sound effect libraries with variations of each sound.\n- Licenses that allow commercial use and streaming."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Tracks that don't loop cleanly.\n- Effects with long tails that muddy fast moments.\n- Mixing many libraries with different loudness."
+				}
+			]
 		}
 	]
 }

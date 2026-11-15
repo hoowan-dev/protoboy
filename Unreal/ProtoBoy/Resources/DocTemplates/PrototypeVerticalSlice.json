@@ -17,69 +17,221 @@
 			"rulesOut": "polish that won't scale to the full game"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "A third-person action game; this slice proves the core loop in one polished level."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Explore the level.\n2. Fight an encounter.\n3. Find the way forward."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Progression systems.\n- More than one level."
+		}
+	],
 	"docs": [
 		{
 			"id": "core-loop",
 			"title": "Core Loop",
 			"kind": "design",
 			"parent": "",
-			"summary": "The main gameplay loop the slice exists to prove."
+			"summary": "The main gameplay loop the slice exists to prove.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can learn the main action within seconds.\n- As a player, I can get better at it each attempt."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Immediate feedback on every action.\n- My score or progress always on screen."
+				},
+				{
+					"heading": "Rules",
+					"text": "- One input does the main action.\n- A round lasts under two minutes."
+				}
+			]
 		},
 		{
 			"id": "player",
 			"title": "Player",
 			"kind": "design",
 			"parent": "core-loop",
-			"summary": "The player character: controls, abilities and feel."
+			"summary": "The player character: controls, abilities and feel.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can move, jump and attack.\n- As a player, I can feel in control at all times."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Responsive animations."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every action can be interrupted by a dodge."
+				}
+			]
 		},
 		{
 			"id": "player-code",
 			"title": "Player Code",
 			"kind": "tech",
 			"parent": "core-loop",
-			"summary": "The player character's components and tuning values."
+			"summary": "The player character's components and tuning values.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "The player character uses the engine's character class with a small set of components for combat and interaction."
+				},
+				{
+					"heading": "Code",
+					"text": "- `ASliceCharacter`: the player\n- `USliceCombatComponent`: attacks and dodges"
+				},
+				{
+					"heading": "Data",
+					"text": "- Tuning values in a data asset."
+				}
+			]
 		},
 		{
 			"id": "player-assets",
 			"title": "Player Assets",
 			"kind": "content",
 			"parent": "core-loop",
-			"summary": "The player's mesh, animations, effects and sounds."
+			"summary": "The player's mesh, animations, effects and sounds.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Player mesh | Mesh | Placeholder | To source |\n| Animations | Animation | Placeholder | To source |\n| Effects | VFX | Placeholder | To source |\n| Sounds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "The final intended look: this is the quality bar for the full game."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Character packs at final quality on the standard skeleton."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Placeholder assets in the slice."
+				}
+			]
 		},
 		{
 			"id": "slice-level",
 			"title": "Slice Level",
 			"kind": "design",
 			"parent": "",
-			"summary": "The single level that shows the game at its intended quality."
+			"summary": "The single level that shows the game at its intended quality.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can play one level from start to finish.\n- As a player, I can experience the game's intended quality."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Final-quality art, lighting and sound."
+				},
+				{
+					"heading": "Rules",
+					"text": "- The level takes 15 minutes."
+				}
+			]
 		},
 		{
 			"id": "slice-level-art",
 			"title": "Slice Level Art",
 			"kind": "content",
 			"parent": "slice-level",
-			"summary": "Environment art, props and lighting for the slice."
+			"summary": "Environment art, props and lighting for the slice.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Environment kit | Mesh | Placeholder | To source |\n| Hero props | Mesh | Placeholder | To source |\n| Lighting | Lighting | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "The intended final look of the game."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Environment packs that can scale to the full game."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- One-off assets that can't be reused."
+				}
+			]
 		},
 		{
 			"id": "tech-risks",
 			"title": "Tech Risks",
 			"kind": "tech",
 			"parent": "",
-			"summary": "Technical unknowns the slice must prove out, such as performance or a new system."
+			"summary": "Technical unknowns the slice must prove out, such as performance or a new system.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Each risk gets a small test in the slice, with a pass or fail result written here."
+				},
+				{
+					"heading": "Code",
+					"text": "- `Test maps`: one per risk"
+				},
+				{
+					"heading": "Data",
+					"text": "- Performance targets per platform."
+				}
+			]
 		},
 		{
 			"id": "debug-tools",
 			"title": "Debug Tools",
 			"kind": "tech",
 			"parent": "",
-			"summary": "Cheats, debug views and tuning panels for iterating on the slice."
+			"summary": "Cheats, debug views and tuning panels for iterating on the slice.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Cheat commands and a debug menu toggle god mode, spawn enemies and show tuning values."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UCheatManager subclass`: cheat commands\n- `WBP_DebugMenu`: in-game debug menu"
+				},
+				{
+					"heading": "Data",
+					"text": "- Debug menu entries in a data asset."
+				}
+			]
 		},
 		{
 			"id": "music-and-sound",
 			"title": "Music and Sound",
 			"kind": "content",
 			"parent": "",
-			"summary": "Music, sound effects and ambience, and where each is used."
+			"summary": "Music, sound effects and ambience, and where each is used.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main theme | Music | Placeholder | To source |\n| Gameplay loops | Music | Placeholder | To source |\n| UI sounds (click, back, confirm) | Sound | Placeholder | To source |\n| Ambience beds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Music sets the mood of each area; sound effects are short and punchy so they read over the music."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Music packs with loopable stems.\n- Sound effect libraries with variations of each sound.\n- Licenses that allow commercial use and streaming."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Tracks that don't loop cleanly.\n- Effects with long tails that muddy fast moments.\n- Mixing many libraries with different loudness."
+				}
+			]
 		}
 	]
 }

@@ -22,188 +22,590 @@
 			"rulesOut": "bullet sponges, enemies that stand still"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "A fast first-person shooter where squads of smart enemies make every firefight a puzzle of cover and timing."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Spawn with a loadout.\n2. Push through an encounter.\n3. Outplay the AI with movement and weapons.\n4. Resupply and push to the next objective."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Vehicles.\n- Battle royale.\n- Loot boxes."
+		}
+	],
 	"docs": [
 		{
 			"id": "weapons",
 			"title": "Weapons",
 			"kind": "design",
 			"parent": "",
-			"summary": "How guns feel and differ."
+			"summary": "How guns feel and differ.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can carry two weapons and switch quickly.\n- As a player, I can feel the difference between weapon types.\n- As a player, I can pick up weapons from the world."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Ammo count and weapon name on the HUD."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Switching takes under half a second.\n- Each weapon type has a clear role (close, mid, long range)."
+				}
+			]
 		},
 		{
 			"id": "recoil-and-spread",
 			"title": "Recoil and Spread",
 			"kind": "design",
 			"parent": "weapons",
-			"summary": "Recoil patterns, spread and how they reward control."
+			"summary": "Recoil patterns, spread and how they reward control.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can control recoil with practice.\n- As a player, I can fire accurately while still."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- The crosshair grows with spread."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Recoil follows a learnable pattern.\n- Moving increases spread; crouching reduces it."
+				}
+			]
 		},
 		{
 			"id": "ammo-and-reloading",
 			"title": "Ammo and Reloading",
 			"kind": "design",
 			"parent": "weapons",
-			"summary": "Magazines, reserves, reloads and pickups."
+			"summary": "Magazines, reserves, reloads and pickups.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can reload when I choose.\n- As a player, I can see how much ammo is left."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A low-ammo warning on the HUD."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Reloading with a round chambered is faster.\n- Ammo pickups are shared across weapons of a type."
+				}
+			]
 		},
 		{
 			"id": "attachments",
 			"title": "Attachments",
 			"kind": "design",
 			"parent": "weapons",
-			"summary": "Scopes, grips and other modifiers, and how they change a weapon."
+			"summary": "Scopes, grips and other modifiers, and how they change a weapon.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can add scopes, grips and magazines to weapons.\n- As a player, I can see how an attachment changes a weapon."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Stat bars that change as I preview attachments."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Each weapon has up to four attachment slots.\n- Every attachment has a trade-off."
+				}
+			]
 		},
 		{
 			"id": "weapon-system",
 			"title": "Weapon System",
 			"kind": "tech",
 			"parent": "weapons",
-			"summary": "Hitscan or projectiles, fire rates, hit detection and weapon data."
+			"summary": "Hitscan or projectiles, fire rates, hit detection and weapon data.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Weapons are actors with a firing component. Hitscan weapons trace on the server and clients; projectile weapons spawn predicted projectiles. Weapon stats come from data assets."
+				},
+				{
+					"heading": "Code",
+					"text": "- `AWeaponBase`: firing, reloading and attachments\n- `UWeaponData`: data asset with fire rate, damage, recoil pattern\n- `UHitscanComponent`: traces and hit confirmation"
+				},
+				{
+					"heading": "Data",
+					"text": "- Weapon stats and recoil curves in UWeaponData.\n- Attachment modifiers in a DataTable."
+				}
+			]
 		},
 		{
 			"id": "weapon-assets",
 			"title": "Weapon Assets",
 			"kind": "content",
 			"parent": "weapons",
-			"summary": "Weapon meshes, first-person animations, muzzle flashes and gun sounds."
+			"summary": "Weapon meshes, first-person animations, muzzle flashes and gun sounds.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Weapon meshes | Mesh | Placeholder | To source |\n| First-person animations | Animation | Placeholder | To source |\n| Muzzle flashes | VFX | Placeholder | To source |\n| Gun sounds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Grounded near-future: believable weapons with clean shapes and some wear."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Weapon packs with first-person rigs and animations.\n- Gun sound libraries with close, distant and indoor variations."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Fantasy or cartoon weapons.\n- Weapons without separate magazine bones."
+				}
+			]
 		},
 		{
 			"id": "player-movement",
 			"title": "Player Movement",
 			"kind": "design",
 			"parent": "",
-			"summary": "Running, crouching, sliding, mantling and how movement interacts with aiming."
+			"summary": "Running, crouching, sliding, mantling and how movement interacts with aiming.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can sprint, crouch, slide and mantle.\n- As a player, I can keep aiming while moving."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Camera bob and sway that stay subtle."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Sliding is triggered by crouching while sprinting.\n- Mantling works on ledges up to chest height."
+				}
+			]
 		},
 		{
 			"id": "movement-code",
 			"title": "Movement Code",
 			"kind": "tech",
 			"parent": "player-movement",
-			"summary": "The movement component, mantling traces and tuning values."
+			"summary": "The movement component, mantling traces and tuning values.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "A custom character movement component adds slide and mantle modes. Mantles use forward and down traces to find a ledge."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UShooterMovementComponent`: slide and mantle modes\n- `UMantleComponent`: ledge traces and mantle animation"
+				},
+				{
+					"heading": "Data",
+					"text": "- Speeds and slide friction in a data asset.\n- Mantle heights and trace distances."
+				}
+			]
 		},
 		{
 			"id": "player-animations",
 			"title": "Player Animations",
 			"kind": "content",
 			"parent": "player-movement",
-			"summary": "First- and third-person animation sets."
+			"summary": "First- and third-person animation sets.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| First-person arms | Mesh | Placeholder | To source |\n| Third-person locomotion | Animation | Placeholder | To source |\n| Weapon animations | Animation | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Weighty but responsive: animations never delay input."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- First-person arm rigs with weapon animation sets.\n- Third-person locomotion packs with crouch and slide."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Long animations that lock out input."
+				}
+			]
 		},
 		{
 			"id": "ai",
 			"title": "AI",
 			"kind": "design",
 			"parent": "",
-			"summary": "Enemies that fight back believably."
+			"summary": "Enemies that fight back believably.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can fight enemies that use cover and flank.\n- As a player, I can outsmart enemies with positioning."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Enemies call out what they're doing."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Enemies never shoot through walls.\n- Enemies react to sound."
+				}
+			]
 		},
 		{
 			"id": "cover",
 			"title": "Cover",
 			"kind": "design",
 			"parent": "ai",
-			"summary": "Finding, using and leaving cover."
+			"summary": "Finding, using and leaving cover.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can see enemies take and leave cover.\n- As a player, I can flush enemies out of cover with grenades."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Enemies peeking from cover."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Enemies leave cover when flanked.\n- Destructible cover breaks after enough damage."
+				}
+			]
 		},
 		{
 			"id": "squad-behavior",
 			"title": "Squad Behavior",
 			"kind": "design",
 			"parent": "ai",
-			"summary": "How AI coordinates: flanking, suppression and callouts."
+			"summary": "How AI coordinates: flanking, suppression and callouts.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can face squads that coordinate.\n- As a player, I can break a squad's plan by taking out its leader."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Audible callouts when enemies flank or reload."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Squads have one leader.\n- No more than two enemies flank at once."
+				}
+			]
 		},
 		{
 			"id": "perception",
 			"title": "Perception",
 			"kind": "tech",
 			"parent": "ai",
-			"summary": "What AI can see and hear, and how it notices the player."
+			"summary": "What AI can see and hear, and how it notices the player.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "AI perception gives enemies sight and hearing. Stimuli feed a threat score per target that decides who they attack."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UAIPerceptionComponent`: sight and hearing senses\n- `UThreatComponent`: keeps threat scores per target"
+				},
+				{
+					"heading": "Data",
+					"text": "- Sight cone and range per enemy type.\n- Hearing ranges per sound event."
+				}
+			]
 		},
 		{
 			"id": "ai-framework",
 			"title": "AI Framework",
 			"kind": "tech",
 			"parent": "ai",
-			"summary": "Behavior trees, EQS queries and how squads share information."
+			"summary": "Behavior trees, EQS queries and how squads share information.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Enemies run behavior trees; EQS queries find cover and flanking spots. A squad manager hands out roles so enemies don't all do the same thing."
+				},
+				{
+					"heading": "Code",
+					"text": "- `AEnemyController`: runs the behavior tree\n- `USquadSubsystem`: squad roles and shared target info\n- `EQS_FindCover`: query for cover spots"
+				},
+				{
+					"heading": "Data",
+					"text": "- Behavior trees per enemy type.\n- Squad roles in a data asset."
+				}
+			]
 		},
 		{
 			"id": "enemy-assets",
 			"title": "Enemy Assets",
 			"kind": "content",
 			"parent": "ai",
-			"summary": "Enemy meshes, animations and voice barks."
+			"summary": "Enemy meshes, animations and voice barks.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Enemy meshes | Mesh | Placeholder | To source |\n| Enemy animations | Animation | Placeholder | To source |\n| Enemy sounds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Each enemy type has a distinct silhouette and color so the player recognizes it instantly."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Creature packs with idle, move, attack, hit and death animations.\n- Packs with several variants on one skeleton."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Enemies that look like the player or allies.\n- Animation sets missing hit or death animations."
+				}
+			]
 		},
 		{
 			"id": "levels",
 			"title": "Levels",
 			"kind": "design",
 			"parent": "",
-			"summary": "Maps built for firefights: sightlines, cover placement and flow."
+			"summary": "Maps built for firefights: sightlines, cover placement and flow.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can move through each level and always know where to go next.\n- As a player, I can find side paths that reward curiosity.\n- As a player, I can see where I've been and where I haven't."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Landmarks visible from far away.\n- Light and color that guide me toward the main path."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every level has a clear start, goal and one optional reward.\n- Levels teach a new idea before testing it."
+				}
+			]
 		},
 		{
 			"id": "level-art",
 			"title": "Level Art",
 			"kind": "content",
 			"parent": "levels",
-			"summary": "Environment kits, cover props and lighting."
+			"summary": "Environment kits, cover props and lighting.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Industrial kit | Mesh | Placeholder | To source |\n| Cover props | Mesh | Placeholder | To source |\n| Decals | Material | Placeholder | To source |\n| Lighting | Lighting | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Clear sightlines and readable cover: cover props are a consistent height and shape."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Modular industrial or urban kits.\n- Cover prop packs with collision."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Busy foliage that hides enemies.\n- Cover props in inconsistent heights."
+				}
+			]
 		},
 		{
 			"id": "game-modes",
 			"title": "Game Modes",
 			"kind": "design",
 			"parent": "",
-			"summary": "The rules of each mode: objectives, scoring and rounds."
+			"summary": "The rules of each mode: objectives, scoring and rounds.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can pick a mode from a menu.\n- As a player, I can understand each mode's goal before starting."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Mode rules on the loading screen."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Each mode has a time limit.\n- Modes share the same weapons."
+				}
+			]
 		},
 		{
 			"id": "networking",
 			"title": "Networking",
 			"kind": "tech",
 			"parent": "",
-			"summary": "Multiplayer: replication, lag compensation and matchmaking. Remove if single-player."
+			"summary": "Multiplayer: replication, lag compensation and matchmaking. Remove if single-player.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "The server is authoritative; clients predict their own movement and the server corrects them. Only what the client needs is replicated."
+				},
+				{
+					"heading": "Code",
+					"text": "- `Replicated properties and RPCs`: on gameplay actors\n- `UNetworkSettings`: tick rates and relevancy distances"
+				},
+				{
+					"heading": "Data",
+					"text": "- Net update frequencies per actor class.\n- Bandwidth budget per player."
+				}
+			]
 		},
 		{
 			"id": "replication",
 			"title": "Replication",
 			"kind": "tech",
 			"parent": "networking",
-			"summary": "What's synced, how often, and who has authority."
+			"summary": "What's synced, how often, and who has authority.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Actors replicate state with replicated properties and events with RPCs. Relevancy keeps far-away actors from being sent."
+				},
+				{
+					"heading": "Code",
+					"text": "- `GetLifetimeReplicatedProps`: declares replicated state per actor\n- `Server RPCs`: client requests the server validates"
+				},
+				{
+					"heading": "Data",
+					"text": "- Net update frequency and priority per actor class.\n- Which properties replicate to owner only."
+				}
+			]
 		},
 		{
 			"id": "matchmaking",
 			"title": "Matchmaking",
 			"kind": "tech",
 			"parent": "networking",
-			"summary": "Finding, joining and balancing matches."
+			"summary": "Finding, joining and balancing matches.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Players create or join sessions through the online subsystem. A host advertises a session; others search and join it. Parties travel together."
+				},
+				{
+					"heading": "Code",
+					"text": "- `USessionSubsystem`: creates, finds and joins sessions\n- `UPartyComponent`: keeps friends together when joining"
+				},
+				{
+					"heading": "Data",
+					"text": "- Session settings (max players, map, mode).\n- Platform online subsystem config."
+				}
+			]
 		},
 		{
 			"id": "ui",
 			"title": "UI",
 			"kind": "design",
 			"parent": "",
-			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start, pause and quit from clear menus.\n- As a player, I can change graphics, audio and control settings.\n- As a player, I can see the information I need during play without it covering the action."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A title screen, pause menu and settings screens.\n- A HUD with only what matters right now.\n- Button prompts that match my input device."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every screen can be used with a gamepad as well as mouse and keyboard.\n- Pausing stops gameplay time.\n- Settings save immediately."
+				}
+			]
 		},
 		{
 			"id": "ui-framework",
 			"title": "UI Framework",
 			"kind": "tech",
 			"parent": "ui",
-			"summary": "How screens and widgets are built, opened, navigated and fed data."
+			"summary": "How screens and widgets are built, opened, navigated and fed data.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Screens are UMG widgets pushed onto a stack by a UI manager subsystem. The top screen gets input; popping it returns to the one below. Gameplay talks to the HUD through events, never directly."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProjectUISubsystem`: owns the screen stack and opens and closes screens\n- `UScreenWidget`: base class for every full screen (menus, settings)\n- `UHUDWidget`: the in-game HUD; listens to gameplay events"
+				},
+				{
+					"heading": "Data",
+					"text": "- Screen classes and their input modes in a data asset.\n- Settings in the game user settings, saved per user."
+				}
+			]
 		},
 		{
 			"id": "ui-art",
 			"title": "UI Art",
 			"kind": "content",
 			"parent": "ui",
-			"summary": "Icons, fonts, panels and widget skins."
+			"summary": "Icons, fonts, panels and widget skins.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Icons | UI | Placeholder | To source |\n| Fonts (headings, body) | UI | Placeholder | To source |\n| Panel and button skins | UI | Placeholder | To source |\n| Input prompt icons | UI | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Clean and readable first: flat shapes, high contrast, one accent color. Icons share one line weight and perspective."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- UI kits with matching icons, buttons and panels.\n- Fonts licensed for games, with the character sets we localize to.\n- Input prompt packs covering keyboard, Xbox and PlayStation."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing icon packs with different styles.\n- Ornate frames that crowd the screen.\n- Fonts that are hard to read at small sizes."
+				}
+			]
 		},
 		{
 			"id": "hud",
 			"title": "HUD",
 			"kind": "design",
 			"parent": "ui",
-			"summary": "Crosshair, ammo, health, hit markers and the scoreboard."
+			"summary": "Crosshair, ammo, health, hit markers and the scoreboard.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can see health, ammo and objectives at a glance.\n- As a player, I can see where damage came from."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Hit markers and damage direction indicators."
+				},
+				{
+					"heading": "Rules",
+					"text": "- The HUD can be scaled.\n- Nothing important sits in the screen's center except the crosshair."
+				}
+			]
 		},
 		{
 			"id": "music-and-sound",
 			"title": "Music and Sound",
 			"kind": "content",
 			"parent": "",
-			"summary": "Music, sound effects and ambience, and where each is used."
+			"summary": "Music, sound effects and ambience, and where each is used.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main theme | Music | Placeholder | To source |\n| Gameplay loops | Music | Placeholder | To source |\n| UI sounds (click, back, confirm) | Sound | Placeholder | To source |\n| Ambience beds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Music sets the mood of each area; sound effects are short and punchy so they read over the music."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Music packs with loopable stems.\n- Sound effect libraries with variations of each sound.\n- Licenses that allow commercial use and streaming."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Tracks that don't loop cleanly.\n- Effects with long tails that muddy fast moments.\n- Mixing many libraries with different loudness."
+				}
+			]
 		}
 	]
 }

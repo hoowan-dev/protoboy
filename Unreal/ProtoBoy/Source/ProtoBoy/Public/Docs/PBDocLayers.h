@@ -91,7 +91,9 @@ namespace ProtoBoyDocLayers
 
 	/**
 	 * A new doc's text after its frontmatter: "# Title", an intro quote, an optional Lead paragraph (what the doc covers,
-	 * e.g. from a template), then each heading with its hint.
+	 * e.g. from a template), then each heading with its hint, followed by its entry in SectionText (heading -> Markdown,
+	 * matched ignoring case), if any.
 	 */
-	PROTOBOY_API FString MakeBody(const FString& Title, const FString& Intro, const TArray<FHeading>& Headings, const FString& Lead = FString());
+	PROTOBOY_API FString MakeBody(const FString& Title, const FString& Intro, const TArray<FHeading>& Headings, const FString& Lead = FString(),
+		const TArray<TPair<FString, FString>>& SectionText = {});
 }

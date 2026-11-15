@@ -22,181 +22,569 @@
 			"rulesOut": "empty corridors and filler"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "A tight 2.5D platformer where a nimble hero dashes and wall-jumps through hand-built gauntlets."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Enter a room.\n2. Read its hazards and enemies.\n3. Clear it with movement and attacks.\n4. Reach the checkpoint and the next room."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Procedurally generated levels.\n- Inventory management.\n- Long cutscenes."
+		}
+	],
 	"docs": [
 		{
 			"id": "movement",
 			"title": "Movement",
 			"kind": "design",
 			"parent": "",
-			"summary": "How the player runs, jumps and traverses; the verb everything else is built around."
+			"summary": "How the player runs, jumps and traverses; the verb everything else is built around.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can run, jump and change direction mid-air.\n- As a player, I can chain moves together without stopping.\n- As a player, I can recover from a mistake mid-jump."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- The character squashes and stretches on landing.\n- Dust and sound on every jump and landing."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Input is buffered for a few frames.\n- Jumping a few frames after leaving a ledge still works (coyote time)."
+				}
+			]
 		},
 		{
 			"id": "run-and-jump",
 			"title": "Run and Jump",
 			"kind": "design",
 			"parent": "movement",
-			"summary": "Ground speed, acceleration, jump arcs, coyote time and input buffering."
+			"summary": "Ground speed, acceleration, jump arcs, coyote time and input buffering.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can control jump height by holding the button.\n- As a player, I can reach full speed quickly.\n- As a player, I can land precisely on small platforms."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A clear landing shadow under the character."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Releasing jump early cuts the jump short.\n- Air control is slightly lower than ground control."
+				}
+			]
 		},
 		{
 			"id": "dash",
 			"title": "Dash",
 			"kind": "design",
 			"parent": "movement",
-			"summary": "Burst movement: distance, cooldown and how it chains with other moves."
+			"summary": "Burst movement: distance, cooldown and how it chains with other moves.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can dash in any direction.\n- As a player, I can dash through some hazards.\n- As a player, I can chain a dash into a jump."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A trail behind the character during the dash.\n- The dash icon dims while it recharges."
+				},
+				{
+					"heading": "Rules",
+					"text": "- One dash in the air; it recharges on landing.\n- The dash makes the player invulnerable for its first frames."
+				}
+			]
 		},
 		{
 			"id": "wall-interactions",
 			"title": "Wall Interactions",
 			"kind": "design",
 			"parent": "movement",
-			"summary": "Wall slides, wall jumps, ledge grabs and climbing."
+			"summary": "Wall slides, wall jumps, ledge grabs and climbing.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can slide down walls.\n- As a player, I can jump off walls.\n- As a player, I can grab ledges and climb up."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Particles where the character touches the wall."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Wall slides slow the fall.\n- Wall jumps push away from the wall."
+				}
+			]
 		},
 		{
 			"id": "character-movement",
 			"title": "Character Movement",
 			"kind": "tech",
 			"parent": "movement",
-			"summary": "The movement component: physics, input buffering, coyote time and tuning values."
+			"summary": "The movement component: physics, input buffering, coyote time and tuning values.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "A custom movement component on top of the character movement component adds coyote time, jump buffering, variable jump height, dash and wall interactions. All tuning values come from a data asset so designers can tweak them live."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UPlatformerMovementComponent`: adds the custom movement modes\n- `UMovementTuning`: data asset with every tuning value"
+				},
+				{
+					"heading": "Data",
+					"text": "- Speeds, gravity, jump heights and timings in UMovementTuning.\n- Coyote time and buffer windows in frames."
+				}
+			]
 		},
 		{
 			"id": "player-character",
 			"title": "Player Character",
 			"kind": "content",
 			"parent": "movement",
-			"summary": "The player's mesh, rig and the animation set movement needs."
+			"summary": "The player's mesh, rig and the animation set movement needs.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Hero mesh | Mesh | Placeholder | To source |\n| Locomotion animations | Animation | Placeholder | To source |\n| Jump, dash and wall animations | Animation | Placeholder | To source |\n| Footstep sounds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "A bright, readable hero who stands out against every background."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Stylized characters with strong silhouettes.\n- Animation packs with platformer moves (double jump, wall slide, dash)."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Realistic proportions.\n- Dark color schemes that blend into backgrounds."
+				}
+			]
 		},
 		{
 			"id": "combat",
 			"title": "Combat",
 			"kind": "design",
 			"parent": "",
-			"summary": "How the player fights: attacks, hits and damage."
+			"summary": "How the player fights: attacks, hits and damage.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can attack, dodge and block with simple inputs.\n- As a player, I can read what an enemy is about to do.\n- As a player, I can feel each hit land."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Wind-up animations before enemy attacks.\n- Hit flashes, sounds and a short pause on impact."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every enemy attack can be avoided.\n- Damage numbers stay small enough to reason about."
+				}
+			]
 		},
 		{
 			"id": "attacks",
 			"title": "Attacks",
 			"kind": "design",
 			"parent": "combat",
-			"summary": "The player's attacks, combos and their timing windows."
+			"summary": "The player's attacks, combos and their timing windows.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can attack in a short combo.\n- As a player, I can attack in the air.\n- As a player, I can cancel an attack into a dash."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Weapon trails on each swing."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Combos have three hits.\n- Attacks can be cancelled into a dash but not into a jump."
+				}
+			]
 		},
 		{
 			"id": "hit-reactions",
 			"title": "Hit Reactions",
 			"kind": "design",
 			"parent": "combat",
-			"summary": "Knockback, hitstun, invulnerability frames and feedback on both sides of a hit."
+			"summary": "Knockback, hitstun, invulnerability frames and feedback on both sides of a hit.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can see when I've been hit and how badly.\n- As a player, I can get a moment to recover after being hit."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- The character flashes and is knocked back.\n- A short freeze on heavy hits."
+				},
+				{
+					"heading": "Rules",
+					"text": "- After a hit the player is invulnerable for one second.\n- Knockback never pushes the player into a pit."
+				}
+			]
 		},
 		{
 			"id": "combat-system",
 			"title": "Combat System",
 			"kind": "tech",
 			"parent": "combat",
-			"summary": "Hitboxes, damage events, hitstop and invulnerability in code."
+			"summary": "Hitboxes, damage events, hitstop and invulnerability in code.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Attacks enable hitbox components on specific animation frames through anim notifies. Overlaps send damage through the damage interface; a short hitstop pauses both actors."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UHitboxComponent`: enabled by anim notifies, detects overlaps\n- `UCombatComponent`: combos, cancels and hitstop"
+				},
+				{
+					"heading": "Data",
+					"text": "- Attack timings in animation notifies.\n- Damage values and hitstop lengths in data assets."
+				}
+			]
 		},
 		{
 			"id": "combat-effects",
 			"title": "Combat Effects",
 			"kind": "content",
 			"parent": "combat",
-			"summary": "Hit VFX, impact sounds and camera shakes."
+			"summary": "Hit VFX, impact sounds and camera shakes.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Hit sparks | VFX | Placeholder | To source |\n| Impact sounds | Sound | Placeholder | To source |\n| Camera shakes | Data | Placeholder | To source |\n| Death effects | VFX | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Short, bright and readable: effects confirm a hit without hiding the next threat."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Niagara VFX packs with hits, slashes and explosions.\n- Impact sound libraries with light, medium and heavy variations."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Long-lasting particles that clutter the screen.\n- Effects in a different style from the characters."
+				}
+			]
 		},
 		{
 			"id": "camera",
 			"title": "Camera",
 			"kind": "tech",
 			"parent": "",
-			"summary": "How the camera follows, frames and leads the action."
+			"summary": "How the camera follows, frames and leads the action.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "A spring-arm camera follows the player with a small dead zone and leads in the direction of movement. Camera volumes in levels override framing for special rooms."
+				},
+				{
+					"heading": "Code",
+					"text": "- `APlatformerCameraManager`: follow, lead and dead zone\n- `ACameraVolume`: per-room framing overrides"
+				},
+				{
+					"heading": "Data",
+					"text": "- Follow speeds and lead distance in a data asset.\n- Volume settings on each camera volume."
+				}
+			]
 		},
 		{
 			"id": "levels",
 			"title": "Levels",
 			"kind": "design",
 			"parent": "",
-			"summary": "Hand-built levels that teach, test and reward the player's moves."
+			"summary": "Hand-built levels that teach, test and reward the player's moves.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can move through each level and always know where to go next.\n- As a player, I can find side paths that reward curiosity.\n- As a player, I can see where I've been and where I haven't."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Landmarks visible from far away.\n- Light and color that guide me toward the main path."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every level has a clear start, goal and one optional reward.\n- Levels teach a new idea before testing it."
+				}
+			]
 		},
 		{
 			"id": "checkpoints",
 			"title": "Checkpoints",
 			"kind": "design",
 			"parent": "levels",
-			"summary": "Where the player respawns and how much progress a death costs."
+			"summary": "Where the player respawns and how much progress a death costs.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can respawn close to where I died.\n- As a player, I can see when I've reached a checkpoint."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A checkpoint lights up when reached."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every room has a checkpoint at its entrance.\n- Collectibles picked up since the checkpoint are kept."
+				}
+			]
 		},
 		{
 			"id": "hazards",
 			"title": "Hazards",
 			"kind": "design",
 			"parent": "levels",
-			"summary": "Spikes, pits, moving platforms and other environmental dangers."
+			"summary": "Spikes, pits, moving platforms and other environmental dangers.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can recognize a hazard before touching it.\n- As a player, I can use some hazards against enemies."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Hazards use one warning color across the game."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Touching a hazard costs one heart.\n- Pits respawn the player at the last safe ground."
+				}
+			]
 		},
 		{
 			"id": "secrets",
 			"title": "Secrets",
 			"kind": "design",
 			"parent": "levels",
-			"summary": "Hidden areas and collectibles that reward mastery and exploration."
+			"summary": "Hidden areas and collectibles that reward mastery and exploration.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can find hidden rooms.\n- As a player, I can collect secrets to unlock extras."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A subtle visual hint near every secret.\n- A counter of secrets found per level."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every level has three secrets.\n- Secrets are never required to finish the game."
+				}
+			]
 		},
 		{
 			"id": "level-kit",
 			"title": "Level Kit",
 			"kind": "content",
 			"parent": "levels",
-			"summary": "Tiles, platforms, props and backgrounds the levels are built from."
+			"summary": "Tiles, platforms, props and backgrounds the levels are built from.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Platform tiles | Mesh | Placeholder | To source |\n| Background layers | Mesh | Placeholder | To source |\n| Hazard props | Mesh | Placeholder | To source |\n| Decor props | Mesh | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Foreground, gameplay and background layers are clearly separated by value and saturation."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Modular platformer kits on a grid.\n- Parallax background packs.\n- Packs with matching hazards (spikes, saws)."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Busy backgrounds with the same contrast as platforms.\n- Kits without collision-friendly shapes."
+				}
+			]
 		},
 		{
 			"id": "enemies",
 			"title": "Enemies",
 			"kind": "design",
 			"parent": "",
-			"summary": "What the player fights, and how each one tests a different skill."
+			"summary": "What the player fights, and how each one tests a different skill.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can learn each enemy's pattern.\n- As a player, I can defeat enemies in more than one way."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Each enemy telegraphs its attack with a pose and a sound."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Each enemy type tests one skill (jumping, timing, positioning).\n- Enemies don't respawn until the checkpoint is reset."
+				}
+			]
 		},
 		{
 			"id": "bosses",
 			"title": "Bosses",
 			"kind": "design",
 			"parent": "enemies",
-			"summary": "Multi-phase encounters that test everything the player has learned."
+			"summary": "Multi-phase encounters that test everything the player has learned.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can learn a boss over several attempts.\n- As a player, I can see how close the boss is to defeat."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A boss health bar with phase markers."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Bosses have three phases.\n- Each phase adds one new attack."
+				}
+			]
 		},
 		{
 			"id": "enemy-ai",
 			"title": "Enemy AI",
 			"kind": "tech",
 			"parent": "enemies",
-			"summary": "Behavior trees or state machines, attack patterns and spawning."
+			"summary": "Behavior trees or state machines, attack patterns and spawning.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Simple enemies use state machines (patrol, chase, attack); bosses use behavior trees with one subtree per phase."
+				},
+				{
+					"heading": "Code",
+					"text": "- `AEnemyBase`: health, state machine and attacks\n- `BT_Boss`: the boss behavior tree"
+				},
+				{
+					"heading": "Data",
+					"text": "- Patrol paths placed in levels.\n- Attack patterns in data assets."
+				}
+			]
 		},
 		{
 			"id": "enemy-assets",
 			"title": "Enemy Assets",
 			"kind": "content",
 			"parent": "enemies",
-			"summary": "Enemy and boss meshes, animations and sounds."
+			"summary": "Enemy and boss meshes, animations and sounds.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Enemy meshes | Mesh | Placeholder | To source |\n| Enemy animations | Animation | Placeholder | To source |\n| Enemy sounds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Each enemy type has a distinct silhouette and color so the player recognizes it instantly."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Creature packs with idle, move, attack, hit and death animations.\n- Packs with several variants on one skeleton."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Enemies that look like the player or allies.\n- Animation sets missing hit or death animations."
+				}
+			]
 		},
 		{
 			"id": "ui",
 			"title": "UI",
 			"kind": "design",
 			"parent": "",
-			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start, pause and quit from clear menus.\n- As a player, I can change graphics, audio and control settings.\n- As a player, I can see the information I need during play without it covering the action."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A title screen, pause menu and settings screens.\n- A HUD with only what matters right now.\n- Button prompts that match my input device."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every screen can be used with a gamepad as well as mouse and keyboard.\n- Pausing stops gameplay time.\n- Settings save immediately."
+				}
+			]
 		},
 		{
 			"id": "ui-framework",
 			"title": "UI Framework",
 			"kind": "tech",
 			"parent": "ui",
-			"summary": "How screens and widgets are built, opened, navigated and fed data."
+			"summary": "How screens and widgets are built, opened, navigated and fed data.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Screens are UMG widgets pushed onto a stack by a UI manager subsystem. The top screen gets input; popping it returns to the one below. Gameplay talks to the HUD through events, never directly."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProjectUISubsystem`: owns the screen stack and opens and closes screens\n- `UScreenWidget`: base class for every full screen (menus, settings)\n- `UHUDWidget`: the in-game HUD; listens to gameplay events"
+				},
+				{
+					"heading": "Data",
+					"text": "- Screen classes and their input modes in a data asset.\n- Settings in the game user settings, saved per user."
+				}
+			]
 		},
 		{
 			"id": "ui-art",
 			"title": "UI Art",
 			"kind": "content",
 			"parent": "ui",
-			"summary": "Icons, fonts, panels and widget skins."
+			"summary": "Icons, fonts, panels and widget skins.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Icons | UI | Placeholder | To source |\n| Fonts (headings, body) | UI | Placeholder | To source |\n| Panel and button skins | UI | Placeholder | To source |\n| Input prompt icons | UI | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Clean and readable first: flat shapes, high contrast, one accent color. Icons share one line weight and perspective."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- UI kits with matching icons, buttons and panels.\n- Fonts licensed for games, with the character sets we localize to.\n- Input prompt packs covering keyboard, Xbox and PlayStation."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing icon packs with different styles.\n- Ornate frames that crowd the screen.\n- Fonts that are hard to read at small sizes."
+				}
+			]
 		},
 		{
 			"id": "music-and-sound",
 			"title": "Music and Sound",
 			"kind": "content",
 			"parent": "",
-			"summary": "Music, sound effects and ambience, and where each is used."
+			"summary": "Music, sound effects and ambience, and where each is used.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main theme | Music | Placeholder | To source |\n| Gameplay loops | Music | Placeholder | To source |\n| UI sounds (click, back, confirm) | Sound | Placeholder | To source |\n| Ambience beds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Music sets the mood of each area; sound effects are short and punchy so they read over the music."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Music packs with loopable stems.\n- Sound effect libraries with variations of each sound.\n- Licenses that allow commercial use and streaming."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Tracks that don't loop cleanly.\n- Effects with long tails that muddy fast moments.\n- Mixing many libraries with different loudness."
+				}
+			]
 		}
 	]
 }

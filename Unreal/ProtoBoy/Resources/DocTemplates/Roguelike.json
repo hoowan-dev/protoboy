@@ -22,132 +22,418 @@
 			"rulesOut": "items that are only small stat bumps"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "A top-down action roguelike where each descent stacks up a wild build of relics before the run inevitably ends."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Start a run.\n2. Clear a room.\n3. Pick a reward.\n4. Descend, die eventually, and unlock something for next time."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Permanent stat grinding.\n- Hand-made levels."
+		}
+	],
 	"docs": [
 		{
 			"id": "runs",
 			"title": "Runs",
 			"kind": "design",
 			"parent": "",
-			"summary": "How a run is built and paced: rooms, encounters and rewards."
+			"summary": "How a run is built and paced: rooms, encounters and rewards.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start a fresh run any time.\n- As a player, I can see how far I got."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A run summary at the end."
+				},
+				{
+					"heading": "Rules",
+					"text": "- A run lasts 20-30 minutes.\n- Runs always start in the same first room."
+				}
+			]
 		},
 		{
 			"id": "encounters",
 			"title": "Encounters",
 			"kind": "design",
 			"parent": "runs",
-			"summary": "Fights, events and choices along the way."
+			"summary": "Fights, events and choices along the way.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can fight different enemy mixes each room.\n- As a player, I can choose between risky and safe rooms."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Room icons that show what's behind each door."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every floor has one optional elite room."
+				}
+			]
 		},
 		{
 			"id": "rewards",
 			"title": "Rewards",
 			"kind": "design",
 			"parent": "runs",
-			"summary": "What the player is offered during a run, and when."
+			"summary": "What the player is offered during a run, and when.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can choose one reward from three after each room."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Reward choices with clear descriptions."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Rarer rewards appear less often but never zero."
+				}
+			]
 		},
 		{
 			"id": "procedural-generation",
 			"title": "Procedural Generation",
 			"kind": "tech",
 			"parent": "runs",
-			"summary": "Generating floors, rooms and layouts that stay fair."
+			"summary": "Generating floors, rooms and layouts that stay fair.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Floors are built from hand-made room templates connected on a graph; rules ensure a path to the exit and a fair spread of rewards."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UFloorGenerator`: builds the room graph from a seed\n- `URoomTemplate`: a hand-made room asset"
+				},
+				{
+					"heading": "Data",
+					"text": "- Room templates per floor.\n- Generation rules in a data asset."
+				}
+			]
 		},
 		{
 			"id": "room-kit",
 			"title": "Room Kit",
 			"kind": "content",
 			"parent": "runs",
-			"summary": "Room tiles, props and the room templates the generator draws from."
+			"summary": "Room tiles, props and the room templates the generator draws from.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Floor and wall tiles | Mesh | Placeholder | To source |\n| Props | Mesh | Placeholder | To source |\n| Room templates | Data | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Dark dungeon with saturated highlights so enemies and pickups pop."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Modular dungeon packs designed for top-down cameras."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Detailed floors that hide projectiles."
+				}
+			]
 		},
 		{
 			"id": "combat",
 			"title": "Combat",
 			"kind": "design",
 			"parent": "",
-			"summary": "Moment-to-moment fighting."
+			"summary": "Moment-to-moment fighting.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can attack, dodge and use abilities.\n- As a player, I can fight many enemies at once."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Clear telegraphs on enemy attacks."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Dodging makes the player briefly invulnerable."
+				}
+			]
 		},
 		{
 			"id": "combat-code",
 			"title": "Combat Code",
 			"kind": "tech",
 			"parent": "combat",
-			"summary": "Attacks, damage, projectiles and status effects."
+			"summary": "Attacks, damage, projectiles and status effects.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Attacks spawn hitboxes for a few frames; overlaps send damage events to anything with a health component. Status effects are applied as timed modifiers."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UCombatComponent`: starts attacks and spawns hitboxes\n- `UHealthComponent`: takes damage, fires death events\n- `UStatusEffect`: a timed modifier (burn, slow, stun)"
+				},
+				{
+					"heading": "Data",
+					"text": "- Attack data (damage, frames, hitbox size) in data assets.\n- Status effects in a DataTable."
+				}
+			]
 		},
 		{
 			"id": "enemies",
 			"title": "Enemies",
 			"kind": "content",
 			"parent": "combat",
-			"summary": "Enemy meshes or sprites, animations and sounds."
+			"summary": "Enemy meshes or sprites, animations and sounds.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Enemy sprites or meshes | Mesh | Placeholder | To source |\n| Enemy animations | Animation | Placeholder | To source |\n| Enemy sounds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Each enemy has a distinct color and silhouette so it reads in a crowded room."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Top-down creature packs with attack telegraphs."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Enemies that look like pickups."
+				}
+			]
 		},
 		{
 			"id": "builds",
 			"title": "Builds",
 			"kind": "design",
 			"parent": "",
-			"summary": "What makes each run play differently: items, upgrades and how they combine."
+			"summary": "What makes each run play differently: items, upgrades and how they combine.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can combine items into a build.\n- As a player, I can see what my build does."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A build screen listing every item and its effect."
+				},
+				{
+					"heading": "Rules",
+					"text": "- No item is useless in every build."
+				}
+			]
 		},
 		{
 			"id": "synergies",
 			"title": "Synergies",
 			"kind": "design",
 			"parent": "builds",
-			"summary": "How items and upgrades combine into builds."
+			"summary": "How items and upgrades combine into builds.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can discover items that work together."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A glow when two items combine."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Synergies are shown once discovered."
+				}
+			]
 		},
 		{
 			"id": "item-effects",
 			"title": "Item Effects",
 			"kind": "tech",
 			"parent": "builds",
-			"summary": "How item effects are defined, stacked and applied."
+			"summary": "How item effects are defined, stacked and applied.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Item effects are small objects that hook into gameplay events (on hit, on kill, on damage taken). Stacking rules decide how copies combine."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UItemEffect`: base class with event hooks\n- `UBuildComponent`: the player's items and active effects"
+				},
+				{
+					"heading": "Data",
+					"text": "- Item definitions in data assets."
+				}
+			]
 		},
 		{
 			"id": "items",
 			"title": "Items",
 			"kind": "content",
 			"parent": "builds",
-			"summary": "Item and relic icons, and the item data tables."
+			"summary": "Item and relic icons, and the item data tables.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Item icons | UI | Placeholder | To source |\n| Item data | Data | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Every item is recognizable from its icon alone."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Icon packs with a consistent style and background."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Icons that differ only in color."
+				}
+			]
 		},
 		{
 			"id": "meta-progression",
 			"title": "Meta Progression",
 			"kind": "design",
 			"parent": "",
-			"summary": "Unlocks and progress that carry over between runs."
+			"summary": "Unlocks and progress that carry over between runs.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can unlock new options between runs or levels.\n- As a player, I can see what I can unlock next.\n- As a player, I can choose what to work toward."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- An unlock screen with locked and unlocked items.\n- Progress bars toward the next unlock."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Unlocks add options, not raw power.\n- Everything can be unlocked by playing."
+				}
+			]
 		},
 		{
 			"id": "ui",
 			"title": "UI",
 			"kind": "design",
 			"parent": "",
-			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start, pause and quit from clear menus.\n- As a player, I can change graphics, audio and control settings.\n- As a player, I can see the information I need during play without it covering the action."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A title screen, pause menu and settings screens.\n- A HUD with only what matters right now.\n- Button prompts that match my input device."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every screen can be used with a gamepad as well as mouse and keyboard.\n- Pausing stops gameplay time.\n- Settings save immediately."
+				}
+			]
 		},
 		{
 			"id": "ui-framework",
 			"title": "UI Framework",
 			"kind": "tech",
 			"parent": "ui",
-			"summary": "How screens and widgets are built, opened, navigated and fed data."
+			"summary": "How screens and widgets are built, opened, navigated and fed data.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Screens are UMG widgets pushed onto a stack by a UI manager subsystem. The top screen gets input; popping it returns to the one below. Gameplay talks to the HUD through events, never directly."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProjectUISubsystem`: owns the screen stack and opens and closes screens\n- `UScreenWidget`: base class for every full screen (menus, settings)\n- `UHUDWidget`: the in-game HUD; listens to gameplay events"
+				},
+				{
+					"heading": "Data",
+					"text": "- Screen classes and their input modes in a data asset.\n- Settings in the game user settings, saved per user."
+				}
+			]
 		},
 		{
 			"id": "ui-art",
 			"title": "UI Art",
 			"kind": "content",
 			"parent": "ui",
-			"summary": "Icons, fonts, panels and widget skins."
+			"summary": "Icons, fonts, panels and widget skins.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Icons | UI | Placeholder | To source |\n| Fonts (headings, body) | UI | Placeholder | To source |\n| Panel and button skins | UI | Placeholder | To source |\n| Input prompt icons | UI | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Clean and readable first: flat shapes, high contrast, one accent color. Icons share one line weight and perspective."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- UI kits with matching icons, buttons and panels.\n- Fonts licensed for games, with the character sets we localize to.\n- Input prompt packs covering keyboard, Xbox and PlayStation."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing icon packs with different styles.\n- Ornate frames that crowd the screen.\n- Fonts that are hard to read at small sizes."
+				}
+			]
 		},
 		{
 			"id": "music-and-sound",
 			"title": "Music and Sound",
 			"kind": "content",
 			"parent": "",
-			"summary": "Music, sound effects and ambience, and where each is used."
+			"summary": "Music, sound effects and ambience, and where each is used.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main theme | Music | Placeholder | To source |\n| Gameplay loops | Music | Placeholder | To source |\n| UI sounds (click, back, confirm) | Sound | Placeholder | To source |\n| Ambience beds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Music sets the mood of each area; sound effects are short and punchy so they read over the music."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Music packs with loopable stems.\n- Sound effect libraries with variations of each sound.\n- Licenses that allow commercial use and streaming."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Tracks that don't loop cleanly.\n- Effects with long tails that muddy fast moments.\n- Mixing many libraries with different loudness."
+				}
+			]
 		},
 		{
 			"id": "save-and-load",
 			"title": "Save and Load",
 			"kind": "tech",
 			"parent": "",
-			"summary": "Meta progress, unlocks and run history."
+			"summary": "Meta progress, unlocks and run history.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "A save game object holds everything that persists. Systems register what they need saved; saving serializes it to a slot, loading restores it before the level starts. Saves carry a version number so old saves can be migrated."
+				},
+				{
+					"heading": "Code",
+					"text": "- `USaveSubsystem`: saves and loads slots, runs migrations\n- `UProjectSaveGame`: the saved data, with a version field\n- `ISaveable`: interface for systems that write and read their part"
+				},
+				{
+					"heading": "Data",
+					"text": "- Save slots in the platform's save location.\n- A version number per save, bumped on every breaking change."
+				}
+			]
 		}
 	]
 }

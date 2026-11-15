@@ -17,34 +17,108 @@
 			"rulesOut": "systems that need explaining"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "Bounce a ball through a shrinking arena for as long as you can."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Start.\n2. Bounce.\n3. Survive.\n4. Die and restart."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Menus beyond start and restart.\n- More than one mechanic."
+		}
+	],
 	"docs": [
 		{
 			"id": "core-loop",
 			"title": "Core Loop",
 			"kind": "design",
 			"parent": "",
-			"summary": "The one thing the player does, over and over, and why it's fun."
+			"summary": "The one thing the player does, over and over, and why it's fun.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can learn the main action within seconds.\n- As a player, I can get better at it each attempt."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Immediate feedback on every action.\n- My score or progress always on screen."
+				},
+				{
+					"heading": "Rules",
+					"text": "- One input does the main action.\n- A round lasts under two minutes."
+				}
+			]
 		},
 		{
 			"id": "prototype-code",
 			"title": "Prototype Code",
 			"kind": "tech",
 			"parent": "core-loop",
-			"summary": "Where the jam code lives, and the shortcuts taken to finish in time."
+			"summary": "Where the jam code lives, and the shortcuts taken to finish in time.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Everything lives in one module; Blueprints are fine. Shortcuts are listed so they can be fixed after the jam."
+				},
+				{
+					"heading": "Code",
+					"text": "- `BP_Player`: the player\n- `BP_GameMode`: rules and restart"
+				},
+				{
+					"heading": "Data",
+					"text": "- Tuning values exposed on the Blueprints."
+				}
+			]
 		},
 		{
 			"id": "jam-assets",
 			"title": "Jam Assets",
 			"kind": "content",
 			"parent": "core-loop",
-			"summary": "Every asset in the game, and the packs they came from."
+			"summary": "Every asset in the game, and the packs they came from.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Player sprite or mesh | Mesh | Placeholder | To source |\n| Arena | Mesh | Placeholder | To source |\n| Sounds | Sound | Placeholder | To source |\n| Music track | Music | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Flat colors and simple shapes that are quick to make or find."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Free asset packs with a matching style.\n- CC0 sound packs."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Assets that take longer to integrate than to replace."
+				}
+			]
 		},
 		{
 			"id": "menus",
 			"title": "Menus",
 			"kind": "design",
 			"parent": "",
-			"summary": "Title screen, the minimum HUD and a way to restart."
+			"summary": "Title screen, the minimum HUD and a way to restart.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start a game from a title screen.\n- As a player, I can restart instantly after losing."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- My score on the game-over screen."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Restart is one button."
+				}
+			]
 		}
 	]
 }

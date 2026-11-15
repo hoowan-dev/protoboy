@@ -11,6 +11,7 @@
 #include "UI/Docs/Map/SPBDocMapNode.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SScrollBox.h"
@@ -335,6 +336,54 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeConfirmStep()
 			]
 		]
 
+		// What goes in the new docs' sections. Hidden for templates without examples (Blank).
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 10.f, 0.f, 0.f)
+		[
+			SNew(SVerticalBox)
+			.Visibility_Lambda([this]()
+			{
+				return SelectedTemplate.IsValid() && ProtoBoyDocTemplates::HasExamples(*SelectedTemplate) ? EVisibility::Visible : EVisibility::Collapsed;
+			})
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				ProtoBoySetupDocsDialog::MakeHeading(LOCTEXT("ContentsHeading", "Note contents"))
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 4.f, 0.f, 0.f)
+			[
+				SNew(SCheckBox)
+				.Style(FAppStyle::Get(), "RadioButton")
+				.IsChecked_Lambda([this]() { return bWriteExamples ? ECheckBoxState::Unchecked : ECheckBoxState::Checked; })
+				.OnCheckStateChanged_Lambda([this](ECheckBoxState) { bWriteExamples = false; })
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("ContentsBlank", "Leave blank: each doc gets its headings, the hints under them, and a line on what it covers."))
+					.AutoWrapText(true)
+				]
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0.f, 4.f, 0.f, 0.f)
+			[
+				SNew(SCheckBox)
+				.Style(FAppStyle::Get(), "RadioButton")
+				.IsChecked_Lambda([this]() { return bWriteExamples ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
+				.OnCheckStateChanged_Lambda([this](ECheckBoxState) { bWriteExamples = true; })
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("ContentsExamples", "Add example documentation: the Game doc and each doc's sections start with example content for this kind of game (what the player can do, how it works, the assets it needs), marked as examples to rewrite."))
+					.AutoWrapText(true)
+				]
+			]
+		]
+
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(0.f, 8.f, 0.f, 0.f)
@@ -442,7 +491,8 @@ FReply SProtoBoySetupDocsDialog::OnApplyClicked()
 		return FReply::Handled();
 	}
 	int32 Created = 0;
-	if (!Map->ApplyTemplate(*SelectedTemplate, Created, ApplyError))
+	const bool bExamples = bWriteExamples && ProtoBoyDocTemplates::HasExamples(*SelectedTemplate);
+	if (!Map->ApplyTemplate(*SelectedTemplate, bExamples, Created, ApplyError))
 	{
 		// Some docs may have been written before the failure; show what's there now.
 		PlanBox->SetContent(MakePlan(*SelectedTemplate));

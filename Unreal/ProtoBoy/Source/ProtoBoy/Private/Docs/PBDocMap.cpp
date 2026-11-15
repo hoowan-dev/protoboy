@@ -157,6 +157,23 @@ namespace ProtoBoyDocMap
 		return Id;
 	}
 
+	/** Template example sections as MakeBody's SectionText. */
+	TArray<TPair<FString, FString>> ToSectionText(const TArray<FProtoBoyDocTemplateSection>* Examples)
+	{
+		TArray<TPair<FString, FString>> Out;
+		for (const FProtoBoyDocTemplateSection& Section : Examples ? *Examples : TArray<FProtoBoyDocTemplateSection>())
+		{
+			Out.Emplace(Section.Heading, Section.Text);
+		}
+		return Out;
+	}
+
+	/** The line under a doc's summary that says its sections hold examples. */
+	FString MakeExampleNote(const FString& TemplateName)
+	{
+		return FString::Printf(TEXT("_The sections below hold example content from the %s template. Rewrite them for your game, or delete what doesn't apply._"), *TemplateName);
+	}
+
 	const TCHAR* ExamplePillar = TEXT(
 		"### Example: Every Shot Counts\n"
 		"\n"
@@ -475,7 +492,8 @@ bool FProtoBoyDocMap::WriteFrontmatter(const FString& Path, const TArray<TPair<F
 	return true;
 }
 
-bool FProtoBoyDocMap::WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePillar>* Pillars, const FString& TemplateName, bool& bOutWrote, FText& OutError)
+bool FProtoBoyDocMap::WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePillar>* Pillars, const FString& TemplateName, bool& bOutWrote, FText& OutError,
+	const TArray<FProtoBoyDocTemplateSection>* Examples)
 {
 	IProtoBoyDocsProvider& Provider = Docs.GetProvider();
 	if (!Provider.IsReady(OutError))
@@ -508,7 +526,9 @@ bool FProtoBoyDocMap::WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePilla
 		PillarsText += TEXT("\n");
 	}
 	const FString Hint = FString::Printf(TEXT("<!-- %s -->\n"), *Headings[ProtoBoyDocMap::PillarsHeadingIndex].Hint);
-	FString Body = ProtoBoyDocLayers::MakeBody(GetProjectTitle(), ProtoBoyDocLayers::GetIntro(EProtoBoyDocKind::Game), Headings);
+	const bool bExamples = Examples && !Examples->IsEmpty();
+	FString Body = ProtoBoyDocLayers::MakeBody(GetProjectTitle(), ProtoBoyDocLayers::GetIntro(EProtoBoyDocKind::Game), Headings,
+		bExamples ? ProtoBoyDocMap::MakeExampleNote(TemplateName) : FString(), ProtoBoyDocMap::ToSectionText(Examples));
 	Body.ReplaceInline(*Hint, *(Hint + TEXT("\n") + PillarsText));
 
 	const FString Text = ProtoBoyMarkdown::SetFrontmatterValues(Body, {
@@ -799,7 +819,7 @@ FProtoBoyDocTemplatePlan FProtoBoyDocMap::PlanTemplate(const FProtoBoyDocTemplat
 	return Plan;
 }
 
-bool FProtoBoyDocMap::ApplyTemplate(const FProtoBoyDocTemplate& Template, int32& OutCreated, FText& OutError)
+bool FProtoBoyDocMap::ApplyTemplate(const FProtoBoyDocTemplate& Template, bool bExamples, int32& OutCreated, FText& OutError)
 {
 	OutCreated = 0;
 	IProtoBoyDocsProvider& Provider = Docs.GetProvider();
@@ -821,7 +841,7 @@ bool FProtoBoyDocMap::ApplyTemplate(const FProtoBoyDocTemplate& Template, int32&
 	Load();
 
 	bool bWrote = false;
-	if (!WriteMissingGameDoc(&Template.Pillars, Template.Name, bWrote, OutError))
+	if (!WriteMissingGameDoc(&Template.Pillars, Template.Name, bWrote, OutError, bExamples ? &Template.GameExamples : nullptr))
 	{
 		AfterWrite();
 		return false;
@@ -853,7 +873,9 @@ bool FProtoBoyDocMap::ApplyTemplate(const FProtoBoyDocTemplate& Template, int32&
 		const FString Id = ProtoBoyDocMap::TakeUniqueId(Title, UsedIds);
 		const FString ParentId = Doc.Parent.IsEmpty() ? FString() : MapIds.FindRef(Doc.Parent);
 		const FString Text = ProtoBoyMarkdown::SetFrontmatterValues(
-			ProtoBoyDocLayers::MakeBody(Title, ProtoBoyDocLayers::GetIntro(Kind), ProtoBoyDocLayers::GetHeadings(Kind), Doc.Summary), {
+			ProtoBoyDocLayers::MakeBody(Title, ProtoBoyDocLayers::GetIntro(Kind), ProtoBoyDocLayers::GetHeadings(Kind),
+				bExamples && !Doc.Examples.IsEmpty() ? Doc.Summary + TEXT("\n\n") + ProtoBoyDocMap::MakeExampleNote(Template.Name) : Doc.Summary,
+				ProtoBoyDocMap::ToSectionText(bExamples ? &Doc.Examples : nullptr)), {
 				{ ProtoBoyDocLayers::IdKey, Id },
 				{ ProtoBoyDocLayers::LayerKey, ProtoBoyDocLayers::ToKey(ProtoBoyDocLayers::GetLayer(Kind)) },
 				{ ProtoBoyDocLayers::ParentKey, ParentId != RootId ? ParentId : FString() },

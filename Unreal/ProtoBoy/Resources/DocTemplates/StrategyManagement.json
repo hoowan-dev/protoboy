@@ -22,160 +22,502 @@
 			"rulesOut": "hidden numbers, opaque simulation"
 		}
 	],
+	"gameExamples": [
+		{
+			"heading": "Pitch",
+			"text": "A colony builder where the player grows a settlement from a camp to a city by balancing production chains."
+		},
+		{
+			"heading": "Core Loop",
+			"text": "1. Survey resources.\n2. Place buildings and assign workers.\n3. Watch the simulation run and spot bottlenecks.\n4. Expand and upgrade."
+		},
+		{
+			"heading": "Non-goals",
+			"text": "- Direct unit combat.\n- Real-time twitch input."
+		}
+	],
 	"docs": [
 		{
 			"id": "simulation",
 			"title": "Simulation",
 			"kind": "tech",
 			"parent": "",
-			"summary": "The rules that run the world underneath the player."
+			"summary": "The rules that run the world underneath the player.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "The simulation runs on a fixed tick separate from frame rate. Systems update in a fixed order each tick, so results are deterministic."
+				},
+				{
+					"heading": "Code",
+					"text": "- `USimulationSubsystem`: runs the tick and system order\n- `ISimulationSystem`: interface each system implements"
+				},
+				{
+					"heading": "Data",
+					"text": "- Tick rate and system order in a data asset."
+				}
+			]
 		},
 		{
 			"id": "resources",
 			"title": "Resources",
 			"kind": "tech",
 			"parent": "simulation",
-			"summary": "What exists to be gathered, stored and spent."
+			"summary": "What exists to be gathered, stored and spent.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Resources are typed amounts stored in stockpiles. Buildings request and deliver resources through the stockpile system."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UResourceDefinition`: data asset per resource\n- `UStockpileComponent`: stores and reserves resources"
+				},
+				{
+					"heading": "Data",
+					"text": "- Resource definitions as data assets.\n- Stockpile capacities per building."
+				}
+			]
 		},
 		{
 			"id": "production-chains",
 			"title": "Production Chains",
 			"kind": "tech",
 			"parent": "simulation",
-			"summary": "How resources turn into other resources."
+			"summary": "How resources turn into other resources.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Each production building has recipes: inputs, outputs and a time. Buildings pull inputs from the nearest stockpile and push outputs back."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProductionComponent`: runs recipes\n- `URecipeDefinition`: inputs, outputs and time"
+				},
+				{
+					"heading": "Data",
+					"text": "- Recipes as data assets.\n- Production times in simulation ticks."
+				}
+			]
 		},
 		{
 			"id": "time-and-tick",
 			"title": "Time and Tick",
 			"kind": "tech",
 			"parent": "simulation",
-			"summary": "Simulation speed, pausing and keeping it deterministic and fast."
+			"summary": "Simulation speed, pausing and keeping it deterministic and fast.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Game speed scales how many simulation ticks run per second. Pausing stops ticks but not the UI."
+				},
+				{
+					"heading": "Code",
+					"text": "- `USimulationClock`: speed, pause and tick counter"
+				},
+				{
+					"heading": "Data",
+					"text": "- Speed steps (1x, 2x, 4x)."
+				}
+			]
 		},
 		{
 			"id": "units",
 			"title": "Units",
 			"kind": "design",
 			"parent": "",
-			"summary": "The things that act in the world, and what the player can tell them to do."
+			"summary": "The things that act in the world, and what the player can tell them to do.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can select units and give them orders.\n- As a player, I can assign workers to buildings."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Selection circles and order markers."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Workers walk to their job.\n- Idle units are highlighted."
+				}
+			]
 		},
 		{
 			"id": "unit-ai",
 			"title": "Unit AI",
 			"kind": "tech",
 			"parent": "units",
-			"summary": "How units decide what to do."
+			"summary": "How units decide what to do.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Units pick jobs from a job board by priority and distance. Each job is a small state machine (walk, work, deliver)."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UJobBoardSubsystem`: posts and assigns jobs\n- `UUnitBrainComponent`: picks and runs jobs"
+				},
+				{
+					"heading": "Data",
+					"text": "- Job priorities in a data asset."
+				}
+			]
 		},
 		{
 			"id": "pathfinding",
 			"title": "Pathfinding",
 			"kind": "tech",
 			"parent": "units",
-			"summary": "How units move across the map at scale."
+			"summary": "How units move across the map at scale.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Units use a flow field per destination on a grid, so hundreds of units can share one path calculation."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UFlowFieldSubsystem`: builds and caches flow fields"
+				},
+				{
+					"heading": "Data",
+					"text": "- Grid cell size and update budget."
+				}
+			]
 		},
 		{
 			"id": "unit-assets",
 			"title": "Unit Assets",
 			"kind": "content",
 			"parent": "units",
-			"summary": "Unit meshes, animations and selection sounds."
+			"summary": "Unit meshes, animations and selection sounds.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Worker meshes | Mesh | Placeholder | To source |\n| Work animations | Animation | Placeholder | To source |\n| Selection sounds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Small, readable figures: color identifies the job, silhouette identifies the unit type."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Low-poly character packs with work animations.\n- Packs designed for top-down cameras."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Highly detailed characters that become noise when zoomed out."
+				}
+			]
 		},
 		{
 			"id": "building",
 			"title": "Building",
 			"kind": "design",
 			"parent": "",
-			"summary": "Placing, connecting and upgrading structures."
+			"summary": "Placing, connecting and upgrading structures.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can place structures where I want.\n- As a player, I can see if a placement is valid before confirming.\n- As a player, I can upgrade or remove what I built."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A ghost preview, green when valid and red when not.\n- Costs shown before placing."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Structures snap to a grid.\n- Removing returns part of the cost."
+				}
+			]
 		},
 		{
 			"id": "placement-code",
 			"title": "Placement Code",
 			"kind": "tech",
 			"parent": "building",
-			"summary": "Grid or free placement, validation and connections."
+			"summary": "Grid or free placement, validation and connections.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Buildings snap to a grid; placement checks the footprint against terrain, other buildings and resources before confirming."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UPlacementSubsystem`: ghost previews and validation\n- `UBuildingFootprint`: grid cells a building covers"
+				},
+				{
+					"heading": "Data",
+					"text": "- Footprints per building data asset."
+				}
+			]
 		},
 		{
 			"id": "building-assets",
 			"title": "Building Assets",
 			"kind": "content",
 			"parent": "building",
-			"summary": "Building meshes for each stage, and construction effects."
+			"summary": "Building meshes for each stage, and construction effects.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Building meshes per tier | Mesh | Placeholder | To source |\n| Construction scaffolding | Mesh | Placeholder | To source |\n| Smoke and work effects | VFX | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Each building type has a unique roof shape so it's recognizable from far above."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Building packs with several upgrade stages.\n- Packs designed for top-down views."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Buildings that all share one silhouette."
+				}
+			]
 		},
 		{
 			"id": "economy-and-balancing",
 			"title": "Economy and Balancing",
 			"kind": "design",
 			"parent": "",
-			"summary": "Costs, rates and tuning that keep choices meaningful."
+			"summary": "Costs, rates and tuning that keep choices meaningful.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can make trade-offs between growth and stability.\n- As a player, I can see where resources go."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Graphs of income and spending."
+				},
+				{
+					"heading": "Rules",
+					"text": "- No resource is ever useless.\n- Every building has an upkeep."
+				}
+			]
 		},
 		{
 			"id": "camera-and-controls",
 			"title": "Camera and Controls",
 			"kind": "tech",
 			"parent": "",
-			"summary": "How the player views the map and selects and commands things."
+			"summary": "How the player views the map and selects and commands things.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "A top-down pawn moves with edge scroll, keys and drag; zoom changes height and angle together."
+				},
+				{
+					"heading": "Code",
+					"text": "- `AStrategyCameraPawn`: pan, zoom and rotate\n- `USelectionComponent`: box and click selection"
+				},
+				{
+					"heading": "Data",
+					"text": "- Zoom levels and pan speeds in a data asset."
+				}
+			]
 		},
 		{
 			"id": "map",
 			"title": "Map",
 			"kind": "design",
 			"parent": "",
-			"summary": "Hand-made or generated maps, terrain and resource placement."
+			"summary": "Hand-made or generated maps, terrain and resource placement.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start on a new map each game.\n- As a player, I can read terrain and resources at a glance."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Resources visible on the terrain."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every map has enough starting resources nearby."
+				}
+			]
 		},
 		{
 			"id": "map-generation",
 			"title": "Map Generation",
 			"kind": "tech",
 			"parent": "map",
-			"summary": "Generating terrain and placing resources."
+			"summary": "Generating terrain and placing resources.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Maps are generated from a seed: noise for terrain, then rules place resources and the starting area."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UMapGenerator`: terrain and resource placement"
+				},
+				{
+					"heading": "Data",
+					"text": "- Generation settings per map size."
+				}
+			]
 		},
 		{
 			"id": "terrain-art",
 			"title": "Terrain Art",
 			"kind": "content",
 			"parent": "map",
-			"summary": "Terrain materials, foliage and resource node meshes."
+			"summary": "Terrain materials, foliage and resource node meshes.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Terrain materials | Material | Placeholder | To source |\n| Trees and foliage | Mesh | Placeholder | To source |\n| Resource node meshes | Mesh | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Soft, readable terrain with resources in strong, distinct colors."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Stylized landscape material packs.\n- Foliage packs that stay readable from above."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Realistic grass that hides resources."
+				}
+			]
 		},
 		{
 			"id": "ui",
 			"title": "UI",
 			"kind": "design",
 			"parent": "",
-			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can start, pause and quit from clear menus.\n- As a player, I can change graphics, audio and control settings.\n- As a player, I can see the information I need during play without it covering the action."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A title screen, pause menu and settings screens.\n- A HUD with only what matters right now.\n- Button prompts that match my input device."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Every screen can be used with a gamepad as well as mouse and keyboard.\n- Pausing stops gameplay time.\n- Settings save immediately."
+				}
+			]
 		},
 		{
 			"id": "ui-framework",
 			"title": "UI Framework",
 			"kind": "tech",
 			"parent": "ui",
-			"summary": "How screens and widgets are built, opened, navigated and fed data."
+			"summary": "How screens and widgets are built, opened, navigated and fed data.",
+			"examples": [
+				{
+					"heading": "How It Works",
+					"text": "Screens are UMG widgets pushed onto a stack by a UI manager subsystem. The top screen gets input; popping it returns to the one below. Gameplay talks to the HUD through events, never directly."
+				},
+				{
+					"heading": "Code",
+					"text": "- `UProjectUISubsystem`: owns the screen stack and opens and closes screens\n- `UScreenWidget`: base class for every full screen (menus, settings)\n- `UHUDWidget`: the in-game HUD; listens to gameplay events"
+				},
+				{
+					"heading": "Data",
+					"text": "- Screen classes and their input modes in a data asset.\n- Settings in the game user settings, saved per user."
+				}
+			]
 		},
 		{
 			"id": "ui-art",
 			"title": "UI Art",
 			"kind": "content",
 			"parent": "ui",
-			"summary": "Icons, fonts, panels and widget skins."
+			"summary": "Icons, fonts, panels and widget skins.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Icons | UI | Placeholder | To source |\n| Fonts (headings, body) | UI | Placeholder | To source |\n| Panel and button skins | UI | Placeholder | To source |\n| Input prompt icons | UI | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Clean and readable first: flat shapes, high contrast, one accent color. Icons share one line weight and perspective."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- UI kits with matching icons, buttons and panels.\n- Fonts licensed for games, with the character sets we localize to.\n- Input prompt packs covering keyboard, Xbox and PlayStation."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Mixing icon packs with different styles.\n- Ornate frames that crowd the screen.\n- Fonts that are hard to read at small sizes."
+				}
+			]
 		},
 		{
 			"id": "overlays",
 			"title": "Overlays",
 			"kind": "design",
 			"parent": "ui",
-			"summary": "Map overlays that show simulation data."
+			"summary": "Map overlays that show simulation data.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can toggle overlays for happiness, resources and traffic."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- Color-coded heatmaps on the map."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Only one overlay at a time."
+				}
+			]
 		},
 		{
 			"id": "notifications",
 			"title": "Notifications",
 			"kind": "design",
 			"parent": "ui",
-			"summary": "Alerts that pull the player's attention to what matters."
+			"summary": "Alerts that pull the player's attention to what matters.",
+			"examples": [
+				{
+					"heading": "The Player Can",
+					"text": "- As a player, I can get alerts about problems.\n- As a player, I can jump to the problem from the alert."
+				},
+				{
+					"heading": "The Player Sees",
+					"text": "- A notification feed in the corner."
+				},
+				{
+					"heading": "Rules",
+					"text": "- Repeated alerts are grouped."
+				}
+			]
 		},
 		{
 			"id": "music-and-sound",
 			"title": "Music and Sound",
 			"kind": "content",
 			"parent": "",
-			"summary": "Music, sound effects and ambience, and where each is used."
+			"summary": "Music, sound effects and ambience, and where each is used.",
+			"examples": [
+				{
+					"heading": "Assets Needed",
+					"text": "| Asset | Type | Status | Source |\n|---|---|---|---|\n| Main theme | Music | Placeholder | To source |\n| Gameplay loops | Music | Placeholder | To source |\n| UI sounds (click, back, confirm) | Sound | Placeholder | To source |\n| Ambience beds | Sound | Placeholder | To source |"
+				},
+				{
+					"heading": "Style",
+					"text": "Music sets the mood of each area; sound effects are short and punchy so they read over the music."
+				},
+				{
+					"heading": "What to Look For",
+					"text": "- Music packs with loopable stems.\n- Sound effect libraries with variations of each sound.\n- Licenses that allow commercial use and streaming."
+				},
+				{
+					"heading": "What to Avoid",
+					"text": "- Tracks that don't loop cleanly.\n- Effects with long tails that muddy fast moments.\n- Mixing many libraries with different loudness."
+				}
+			]
 		}
 	]
 }

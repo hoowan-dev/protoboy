@@ -140,7 +140,7 @@ Content      the assets to make it happen                and the style they must
   Management, Puzzle, Narrative / Adventure, Survival / Crafting, Roguelike) and by size (Game Jam, Prototype / Vertical
   Slice, Multiplayer, Live / Production), plus Generic. Each preview shows the template's suggested design pillars, and its docs as a tree (Tech and Content docs under the features they serve). **A template replaces your documentation:** **Next** lists every doc that moves to the trash first
   (everything on the map, the Game doc included, plus any other file where the template writes) and every doc that will
-  be written, and the button reads **Replace with N Docs**. Folders the old docs leave empty are removed too, so the
+  be written, and the button reads **Replace with N Docs**. The same step has a **Note contents** choice: **Leave blank** (each doc gets its headings, hints and a line on what it covers) or **Add example documentation** (the Game doc's pitch, core loop and non-goals, and each doc's main sections, start with example content for that kind of game: what the player can do and see, how it works in code, the assets it needs and their style, marked as examples to rewrite). Folders the old docs leave empty are removed too, so the
   old folder structure goes with them. Other notes in the docs folder aren't touched (nor the folders holding them), and the
   removed docs can be recovered from the vault's `.trash` (or `Saved/ProtoBoy/DeletedDocs`). The new Game doc gets the
   template's pillars as placeholders to rewrite, and each doc starts from its template's sections with a line on what it covers. Templates are JSON files in
