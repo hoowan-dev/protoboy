@@ -25,6 +25,7 @@ public class ProtoBoy : ModuleRules
 			"Projects",
 			"Json",
 			"AssetRegistry",
+			"SourceControl",
 			"JsonUtilities",
 			"DesktopPlatform",
 			"ApplicationCore",

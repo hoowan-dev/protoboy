@@ -53,6 +53,7 @@ private:
 	FSetupStepState TasksStep;
 	/** Asset sourcing is optional, so always done; the detail describes the team's choices. */
 	FSetupStepState SourcingStep;
+	FSetupStepState DocHealthStep;
 
 	/** Wraps Body in a collapsible, titled card. Use for every section inside a page so they look consistent. */
 	TSharedRef<SWidget> MakeSection(const FText& Title, const TSharedRef<SWidget>& Body);

@@ -7,12 +7,14 @@
 #include "Modules/ModuleManager.h"
 #include "PBSettings.h"
 #include "PBSubsystem.h"
+#include "Health/PBDocHealth.h"
 #include "Sourcing/PBAssetSourcing.h"
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
 #include "UI/PBStyle.h"
 #include "UI/Docs/Map/SPBDocMapEditor.h"
+#include "UI/Health/SPBDocHealthPanel.h"
 #include "UI/Sourcing/SPBAssetSourcingPanel.h"
 #include "UI/Tasks/SPBConnectTasksDialog.h"
 #include "UI/Docs/SPBConnectDocsDialog.h"
@@ -516,6 +518,13 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupSection()
 		.Padding(0.f, 12.f, 0.f, 0.f)
 		[
 			MakeSection(LOCTEXT("AssetSourcingHeader", "Asset Sourcing (optional)"), SourcingStep, SAssignNew(AssetSourcingPanel, SProtoBoyAssetSourcingPanel))
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 12.f, 0.f, 0.f)
+		[
+			MakeSection(LOCTEXT("DocHealthHeader", "Documentation Health Checks (optional)"), DocHealthStep, SNew(SProtoBoyDocHealthPanel))
 		];
 }
 
@@ -701,7 +710,20 @@ void SProtoBoyDashboard::BuildSetupSteps()
 		return true;
 	};
 
-	SetupSteps = { AgentStep, DocsStep, TasksStep, SourcingStep };
+	// Optional, so always green; the detail says whether it's on and whether revision control is connected.
+	DocHealthStep = [](FText& OutDetail)
+	{
+		FText Status;
+		const bool bConnected = ProtoBoyDocHealth::IsRevisionControlConnected(Status);
+		OutDetail = FText::Format(LOCTEXT("StepDocHealthDetail", "{0} {1}"),
+			ProtoBoyDocHealth::IsEnabled() ? LOCTEXT("DocHealthOn", "Health checks are enabled.")
+				: bConnected ? LOCTEXT("DocHealthOff", "Health checks are off.")
+				: LOCTEXT("DocHealthNeedsRC", "Health checks need revision control."),
+			Status);
+		return true;
+	};
+
+	SetupSteps = { AgentStep, DocsStep, TasksStep, SourcingStep, DocHealthStep };
 }
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeDocumentationSection()

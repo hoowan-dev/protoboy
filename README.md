@@ -43,11 +43,14 @@ come later (see [Roadmap](#roadmap)).
 **Tools > ProtoBoy Dashboard** has three pages, picked from the list in its sidebar (the dashboard reopens on the last
 page you used):
 
-- **Setup**: a shortcut to the plugin's Project Settings, plus the **MCP**, **Documentation**, **Tasks** and optional
-  **Asset Sourcing** sections. Each shows its connection status and what's left to set up, with a check or a red X in
+- **Setup**: a shortcut to the plugin's Project Settings, plus the **MCP**, **Documentation**, **Tasks**, and optional
+  **Asset Sourcing** and **Documentation Health Checks** sections. Each shows its connection status and what's left to set up, with a check or a red X in
   its header (hover it for details). Asset Sourcing is optional, so it's always green: it shows the team's choices
   (whether agents source assets instead of generating them, the enabled sources, and that the style comes from Content
-  docs).
+  docs). Documentation Health Checks is optional too: a team-wide checkbox to allow LLM health checks that look for
+  files changed in revision control that may be related to existing notes, so you can see which docs may need
+  updating. It can only be ticked while the editor is connected to revision control, and the section explains how to
+  connect (with a **Connect to Revision Control...** button). The checks themselves don't run yet.
 - **Documentation**: the **Doc Map** (see [Doc map](#doc-map)). Until an agent, documentation and a task board are
   connected, it's disabled with a warning saying what's missing and a **Go to Setup** button (a missing Game doc doesn't
   lock it, since this is where you create it).
