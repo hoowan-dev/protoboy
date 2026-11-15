@@ -3,9 +3,12 @@
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "Docs/PBDocGenerator.h"
 #include "Docs/PBDocMap.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Framework/Commands/GenericCommands.h"
 #include "Framework/Commands/UICommandList.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "HAL/PlatformProcess.h"
+#include "Misc/MessageDialog.h"
 #include "Misc/Paths.h"
 #include "PBSubsystem.h"
 #include "Styling/AppStyle.h"
@@ -16,7 +19,6 @@
 #include "UObject/Package.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
-#include "Widgets/Input/SComboButton.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Input/SHyperlink.h"
 #include "Widgets/Input/SSearchBox.h"
@@ -31,15 +33,13 @@
 namespace ProtoBoyDocMapEditor
 {
 	constexpr float GraphHeight = 480.f;
-	/** Longest Map Existing Doc menu before it says "and N more". */
+	/** Longest list of existing notes in the add menu before it says "and N more". */
 	constexpr int32 MaxUnmappedInMenu = 40;
 
-	/** "Design Doc", "Shared Tech Doc", "Content Doc", "Style Guide". */
+	/** "Design Doc", "Tech Doc", "Content Doc", "Style Doc". */
 	FText GetAddLabel(EProtoBoyDocKind Kind)
 	{
-		return Kind == EProtoBoyDocKind::StyleGuide
-			? ProtoBoyDocLayers::GetKindName(Kind)
-			: FText::Format(NSLOCTEXT("SProtoBoyDocMapEditor", "AddKind", "{0} Doc"), ProtoBoyDocLayers::GetKindName(Kind));
+		return FText::Format(NSLOCTEXT("SProtoBoyDocMapEditor", "AddKind", "{0} Doc"), ProtoBoyDocLayers::GetKindName(Kind));
 	}
 }
 
@@ -53,7 +53,7 @@ void SProtoBoyDocMapEditor::Construct(const FArguments& InArgs)
 		.AutoHeight()
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("Intro", "The project's docs in four layers: the Game doc (why the game exists and what it is), Design docs (each feature, from the player's side), Tech docs (how things are built) and Content docs (what's in the game and how it looks, sounds and reads). Each doc's place is stored in its own frontmatter, so the docs are the source of truth. Agents read down the layers before they build."))
+			.Text(LOCTEXT("Intro", "The project's docs: the Game doc (what the game is, named after the project), Design docs (what a player should be able to do or see), Tech docs (the technical details of how something works) and Content docs (the assets to make it happen, and the style they must have, which agents read before looking for assets). Put any doc under any other, however makes sense to you; only the Game doc stays at the top. Each doc's place is stored in its own frontmatter, so the docs are the source of truth."))
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 			.AutoWrapText(true)
 		]
@@ -64,6 +64,14 @@ void SProtoBoyDocMapEditor::Construct(const FArguments& InArgs)
 		.Padding(0.f, 8.f, 0.f, 0.f)
 		[
 			MakeSetupRow()
+		]
+
+		// An old Vision and Overview to combine
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 8.f, 0.f, 0.f)
+		[
+			MakeCombineRow()
 		]
 
 		+ SVerticalBox::Slot()
@@ -86,7 +94,7 @@ void SProtoBoyDocMapEditor::Construct(const FArguments& InArgs)
 		.Padding(0.f, 4.f, 0.f, 0.f)
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("GraphHelp", "Wire a doc's bottom bar to another doc's top bar to put the second under the first. Drag off a bottom bar into empty space to add a doc there. Double-click opens a doc; right-click for more."))
+			.Text(LOCTEXT("GraphHelp", "Drag off a doc's bottom bar into empty space to add a doc under it, or to link an existing note. Wire a doc's bottom bar to another doc's top bar to move the second under the first. Delete removes the selected doc (after asking). Double-click opens a doc."))
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 			.Font(FCoreStyle::GetDefaultFontStyle("Regular", 8))
 			.AutoWrapText(true)
@@ -172,7 +180,8 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeSetupRow()
 			.VAlign(VAlign_Center)
 			[
 				SNew(STextBlock)
-				.Text(LOCTEXT("NeedGame", "The map starts with the Game doc: why the game exists, its design pillars, what it is, and an index of every other doc. Set it up from a template, create it on its own, or put an existing note on the map as the Game doc with Map Existing Doc."))
+				.Text(FText::Format(LOCTEXT("NeedGame", "The map starts with the Game doc, {0}: why the game exists, its design pillars, what it is, and an index of every other doc. Set it up from a template, or create it on its own."),
+					FText::FromString(FProtoBoyDocMap::GetProjectTitle())))
 				.AutoWrapText(true)
 			]
 
@@ -184,7 +193,7 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeSetupRow()
 				SNew(SButton)
 				.ButtonStyle(FAppStyle::Get(), "PrimaryButton")
 				.Text(LOCTEXT("SetupFromTemplate", "Set Up from Template..."))
-				.ToolTipText(LOCTEXT("SetupFromTemplateTip", "Pick a preset for your kind of game: the Game doc with suggested design pillars, and a starting set of docs below it."))
+				.ToolTipText(LOCTEXT("SetupFromTemplateTip", "Pick a preset for your kind of game, or Blank for just the Game doc."))
 				.OnClicked(this, &SProtoBoyDocMapEditor::OnSetupFromTemplateClicked)
 			]
 
@@ -195,8 +204,63 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeSetupRow()
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("CreateGame", "Create Game Doc"))
-				.ToolTipText(LOCTEXT("CreateGameTip", "Just the Game doc, from its template. Add the rest yourself."))
+				.ToolTipText(LOCTEXT("CreateGameTip", "Just the Game doc, from its template. Add the rest by dragging off it."))
 				.OnClicked(this, &SProtoBoyDocMapEditor::OnCreateGameClicked)
+			]
+		];
+}
+
+TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeCombineRow()
+{
+	return SNew(SBorder)
+		.Visibility_Lambda([]()
+		{
+			const FProtoBoyDocMap* Map = GetMap();
+			return Map && Map->HasSplitGameDocs() ? EVisibility::Visible : EVisibility::Collapsed;
+		})
+		.BorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
+		.Padding(10.f)
+		[
+			SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(0.f, 0.f, 8.f, 0.f)
+			[
+				SNew(SImage)
+				.Image(FAppStyle::Get().GetBrush("Icons.InfoWithColor"))
+			]
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text_Lambda([]()
+				{
+					const FProtoBoyDocMap* Map = GetMap();
+					TArray<FString> Paths;
+					for (const FProtoBoyDocNode* Game : Map ? Map->GetGameDocs() : TArray<const FProtoBoyDocNode*>())
+					{
+						Paths.Add(Game->Path);
+					}
+					return FText::Format(LOCTEXT("CombineText", "{0} are all top-level docs from an older ProtoBoy (a separate Vision and Overview). Combine them into one Game doc titled {1}: every section is kept, and the old files go to {2}."),
+						FText::FromString(FString::Join(Paths, TEXT(", "))), FText::FromString(FProtoBoyDocMap::GetProjectTitle()),
+						UProtoBoySubsystem::Get() ? UProtoBoySubsystem::Get()->GetDocsProvider().GetDeletedDocsLocation() : FText::GetEmpty());
+				})
+				.AutoWrapText(true)
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(8.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SButton)
+				.ButtonStyle(FAppStyle::Get(), "PrimaryButton")
+				.Text(LOCTEXT("Combine", "Combine into One Game Doc"))
+				.OnClicked(this, &SProtoBoyDocMapEditor::OnCombineClicked)
 			]
 		];
 }
@@ -213,55 +277,6 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeToolbar()
 			.Text(LOCTEXT("SetupFromTemplateToolbar", "Set Up from Template..."))
 			.ToolTipText(LOCTEXT("SetupFromTemplateToolbarTip", "Add a preset set of docs for your kind of game. Only docs that don't exist yet are created; nothing is overwritten."))
 			.OnClicked(this, &SProtoBoyDocMapEditor::OnSetupFromTemplateClicked)
-		]
-
-		+ SWrapBox::Slot()
-		[
-			SNew(SBox)
-			.WidthOverride(200.f)
-			[
-				SAssignNew(TitleBox, SEditableTextBox)
-				.HintText(LOCTEXT("TitleHint", "New doc title"))
-				.ToolTipText(LOCTEXT("TitleTip", "Title for the next doc you add. It becomes the file name too."))
-			]
-		]
-
-		+ SWrapBox::Slot()
-		[
-			SNew(SComboButton)
-			.ToolTipText(LOCTEXT("AddTip", "Add a doc from its template, under the selected doc (or the Game doc)."))
-			.IsEnabled_Lambda([]() { const FProtoBoyDocMap* Map = GetMap(); return Map && Map->HasGameDoc(); })
-			.OnGetMenuContent(this, &SProtoBoyDocMapEditor::MakeAddMenu)
-			.ButtonContent()
-			[
-				SNew(STextBlock).Text(LOCTEXT("AddDoc", "Add Doc"))
-			]
-		]
-
-		+ SWrapBox::Slot()
-		[
-			SNew(SButton)
-			.Text(LOCTEXT("AddTech", "Add Tech Doc"))
-			.ToolTipText(LOCTEXT("AddTechTip", "Create the selected Design doc's Tech doc next to it, with one section for each of its sections."))
-			.IsEnabled_Lambda([this]() { return CanAddTechDoc(SelectedId); })
-			.OnClicked_Lambda([this]() { AddTechDoc(SelectedId); return FReply::Handled(); })
-		]
-
-		+ SWrapBox::Slot()
-		[
-			SNew(SComboButton)
-			.ToolTipText(LOCTEXT("MapExistingTip", "Put a note that's already in the docs folder on the map, by giving it a layer. Its text isn't changed."))
-			.OnGetMenuContent(this, &SProtoBoyDocMapEditor::MakeMapExistingMenu)
-			.ButtonContent()
-			[
-				SNew(STextBlock)
-				.Text_Lambda([]()
-				{
-					const FProtoBoyDocMap* Map = GetMap();
-					const int32 Count = Map ? Map->GetUnmappedDocs().Num() : 0;
-					return Count > 0 ? FText::Format(LOCTEXT("MapExistingCount", "Map Existing Doc ({0})"), FText::AsNumber(Count)) : LOCTEXT("MapExisting", "Map Existing Doc");
-				})
-			]
 		]
 
 		+ SWrapBox::Slot()
@@ -303,78 +318,6 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeToolbar()
 		];
 }
 
-TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeAddMenu()
-{
-	const FProtoBoyDocMap* Map = GetMap();
-	const FString ParentId = GetAddParentId();
-	const FProtoBoyDocNode* Parent = Map ? Map->Find(ParentId) : nullptr;
-
-	FMenuBuilder Menu(true, nullptr);
-	Menu.BeginSection("Add", Parent
-		? FText::Format(LOCTEXT("AddUnder", "Add under {0}"), FText::FromString(Parent->Title))
-		: LOCTEXT("AddSection", "Add"));
-	for (const EProtoBoyDocKind Kind : ProtoBoyDocLayers::GetAddableKinds())
-	{
-		Menu.AddMenuEntry(
-			ProtoBoyDocMapEditor::GetAddLabel(Kind),
-			GetNewTitle().IsEmpty() ? LOCTEXT("NeedTitle", "Type a title in the box first.") : ProtoBoyDocLayers::GetKindDescription(Kind),
-			FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Documentation"),
-			FUIAction(
-				FExecuteAction::CreateSPLambda(this, [this, Kind, ParentId]() { AddDoc(Kind, ParentId); }),
-				FCanExecuteAction::CreateSPLambda(this, [this]() { return !GetNewTitle().IsEmpty(); })));
-	}
-	Menu.EndSection();
-	return Menu.MakeWidget();
-}
-
-TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeMapExistingMenu()
-{
-	const FProtoBoyDocMap* Map = GetMap();
-	FMenuBuilder Menu(true, nullptr);
-	if (!Map || Map->GetUnmappedDocs().IsEmpty())
-	{
-		Menu.AddMenuEntry(LOCTEXT("NoneUnmapped", "Every doc in the docs folder is on the map."), FText::GetEmpty(), FSlateIcon(),
-			FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([]() { return false; })));
-		return Menu.MakeWidget();
-	}
-
-	Menu.BeginSection("Unmapped", LOCTEXT("UnmappedSection", "Docs not on the map"));
-	const TArray<FProtoBoyDocInfo>& Unmapped = Map->GetUnmappedDocs();
-	for (int32 Index = 0; Index < Unmapped.Num() && Index < ProtoBoyDocMapEditor::MaxUnmappedInMenu; ++Index)
-	{
-		const FString Path = Unmapped[Index].Path;
-		Menu.AddSubMenu(
-			FText::FromString(Path),
-			LOCTEXT("PickLayerTip", "Choose the layer this doc belongs to."),
-			FNewMenuDelegate::CreateSPLambda(this, [this, Path](FMenuBuilder& SubMenu)
-			{
-				const FProtoBoyDocMap* SubMap = GetMap();
-				for (const EProtoBoyDocLayer Layer : ProtoBoyDocLayers::GetAllLayers())
-				{
-					// There's one Game doc. A mapped Tech doc is shared tech until it names a Design doc to implement.
-					if (Layer == EProtoBoyDocLayer::Game && SubMap && SubMap->HasGameDoc())
-					{
-						continue;
-					}
-					SubMenu.AddMenuEntry(
-						ProtoBoyDocLayers::GetDisplayName(Layer),
-						ProtoBoyDocLayers::GetDescription(Layer),
-						FSlateIcon(),
-						FUIAction(FExecuteAction::CreateSPLambda(this, [this, Path, Layer]() { MapExistingDoc(Path, Layer); })));
-				}
-			}));
-	}
-	if (Unmapped.Num() > ProtoBoyDocMapEditor::MaxUnmappedInMenu)
-	{
-		Menu.AddMenuEntry(
-			FText::Format(LOCTEXT("MoreUnmapped", "...and {0} more. Add \"protoboy-layer\" to a note's properties to map it by hand."),
-				FText::AsNumber(Unmapped.Num() - ProtoBoyDocMapEditor::MaxUnmappedInMenu)),
-			FText::GetEmpty(), FSlateIcon(), FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([]() { return false; })));
-	}
-	Menu.EndSection();
-	return Menu.MakeWidget();
-}
-
 TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeGraph()
 {
 	Graph = NewObject<UProtoBoyDocMapGraph>(GetTransientPackage(), NAME_None, RF_Transient);
@@ -382,6 +325,9 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeGraph()
 	Graph->Editor = SharedThis(this);
 
 	GraphCommands = MakeShared<FUICommandList>();
+	GraphCommands->MapAction(FGenericCommands::Get().Delete,
+		FExecuteAction::CreateSPLambda(this, [this]() { DeleteDocWithConfirm(SelectedId); }),
+		FCanExecuteAction::CreateSP(this, &SProtoBoyDocMapEditor::CanDeleteSelected));
 
 	SGraphEditor::FGraphEditorEvents Events;
 	Events.OnSelectionChanged = SGraphEditor::FOnSelectionChanged::CreateSP(this, &SProtoBoyDocMapEditor::OnGraphSelectionChanged);
@@ -402,6 +348,140 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeGraph()
 			.GraphEvents(Events)
 			.ShowGraphStateOverlay(false)
 		];
+}
+
+// --- Add menu -----------------------------------------------------------------------------------------------------
+
+TArray<EProtoBoyDocKind> SProtoBoyDocMapEditor::GetKindsUnder(const FProtoBoyDocNode& Parent) const
+{
+	// The usual kinds under this layer first, then every other addable kind: the map allows any layer under any doc.
+	const FProtoBoyDocMap* Map = GetMap();
+	TArray<EProtoBoyDocKind> Kinds;
+	switch (Parent.Layer)
+	{
+	case EProtoBoyDocLayer::Game:
+		break;
+	case EProtoBoyDocLayer::Design:
+		Kinds.Append({ EProtoBoyDocKind::Tech, EProtoBoyDocKind::Design, EProtoBoyDocKind::Content });
+		break;
+	case EProtoBoyDocLayer::Tech:
+		Kinds.Append({ EProtoBoyDocKind::Tech, EProtoBoyDocKind::Content });
+		break;
+	case EProtoBoyDocLayer::Content:
+		Kinds.Add(EProtoBoyDocKind::Content);
+		break;
+	}
+	for (const EProtoBoyDocKind Kind : ProtoBoyDocLayers::GetAddableKinds())
+	{
+		Kinds.AddUnique(Kind);
+	}
+	return Kinds;
+}
+
+TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeAddMenu(const FString& ParentId, TSharedPtr<SWidget>& OutFocus, TFunction<void()> OnPicked)
+{
+	const FProtoBoyDocMap* Map = GetMap();
+	const FProtoBoyDocNode* Parent = Map ? Map->Find(ParentId) : nullptr;
+	FMenuBuilder Menu(true, nullptr);
+	if (!Parent)
+	{
+		Menu.AddMenuEntry(LOCTEXT("AddNeedGame", "Create the Game doc first."), FText::GetEmpty(), FSlateIcon(),
+			FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([]() { return false; })));
+		return Menu.MakeWidget();
+	}
+
+	const TArray<EProtoBoyDocKind> Kinds = GetKindsUnder(*Parent);
+	const TSharedRef<FString> Title = MakeShared<FString>();
+
+	// New docs: a title first, then what fits under this doc.
+	Menu.BeginSection("New", FText::Format(LOCTEXT("NewUnder", "New doc under {0}"), FText::FromString(Parent->Title)));
+	TSharedRef<SEditableTextBox> TitleBox = SNew(SEditableTextBox)
+		.HintText(LOCTEXT("TitleHint", "Title (becomes the file name)"))
+		.OnTextChanged_Lambda([Title](const FText& Text) { *Title = Text.ToString().TrimStartAndEnd(); })
+		.OnTextCommitted_Lambda([this, Title, Kinds, ParentId, OnPicked](const FText&, ETextCommit::Type Commit)
+		{
+			// Enter creates the first kind that takes a title.
+			if (Commit == ETextCommit::OnEnter && !Kinds.IsEmpty() && !Title->IsEmpty())
+			{
+				FSlateApplication::Get().DismissAllMenus();
+				OnPicked();
+				AddDoc(Kinds[0], ParentId, *Title);
+			}
+		});
+	OutFocus = TitleBox;
+	Menu.AddWidget(SNew(SBox).WidthOverride(260.f).Padding(FMargin(8.f, 2.f))[ TitleBox ], FText::GetEmpty(), true);
+	for (const EProtoBoyDocKind Kind : Kinds)
+	{
+		Menu.AddMenuEntry(
+			ProtoBoyDocMapEditor::GetAddLabel(Kind),
+			ProtoBoyDocLayers::GetKindDescription(Kind),
+			FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Documentation"),
+			FUIAction(
+				FExecuteAction::CreateSPLambda(this, [this, Kind, ParentId, Title, OnPicked]()
+				{
+					OnPicked();
+					AddDoc(Kind, ParentId, *Title);
+				}),
+				FCanExecuteAction::CreateLambda([Title]() { return !Title->IsEmpty(); })));
+	}
+	Menu.EndSection();
+
+	// Existing notes in the docs folder that aren't on the map yet, linked here as one of the same kinds.
+	const TArray<FProtoBoyDocInfo>& Unmapped = Map->GetUnmappedDocs();
+	if (!Unmapped.IsEmpty())
+	{
+		Menu.BeginSection("Existing", LOCTEXT("ExistingSection", "Existing note"));
+		Menu.AddSubMenu(
+			FText::Format(LOCTEXT("LinkExisting", "Link an Existing Note ({0})"), FText::AsNumber(Unmapped.Num())),
+			LOCTEXT("LinkExistingTip", "Put a note that's already in the docs folder under this doc. Only its frontmatter changes."),
+			FNewMenuDelegate::CreateSPLambda(this, [this, ParentId, Kinds, OnPicked](FMenuBuilder& Notes)
+			{
+				const FProtoBoyDocMap* NotesMap = GetMap();
+				const FProtoBoyDocNode* NotesParent = NotesMap ? NotesMap->Find(ParentId) : nullptr;
+				if (!NotesParent)
+				{
+					return;
+				}
+				const TArray<FProtoBoyDocInfo>& List = NotesMap->GetUnmappedDocs();
+				for (int32 Index = 0; Index < List.Num() && Index < ProtoBoyDocMapEditor::MaxUnmappedInMenu; ++Index)
+				{
+					const FString Path = List[Index].Path;
+					Notes.AddSubMenu(
+						FText::FromString(Path),
+						LOCTEXT("LinkAsTip", "Link it as..."),
+						FNewMenuDelegate::CreateSPLambda(this, [this, Path, ParentId, Kinds, OnPicked](FMenuBuilder& As)
+						{
+							const FProtoBoyDocMap* AsMap = GetMap();
+							if (!AsMap || !AsMap->Find(ParentId))
+							{
+								return;
+							}
+							for (const EProtoBoyDocKind Kind : Kinds)
+							{
+								const EProtoBoyDocLayer Layer = ProtoBoyDocLayers::GetLayer(Kind);
+								As.AddMenuEntry(
+									ProtoBoyDocMapEditor::GetAddLabel(Kind),
+									ProtoBoyDocLayers::GetKindDescription(Kind),
+									FSlateIcon(),
+									FUIAction(FExecuteAction::CreateSPLambda(this, [this, Path, Layer, ParentId, OnPicked]()
+									{
+										OnPicked();
+										LinkExistingDoc(Path, Layer, ParentId);
+									})));
+							}
+						}));
+				}
+				if (List.Num() > ProtoBoyDocMapEditor::MaxUnmappedInMenu)
+				{
+					Notes.AddMenuEntry(
+						FText::Format(LOCTEXT("MoreUnmapped", "...and {0} more. Add \"protoboy-layer\" to a note's properties to map it by hand."),
+							FText::AsNumber(List.Num() - ProtoBoyDocMapEditor::MaxUnmappedInMenu)),
+						FText::GetEmpty(), FSlateIcon(), FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([]() { return false; })));
+				}
+			}));
+		Menu.EndSection();
+	}
+	return Menu.MakeWidget();
 }
 
 // --- Graph events -------------------------------------------------------------------------------------------------
@@ -439,8 +519,10 @@ void SProtoBoyDocMapEditor::OnNodeDoubleClicked(UEdGraphNode* Node)
 FActionMenuContent SProtoBoyDocMapEditor::OnCreateActionMenu(UEdGraph* InGraph, const FVector2f& Location, const TArray<UEdGraphPin*>& DraggedPins,
 	bool bAutoExpand, SGraphEditor::FActionMenuClosed OnClosed)
 {
-	// Dragged off a doc's bottom bar: add under that doc. Right-click in empty space: add under the selection.
-	FString ParentId = GetAddParentId();
+	// Dragged off a doc's bottom bar: add under that doc. Right-click in empty space: add under the Game doc.
+	const FProtoBoyDocMap* Map = GetMap();
+	const FProtoBoyDocNode* Root = Map ? Map->GetGame() : nullptr;
+	FString ParentId = Root ? Root->Id : FString();
 	for (const UEdGraphPin* Pin : DraggedPins)
 	{
 		const UProtoBoyDocMapGraphNode* Node = Pin ? Cast<UProtoBoyDocMapGraphNode>(Pin->GetOwningNode()) : nullptr;
@@ -451,38 +533,10 @@ FActionMenuContent SProtoBoyDocMapEditor::OnCreateActionMenu(UEdGraph* InGraph, 
 		}
 	}
 
-	const FProtoBoyDocMap* Map = GetMap();
-	const FProtoBoyDocNode* Parent = Map ? Map->Find(ParentId) : nullptr;
-	FMenuBuilder Menu(true, nullptr);
-	Menu.BeginSection("Add", Parent ? FText::Format(LOCTEXT("ActionAddUnder", "Add under {0}"), FText::FromString(Parent->Title)) : LOCTEXT("ActionAdd", "Add"));
-	if (!Map || !Map->HasGameDoc())
-	{
-		Menu.AddMenuEntry(LOCTEXT("ActionNeedGame", "Create the Game doc first."), FText::GetEmpty(), FSlateIcon(),
-			FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([]() { return false; })));
-	}
-	else
-	{
-		const FString Title = GetNewTitle();
-		for (const EProtoBoyDocKind Kind : ProtoBoyDocLayers::GetAddableKinds())
-		{
-			Menu.AddMenuEntry(
-				Title.IsEmpty()
-					? ProtoBoyDocMapEditor::GetAddLabel(Kind)
-					: FText::Format(LOCTEXT("ActionAddKindTitled", "{0} \"{1}\""), ProtoBoyDocMapEditor::GetAddLabel(Kind), FText::FromString(Title)),
-				Title.IsEmpty() ? LOCTEXT("ActionNeedTitle", "Type a title in the toolbar's title box first.") : ProtoBoyDocLayers::GetKindDescription(Kind),
-				FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Documentation"),
-				FUIAction(
-					FExecuteAction::CreateSPLambda(this, [this, Kind, ParentId, OnClosed]()
-					{
-						OnClosed.ExecuteIfBound();
-						AddDoc(Kind, ParentId);
-					}),
-					FCanExecuteAction::CreateLambda([Title]() { return !Title.IsEmpty(); })));
-		}
-	}
-	Menu.EndSection();
-
-	FActionMenuContent Content(Menu.MakeWidget());
+	// Built first: it fills Focus (the title box), which the menu focuses so you can type straight away.
+	TSharedPtr<SWidget> Focus;
+	const TSharedRef<SWidget> MenuWidget = MakeAddMenu(ParentId, Focus, [OnClosed]() { OnClosed.ExecuteIfBound(); });
+	FActionMenuContent Content(MenuWidget, Focus);
 	Content.OnMenuDismissed.AddLambda([OnClosed]() { OnClosed.ExecuteIfBound(); });
 	return Content;
 }
@@ -509,42 +563,23 @@ FActionMenuContent SProtoBoyDocMapEditor::OnCreateNodeOrPinMenu(UEdGraph* InGrap
 		FText::FromString(Doc->Path),
 		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.OpenInExternalEditor"),
 		FUIAction(FExecuteAction::CreateSPLambda(this, [this, Id]() { OpenDoc(Id); })));
-	if (CanAddTechDoc(Id))
-	{
-		Menu->AddMenuEntry(
-			LOCTEXT("CtxAddTech", "Add Tech Doc"),
-			LOCTEXT("CtxAddTechTip", "Create this Design doc's Tech doc next to it."),
-			FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Plus"),
-			FUIAction(FExecuteAction::CreateSPLambda(this, [this, Id]() { AddTechDoc(Id); })));
-	}
 	const FProtoBoyDocNode* Parent = Map->GetParent(Id);
 	const FProtoBoyDocNode* Default = Map->GetDefaultParent(*Doc);
 	if (Parent && Default && Parent != Default)
 	{
 		Menu->AddMenuEntry(
 			FText::Format(LOCTEXT("CtxDefault", "Move Back Under {0}"), FText::FromString(Default->Title)),
-			LOCTEXT("CtxDefaultTip", "Where docs of this layer go by default."),
+			LOCTEXT("CtxDefaultTip", "Where docs go by default."),
 			FSlateIcon(),
 			FUIAction(FExecuteAction::CreateSPLambda(this, [this, Id]() { ReparentFromGraph(Id, FString()); })));
 	}
-	Menu->EndSection();
-
-	if (Map->HasGameDoc())
+	if (Doc != Map->GetGame())
 	{
-		Menu->BeginSection("AddUnder", LOCTEXT("CtxAddUnder", "Add Under This Doc"));
-		const FString Title = GetNewTitle();
-		for (const EProtoBoyDocKind Kind : ProtoBoyDocLayers::GetAddableKinds())
-		{
-			Menu->AddMenuEntry(
-				ProtoBoyDocMapEditor::GetAddLabel(Kind),
-				Title.IsEmpty() ? LOCTEXT("CtxNeedTitle", "Type a title in the toolbar's title box first.") : ProtoBoyDocLayers::GetKindDescription(Kind),
-				FSlateIcon(),
-				FUIAction(
-					FExecuteAction::CreateSPLambda(this, [this, Kind, Id]() { AddDoc(Kind, Id); }),
-					FCanExecuteAction::CreateLambda([Title]() { return !Title.IsEmpty(); })));
-		}
-		Menu->EndSection();
+		Menu->AddMenuSeparator();
+		Menu->AddMenuEntry(FGenericCommands::Get().Delete, NAME_None, LOCTEXT("CtxDelete", "Delete..."),
+			LOCTEXT("CtxDeleteTip", "Delete this doc. Asks first; the note goes to the trash."));
 	}
+	Menu->EndSection();
 	return FActionMenuContent(Menu->MakeWidget());
 }
 
@@ -788,41 +823,13 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeDetails(const FProtoBoyDocNode& D
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[ MakeDocLink(*Parent) ]
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(6.f, 0.f, 0.f, 0.f)
 			[
-				Text(bDefault ? LOCTEXT("DefaultPlace", "(where this layer goes by default)") : LOCTEXT("MovedPlace", "(set in this doc's frontmatter)"), true)
+				Text(bDefault ? LOCTEXT("DefaultPlace", "(where docs go by default)") : LOCTEXT("MovedPlace", "(set in this doc's frontmatter)"), true)
 			]);
 	}
 
-	if (Doc.Layer == EProtoBoyDocLayer::Design)
+	if (Doc.Layer == EProtoBoyDocLayer::Content)
 	{
-		if (const FProtoBoyDocNode* Tech = Map->FindTechFor(Id))
-		{
-			AddRow(LOCTEXT("TechLabel", "Tech doc"), MakeDocLink(*Tech));
-		}
-		else
-		{
-			AddRow(LOCTEXT("TechLabel", "Tech doc"),
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[ Text(LOCTEXT("NoTech", "None yet: how this is built isn't written down."), true) ]
-				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(6.f, 0.f, 0.f, 0.f)
-				[
-					SNew(SButton)
-					.Text(LOCTEXT("AddTechDetails", "Add Tech Doc"))
-					.OnClicked_Lambda([this, Id]() { AddTechDoc(Id); return FReply::Handled(); })
-				]);
-		}
-	}
-	if (Doc.Layer == EProtoBoyDocLayer::Tech)
-	{
-		if (const FProtoBoyDocNode* Design = Map->Find(Doc.ImplementsId))
-		{
-			AddRow(LOCTEXT("ImplementsLabel", "Implements"), MakeDocLink(*Design));
-		}
-		else
-		{
-			AddRow(LOCTEXT("ImplementsLabel", "Implements"), Text(Doc.ImplementsId.IsEmpty()
-				? LOCTEXT("ImplementsNone", "Nothing: this is shared tech. To make it a feature's Tech doc, add \"protoboy-implements: <design doc id>\" to its frontmatter.")
-				: FText::Format(LOCTEXT("ImplementsMissing", "\"{0}\", which isn't on the map."), FText::FromString(Doc.ImplementsId)), true));
-		}
+		AddRow(LOCTEXT("StyleUseLabel", "Style"), Text(LOCTEXT("StyleUse", "Agents read this doc's Style, What to Look For and What to Avoid sections (and those of the Content docs above it) before searching asset stores (Fab) or choosing assets."), true));
 	}
 	if (&Doc == Map->GetGame())
 	{
@@ -862,34 +869,7 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeDetails(const FProtoBoyDocNode& D
 
 // --- Actions ------------------------------------------------------------------------------------------------------
 
-FString SProtoBoyDocMapEditor::GetAddParentId() const
-{
-	const FProtoBoyDocMap* Map = GetMap();
-	if (!Map)
-	{
-		return FString();
-	}
-	if (Map->Find(SelectedId))
-	{
-		return SelectedId;
-	}
-	const FProtoBoyDocNode* Root = Map->GetGame();
-	return Root ? Root->Id : FString();
-}
-
-FString SProtoBoyDocMapEditor::GetNewTitle() const
-{
-	return TitleBox.IsValid() ? TitleBox->GetText().ToString().TrimStartAndEnd() : FString();
-}
-
-bool SProtoBoyDocMapEditor::CanAddTechDoc(const FString& Id) const
-{
-	const FProtoBoyDocMap* Map = GetMap();
-	const FProtoBoyDocNode* Doc = Map ? Map->Find(Id) : nullptr;
-	return Doc && Doc->Layer == EProtoBoyDocLayer::Design && !Map->FindTechFor(Id);
-}
-
-void SProtoBoyDocMapEditor::AddDoc(EProtoBoyDocKind Kind, const FString& ParentId)
+void SProtoBoyDocMapEditor::AddDoc(EProtoBoyDocKind Kind, const FString& ParentId, const FString& Title)
 {
 	FProtoBoyDocMap* Map = GetMap();
 	if (!Map)
@@ -898,40 +878,17 @@ void SProtoBoyDocMapEditor::AddDoc(EProtoBoyDocKind Kind, const FString& ParentI
 	}
 	FString NewId;
 	FText Error;
-	if (!Map->CreateDoc(Kind, GetNewTitle(), ParentId, NewId, Error))
+	if (!Map->CreateDoc(Kind, Title, ParentId, NewId, Error))
 	{
 		SetStatus(Error, true);
 		return;
-	}
-	if (TitleBox.IsValid())
-	{
-		TitleBox->SetText(FText::GetEmpty());
 	}
 	const FProtoBoyDocNode* Doc = Map->Find(NewId);
 	SetStatus(FText::Format(LOCTEXT("Created", "Created {0}."), FText::FromString(Doc ? Doc->Path : NewId)), false);
 	Select(NewId);
 }
 
-void SProtoBoyDocMapEditor::AddTechDoc(const FString& DesignId)
-{
-	FProtoBoyDocMap* Map = GetMap();
-	if (!Map)
-	{
-		return;
-	}
-	FString NewId;
-	FText Error;
-	if (!Map->CreateTechDoc(DesignId, NewId, Error))
-	{
-		SetStatus(Error, true);
-		return;
-	}
-	const FProtoBoyDocNode* Doc = Map->Find(NewId);
-	SetStatus(FText::Format(LOCTEXT("CreatedTech", "Created {0}."), FText::FromString(Doc ? Doc->Path : NewId)), false);
-	Select(NewId);
-}
-
-void SProtoBoyDocMapEditor::MapExistingDoc(const FString& Path, EProtoBoyDocLayer Layer)
+void SProtoBoyDocMapEditor::LinkExistingDoc(const FString& Path, EProtoBoyDocLayer Layer, const FString& ParentId)
 {
 	FProtoBoyDocMap* Map = GetMap();
 	if (!Map)
@@ -939,16 +896,58 @@ void SProtoBoyDocMapEditor::MapExistingDoc(const FString& Path, EProtoBoyDocLaye
 		return;
 	}
 	FText Error;
-	if (!Map->AddToMap(Path, Layer, Error))
+	if (!Map->AddToMap(Path, Layer, ParentId, Error))
 	{
 		SetStatus(Error, true);
 		return;
 	}
-	SetStatus(FText::Format(LOCTEXT("Mapped", "{0} is on the map as a {1} doc."), FText::FromString(Path), ProtoBoyDocLayers::GetDisplayName(Layer)), false);
+	SetStatus(FText::Format(LOCTEXT("Linked", "{0} is on the map as a {1} doc."), FText::FromString(Path), ProtoBoyDocLayers::GetDisplayName(Layer)), false);
 	if (const FProtoBoyDocNode* Doc = Map->FindByPath(Path))
 	{
 		Select(Doc->Id);
 	}
+}
+
+bool SProtoBoyDocMapEditor::CanDeleteSelected() const
+{
+	const FProtoBoyDocMap* Map = GetMap();
+	const FProtoBoyDocNode* Doc = Map ? Map->Find(SelectedId) : nullptr;
+	return Doc && Doc != Map->GetGame();
+}
+
+void SProtoBoyDocMapEditor::DeleteDocWithConfirm(const FString& Id)
+{
+	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	FProtoBoyDocMap* Map = GetMap();
+	const FProtoBoyDocNode* Doc = Map ? Map->Find(Id) : nullptr;
+	if (!Subsystem || !Doc || Doc == Map->GetGame())
+	{
+		return;
+	}
+
+	// Say exactly what happens: the note itself goes, and what's under it moves up.
+	FText Consequences;
+	const int32 NumChildren = Map->GetChildren(Id).Num();
+	if (NumChildren > 0)
+	{
+		Consequences = FText::Format(LOCTEXT("DeleteChildren", "\n\nThe {0} {0}|plural(one=doc,other=docs) under it {0}|plural(one=isn't,other=aren't) deleted: {0}|plural(one=it moves,other=they move) back under the Game doc."), FText::AsNumber(NumChildren));
+	}
+	const FText Message = FText::Format(LOCTEXT("DeleteConfirm", "Delete \"{0}\"?\n\nThis deletes the note itself ({1}): it's moved to {2}.{3}"),
+		FText::FromString(Doc->Title), FText::FromString(Doc->Path), Subsystem->GetDocsProvider().GetDeletedDocsLocation(), Consequences);
+	if (FMessageDialog::Open(EAppMsgType::YesNo, EAppReturnType::No, Message, LOCTEXT("DeleteTitle", "Delete Doc")) != EAppReturnType::Yes)
+	{
+		return;
+	}
+
+	const FString Path = Doc->Path;
+	FText Error;
+	if (!Map->DeleteDoc(Id, Error))
+	{
+		SetStatus(Error, true);
+		return;
+	}
+	SelectedId.Reset();
+	SetStatus(FText::Format(LOCTEXT("Deleted", "Deleted {0}."), FText::FromString(Path)), false);
 }
 
 void SProtoBoyDocMapEditor::OpenDoc(const FString& Id)
@@ -979,7 +978,25 @@ FReply SProtoBoyDocMapEditor::OnCreateGameClicked()
 		FText Error;
 		if (Map->CreateGameDoc(Error))
 		{
-			SetStatus(LOCTEXT("CreatedGame", "Created the Game doc. Write the pitch and the design pillars first."), false);
+			SetStatus(LOCTEXT("CreatedGame", "Created the Game doc. Write the pitch and the design pillars first, then drag off it to add docs."), false);
+			ZoomToFitSoon();
+		}
+		else
+		{
+			SetStatus(Error, true);
+		}
+	}
+	return FReply::Handled();
+}
+
+FReply SProtoBoyDocMapEditor::OnCombineClicked()
+{
+	if (FProtoBoyDocMap* Map = GetMap())
+	{
+		FText Error;
+		if (Map->CombineGameDocs(Error))
+		{
+			SetStatus(FText::Format(LOCTEXT("Combined", "Combined into {0}, titled {1}."), FText::FromString(FProtoBoyDocMap::GetGameDocPath()), FText::FromString(FProtoBoyDocMap::GetProjectTitle())), false);
 			ZoomToFitSoon();
 		}
 		else

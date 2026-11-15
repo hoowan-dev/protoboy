@@ -1,0 +1,10 @@
+{
+	"version": 1,
+	"id": "blank",
+	"name": "Blank",
+	"description": "Just the Game doc, named after your project, and nothing below it. Drag off it in the doc map to add docs as you go.",
+	"genre": "",
+	"sortOrder": -10,
+	"pillars": [],
+	"docs": []
+}

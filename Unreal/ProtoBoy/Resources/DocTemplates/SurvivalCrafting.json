@@ -31,25 +31,11 @@
 			"summary": "Health, hunger, thirst, temperature and how they pressure the player."
 		},
 		{
-			"id": "health",
-			"title": "Health",
-			"kind": "design",
+			"id": "needs-system",
+			"title": "Needs System",
+			"kind": "tech",
 			"parent": "survival-needs",
-			"summary": "Damage, healing and death."
-		},
-		{
-			"id": "hunger-and-thirst",
-			"title": "Hunger and Thirst",
-			"kind": "design",
-			"parent": "survival-needs",
-			"summary": "Food and water as a constant pressure."
-		},
-		{
-			"id": "temperature",
-			"title": "Temperature",
-			"kind": "design",
-			"parent": "survival-needs",
-			"summary": "Exposure to cold and heat, and how shelter and clothing help."
+			"summary": "How needs tick, interact and are saved."
 		},
 		{
 			"id": "gathering",
@@ -57,6 +43,13 @@
 			"kind": "design",
 			"parent": "",
 			"summary": "Collecting resources from the world: tools, nodes and yields."
+		},
+		{
+			"id": "resource-nodes",
+			"title": "Resource Nodes",
+			"kind": "content",
+			"parent": "gathering",
+			"summary": "Trees, rocks and other node meshes, with their depleted states."
 		},
 		{
 			"id": "crafting",
@@ -70,14 +63,21 @@
 			"title": "Recipes",
 			"kind": "design",
 			"parent": "crafting",
-			"summary": "Recipe unlocks: what can be made and how the player discovers it."
+			"summary": "What can be made, and how the player discovers it."
 		},
 		{
-			"id": "stations",
-			"title": "Stations",
-			"kind": "design",
+			"id": "crafting-system",
+			"title": "Crafting System",
+			"kind": "tech",
 			"parent": "crafting",
-			"summary": "Workbenches and other stations that gate recipes."
+			"summary": "Recipe data, stations and crafting queues."
+		},
+		{
+			"id": "item-assets",
+			"title": "Item Assets",
+			"kind": "content",
+			"parent": "crafting",
+			"summary": "Tool, gear and supply meshes and icons."
 		},
 		{
 			"id": "building",
@@ -87,11 +87,25 @@
 			"summary": "Placing structures and bases: snapping, stability and upgrades."
 		},
 		{
+			"id": "building-system",
+			"title": "Building System",
+			"kind": "tech",
+			"parent": "building",
+			"summary": "Snapping, stability checks and how bases are stored."
+		},
+		{
+			"id": "building-pieces",
+			"title": "Building Pieces",
+			"kind": "content",
+			"parent": "building",
+			"summary": "Walls, floors, roofs and furniture in each material tier."
+		},
+		{
 			"id": "world",
 			"title": "World",
-			"kind": "tech",
+			"kind": "design",
 			"parent": "",
-			"summary": "The environment the player survives in."
+			"summary": "The environment the player survives in, and how it changes."
 		},
 		{
 			"id": "world-generation",
@@ -105,35 +119,70 @@
 			"title": "Day and Night",
 			"kind": "tech",
 			"parent": "world",
-			"summary": "The day/night cycle and how danger changes with it."
+			"summary": "The day/night cycle and weather, and how they change danger."
 		},
 		{
-			"id": "weather",
-			"title": "Weather",
-			"kind": "tech",
+			"id": "biomes",
+			"title": "Biomes",
+			"kind": "content",
 			"parent": "world",
-			"summary": "Weather systems and how they affect survival."
+			"summary": "Landscape materials, foliage and props for each biome."
 		},
 		{
 			"id": "threats",
 			"title": "Threats",
 			"kind": "design",
 			"parent": "",
-			"summary": "Creatures and other dangers, and the AI that drives them."
+			"summary": "Creatures and other dangers."
 		},
 		{
-			"id": "persistence",
-			"title": "Persistence",
+			"id": "creature-ai",
+			"title": "Creature AI",
 			"kind": "tech",
-			"parent": "",
-			"summary": "Saving the world, bases and inventory, and keeping saves compatible."
+			"parent": "threats",
+			"summary": "How creatures perceive, hunt and flee."
+		},
+		{
+			"id": "creatures",
+			"title": "Creatures",
+			"kind": "content",
+			"parent": "threats",
+			"summary": "Creature meshes, animations and sounds."
 		},
 		{
 			"id": "ui",
 			"title": "UI",
-			"kind": "style",
+			"kind": "design",
 			"parent": "",
-			"summary": "Menus, HUD and how the game communicates with the player."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+		},
+		{
+			"id": "ui-framework",
+			"title": "UI Framework",
+			"kind": "tech",
+			"parent": "ui",
+			"summary": "How screens and widgets are built, opened, navigated and fed data."
+		},
+		{
+			"id": "ui-art",
+			"title": "UI Art",
+			"kind": "content",
+			"parent": "ui",
+			"summary": "Icons, fonts, panels and widget skins."
+		},
+		{
+			"id": "music-and-sound",
+			"title": "Music and Sound",
+			"kind": "content",
+			"parent": "",
+			"summary": "Music, sound effects and ambience, and where each is used."
+		},
+		{
+			"id": "save-and-load",
+			"title": "Save and Load",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Saving the world, bases and inventory, and keeping saves compatible."
 		}
 	]
 }

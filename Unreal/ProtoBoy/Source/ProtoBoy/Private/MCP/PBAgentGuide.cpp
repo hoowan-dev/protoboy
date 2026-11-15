@@ -29,20 +29,21 @@ namespace ProtoBoyAgentGuide
 		const FString Guide = TEXT(R"MD(## ProtoBoy: design docs and tasks
 
 This project uses ProtoBoy (an Unreal Editor plugin) so agents build what the game's docs describe instead of growing
-disconnected or monolithic code. The docs are layered: the Game doc (why the game exists, its design pillars, what it
-is) > Design docs (each feature, from the player's side) > Tech docs (how each is built, plus shared tech), with Content
-docs for what's in the game and its style guides. Every doc ends with a Decisions section. When the `protoboy` MCP tools
-are available:
+disconnected or monolithic code. The docs: the Game doc (what the game is, its design pillars, an index of every doc),
+Design docs (what a player should be able to do or see), Tech docs (the technical details of how something works) and
+Content docs (the assets to make it happen, and the style they must have). The team nests docs
+however suits them, e.g. a Tech doc under the Design doc it implements. Every doc ends with a Decisions section. When
+the `protoboy` MCP tools are available:
 
-- **Before designing or implementing**, call `get_project_context`, then `locate_feature` to find the Design or shared
-  Tech doc the work belongs to. Read its Tech doc and the Decisions sections before changing code. Check the work serves
-  one of the Game doc's design pillars and isn't one of its non-goals.
+- **Before designing or implementing**, call `get_project_context`, then `locate_feature` to find the Design or Tech
+  doc the work belongs to. Read the Tech docs near it and the Decisions sections before changing code. Check the work
+  serves one of the Game doc's design pillars and isn't one of its non-goals.
 - **New features or systems need a decision first**: propose it, get the user's agreement, then record it with
   `record_decision` in the doc it affects (the Game doc for new scope), or use the `record-decision` prompt.
 - **Work from tasks**: `task_get` for the description and linked design doc, `task_update_status` when you start and
   finish, `task_comment` to report what changed. Split out-of-scope work into new tasks with `task_create`.
-- **Keep docs current**: record how things are built in the Tech doc, and append to Design docs with
-  `docs_update_section`. Humans own the Game doc and all existing text; never rewrite them.
+- **Keep docs current**: record how things work in Tech docs, the assets used in Content docs, and append to Design
+  docs with `docs_update_section`. Humans own the Game doc and all existing text; never rewrite them.
 {ASSET_POLICY}- **Prompts**: `plan-feature`, `implement-task`, `record-decision`, `source-assets`.
 
 ProtoBoy's tools are only available while the Unreal Editor is open with its MCP server running. Some changes need the

@@ -2,7 +2,7 @@
 	"version": 1,
 	"id": "rpg",
 	"name": "RPG",
-	"description": "Character growth, items and a world with quests to follow. Systems-heavy, so stats, inventory and saves get shared Tech docs.",
+	"description": "Character growth, items and a world with quests to follow. Systems-heavy, so the stats, inventory and save code each get a Tech doc.",
 	"genre": "RPG",
 	"sortOrder": 20,
 	"pillars": [
@@ -23,20 +23,6 @@
 		}
 	],
 	"docs": [
-		{
-			"id": "stats",
-			"title": "Stats",
-			"kind": "tech",
-			"parent": "",
-			"summary": "Attributes and derived values, and how they feed into every other system."
-		},
-		{
-			"id": "inventory",
-			"title": "Inventory",
-			"kind": "tech",
-			"parent": "",
-			"summary": "How items are stored, sorted and limited."
-		},
 		{
 			"id": "character",
 			"title": "Character",
@@ -59,6 +45,27 @@
 			"summary": "Classes, skills and ability trees that define how characters play."
 		},
 		{
+			"id": "stats",
+			"title": "Stats",
+			"kind": "tech",
+			"parent": "character",
+			"summary": "Attributes and derived values, and how they feed into every other system."
+		},
+		{
+			"id": "ability-system",
+			"title": "Ability System",
+			"kind": "tech",
+			"parent": "character",
+			"summary": "How abilities, cooldowns and effects are implemented."
+		},
+		{
+			"id": "character-models",
+			"title": "Character Models",
+			"kind": "content",
+			"parent": "character",
+			"summary": "Player and companion meshes, rigs, animations and customization parts."
+		},
+		{
 			"id": "combat",
 			"title": "Combat",
 			"kind": "design",
@@ -66,9 +73,23 @@
 			"summary": "How fights play out: turns or real time, targeting, damage and status effects."
 		},
 		{
+			"id": "combat-code",
+			"title": "Combat Code",
+			"kind": "tech",
+			"parent": "combat",
+			"summary": "Turn order or real-time loop, damage calculation and status effects."
+		},
+		{
+			"id": "combat-effects",
+			"title": "Combat Effects",
+			"kind": "content",
+			"parent": "combat",
+			"summary": "Spell and hit VFX, combat sounds and animations."
+		},
+		{
 			"id": "items",
 			"title": "Items",
-			"kind": "content",
+			"kind": "design",
 			"parent": "",
 			"summary": "Everything the player can own, carry and use, and where it comes from."
 		},
@@ -77,19 +98,26 @@
 			"title": "Equipment",
 			"kind": "design",
 			"parent": "items",
-			"summary": "Gear slots and how equipment modifies the character."
+			"summary": "Gear slots and how equipment changes the character."
 		},
 		{
-			"id": "loot-tables",
-			"title": "Loot Tables",
+			"id": "inventory",
+			"title": "Inventory",
+			"kind": "tech",
+			"parent": "items",
+			"summary": "How items are stored, sorted and limited, and the item data format."
+		},
+		{
+			"id": "item-assets",
+			"title": "Item Assets",
 			"kind": "content",
 			"parent": "items",
-			"summary": "What drops where, and at what rarity."
+			"summary": "Item meshes, icons and the item data tables."
 		},
 		{
-			"id": "quests-and-narrative",
-			"title": "Quests and Narrative",
-			"kind": "content",
+			"id": "quests",
+			"title": "Quests",
+			"kind": "design",
 			"parent": "",
 			"summary": "The story and the tasks that move the player through it."
 		},
@@ -97,57 +125,50 @@
 			"id": "dialogue",
 			"title": "Dialogue",
 			"kind": "design",
-			"parent": "quests-and-narrative",
-			"summary": "Conversations, choices and how they're authored."
+			"parent": "quests",
+			"summary": "Conversations and choices, and how the player sees them."
 		},
 		{
-			"id": "quest-tracking",
-			"title": "Quest Tracking",
-			"kind": "design",
-			"parent": "quests-and-narrative",
-			"summary": "Quest states, objectives and the journal."
+			"id": "quest-system",
+			"title": "Quest System",
+			"kind": "tech",
+			"parent": "quests",
+			"summary": "Quest states, objectives, triggers and the journal."
 		},
 		{
-			"id": "story-beats",
-			"title": "Story Beats",
+			"id": "story-assets",
+			"title": "Story Assets",
 			"kind": "content",
-			"parent": "quests-and-narrative",
-			"summary": "The main plot and its key moments."
+			"parent": "quests",
+			"summary": "Dialogue scripts, voice lines and cutscenes."
 		},
 		{
 			"id": "world",
 			"title": "World",
-			"kind": "content",
+			"kind": "design",
 			"parent": "",
 			"summary": "The places the player explores and who lives there."
+		},
+		{
+			"id": "npcs",
+			"title": "NPCs",
+			"kind": "design",
+			"parent": "world",
+			"summary": "Non-player characters: schedules, roles and interactions."
 		},
 		{
 			"id": "regions",
 			"title": "Regions",
 			"kind": "content",
 			"parent": "world",
-			"summary": "Areas of the world, how they connect and how they gate progress."
-		},
-		{
-			"id": "npcs",
-			"title": "NPCs",
-			"kind": "content",
-			"parent": "world",
-			"summary": "Non-player characters: schedules, roles and interactions."
+			"summary": "Environment kits, props and landscapes for each region."
 		},
 		{
 			"id": "economy",
 			"title": "Economy",
 			"kind": "design",
 			"parent": "",
-			"summary": "Currencies and the systems that make and spend them."
-		},
-		{
-			"id": "currencies",
-			"title": "Currencies",
-			"kind": "tech",
-			"parent": "economy",
-			"summary": "Money and other currencies, and where they come from."
+			"summary": "Currencies, shops and crafting, and how they balance."
 		},
 		{
 			"id": "shops",
@@ -164,18 +185,39 @@
 			"summary": "Turning materials into items: recipes and stations."
 		},
 		{
+			"id": "ui",
+			"title": "UI",
+			"kind": "design",
+			"parent": "",
+			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+		},
+		{
+			"id": "ui-framework",
+			"title": "UI Framework",
+			"kind": "tech",
+			"parent": "ui",
+			"summary": "How screens and widgets are built, opened, navigated and fed data."
+		},
+		{
+			"id": "ui-art",
+			"title": "UI Art",
+			"kind": "content",
+			"parent": "ui",
+			"summary": "Icons, fonts, panels and widget skins."
+		},
+		{
+			"id": "music-and-sound",
+			"title": "Music and Sound",
+			"kind": "content",
+			"parent": "",
+			"summary": "Music, sound effects and ambience, and where each is used."
+		},
+		{
 			"id": "save-and-load",
 			"title": "Save and Load",
 			"kind": "tech",
 			"parent": "",
-			"summary": "What persists, how it's stored and how saves stay compatible."
-		},
-		{
-			"id": "ui",
-			"title": "UI",
-			"kind": "style",
-			"parent": "",
-			"summary": "Menus, HUD and how the game communicates with the player."
+			"summary": "What persists between sessions, how it's stored, and how saves stay compatible."
 		}
 	]
 }

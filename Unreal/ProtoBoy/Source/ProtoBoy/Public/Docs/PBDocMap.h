@@ -17,12 +17,13 @@ struct FProtoBoyDocNode
 	FString Path;
 	FString Title;
 	EProtoBoyDocLayer Layer = EProtoBoyDocLayer::Design;
-	/** The layer as written ("vision", "systems", ... from the eight-layer version map onto the four layers). */
+	/** The layer as written ("vision", "systems", ... from older versions map onto today's layers). */
 	FString LayerKey;
-	/** The parent's id as written in the frontmatter. May be empty or stale: use FProtoBoyDocMap::GetParent. */
+	/**
+	 * The parent's id as written in the frontmatter (or an old "protoboy-implements" when there's no parent key). May be
+	 * empty or stale: use FProtoBoyDocMap::GetParent.
+	 */
 	FString ParentId;
-	/** Tech docs: the Design doc they implement. Empty for shared tech. */
-	FString ImplementsId;
 	/** The first line someone actually wrote below the title (hints and quotes skipped), for previews. */
 	FString Summary;
 };
@@ -57,16 +58,17 @@ struct FProtoBoyDocTemplatePlan
 		FString Path;
 		/** Levels below the Game doc (0 = directly under it). */
 		int32 Depth = 0;
-		/** A doc is already at Path: it's kept as it is, and not written. */
-		bool bExists = false;
 	};
 
-	/** There's no Game doc yet, so the template creates it (with its design pillars). */
-	bool bCreatesGame = false;
-	/** The template's docs, in order. */
+	/** The template's docs below the Game doc, in order. */
 	TArray<FEntry> Docs;
-	/** Docs that would be written (the ones that don't exist yet), the Game doc included. */
+	/** Docs that would be written: the Game doc plus Docs. */
 	int32 NumToCreate = 0;
+	/**
+	 * Paths of the docs moved to the trash first: every doc on the map, plus any other file at a path the template
+	 * writes. Other notes in the docs folder are left alone.
+	 */
+	TArray<FString> Removed;
 };
 
 /**
@@ -74,13 +76,14 @@ struct FProtoBoyDocTemplatePlan
  * the map is rebuilt by reading them (Refresh), so edits made in Obsidian show up after a refresh, and everything
  * ProtoBoy changes is written into the docs themselves (frontmatter, new files, the Game doc's managed Areas block).
  *
- * Tree: the Game doc is the root. A doc's parent is its "protoboy-parent" when that names another doc (and wouldn't
- * make a loop), otherwise the layer default: a feature's Tech doc sits under the Design doc it implements, everything
- * else under the Game doc. Nothing restricts which layer goes under which.
+ * Tree: the Game doc is the root and never goes under anything. Every other doc's parent is its "protoboy-parent" when
+ * that names another doc (and wouldn't make a loop), otherwise the Game doc. Nothing restricts which layer goes under
+ * which: the team puts each doc wherever makes sense to them.
  *
- * Docs from the eight-layer version keep working: a Vision and an Overview are both Game docs (the Vision is the root,
- * the Overview hangs under it), Systems docs are shared Tech, Direction docs are Content. ADRs ("decision", or in the
- * ADR folder) stay off the map: decisions now live in each doc's Decisions section (RecordDecision).
+ * Docs from older versions keep working: a Vision and an Overview are both Game docs (the Vision is the root, the
+ * Overview hangs under it), Systems docs are Tech, Direction docs are Content, and a feature Tech doc's
+ * "protoboy-implements" counts as its parent. ADRs ("decision", or in the ADR folder) stay off the map: decisions now
+ * live in each doc's Decisions section (RecordDecision).
  */
 class PROTOBOY_API FProtoBoyDocMap
 {
@@ -96,39 +99,58 @@ public:
 
 	const FProtoBoyDocNode* Find(const FString& Id) const;
 	const FProtoBoyDocNode* FindByPath(const FString& Path) const;
-	/** The Game doc: the map's root. With several, the first by path, preferring one that wasn't an old Overview. */
+	/** The Game doc: the map's root. With several, a "game" one first, then an old Vision, then an old Overview. */
 	const FProtoBoyDocNode* GetGame() const;
 	bool HasGameDoc() const { return GetGame() != nullptr; }
+	/** Every Game-layer doc, the root first. More than one means an old Vision and Overview that CombineGameDocs can merge. */
+	TArray<const FProtoBoyDocNode*> GetGameDocs() const;
+	bool HasSplitGameDocs() const { return GetGameDocs().Num() > 1; }
+	/** The project's name: the Game doc's title, and the root node's. */
+	static FString GetProjectTitle();
+	/** Where a new Game doc goes: "<Project>.md" at the docs root. An existing Game doc keeps whatever file it's in. */
+	static FString GetGameDocPath();
 
 	/** The doc this one sits under (see the class comment). Null for the Game doc, and when there's no Game doc. */
 	const FProtoBoyDocNode* GetParent(const FString& Id) const;
-	/** The parent a doc gets when its frontmatter names none. */
+	/** The parent a doc gets when its frontmatter names none: the Game doc (null for the Game doc itself). */
 	const FProtoBoyDocNode* GetDefaultParent(const FProtoBoyDocNode& Node) const;
 	/** Docs directly under Id, in layer order, then by title. */
 	TArray<const FProtoBoyDocNode*> GetChildren(const FString& Id) const;
 	/** True if Id is Ancestor or sits anywhere below it. */
 	bool IsInSubtree(const FString& Id, const FString& Ancestor) const;
-	/** The Tech doc that implements DesignId, or null. */
-	const FProtoBoyDocNode* FindTechFor(const FString& DesignId) const;
-
-	/** Create the Game doc (Game.md) from its template, if there isn't one. */
+	/** Create the Game doc (<Project>.md, titled with the project's name) from its template, if there isn't one. */
 	bool CreateGameDoc(FText& OutError);
 
 	/**
+	 * Merge every Game-layer doc (an old Vision and Overview) into one <Project>.md titled with the project's name: each Game
+	 * section takes the first written version (the root's first), sections the template doesn't have are kept after
+	 * them, Decisions are concatenated. The other docs go to the trash (IProtoBoyDocsProvider::DeleteDoc), and docs that
+	 * named them as their parent go under the new Game doc.
+	 */
+	bool CombineGameDocs(FText& OutError);
+
+	/**
+	 * Delete a doc (the provider moves it to its trash). Docs whose frontmatter put them under it go back to their
+	 * default place. The Game doc can't be deleted.
+	 */
+	bool DeleteDoc(const FString& Id, FText& OutError);
+
+	/**
 	 * Create a doc of Kind (one of ProtoBoyDocLayers::GetAddableKinds) titled Title under ParentId (empty = the Game
-	 * doc), from its template. Design docs nest in folders (Design/Combat/Weapons/Weapons.md); shared Tech goes in
-	 * Tech/, Content and style guides in Content/.
+	 * doc), from its template. The file follows the parent: under the Game doc it goes in its kind's folder (Design/,
+	 * Tech/, Content/), under any other doc in that doc's folder (Content/Ammo.md's children in Content/Ammo/). Design
+	 * docs get a folder of their own (Design/Combat/Weapons/Weapons.md).
 	 */
 	bool CreateDoc(EProtoBoyDocKind Kind, const FString& Title, const FString& ParentId, FString& OutId, FText& OutError);
-
-	/** Create the Tech doc for a Design doc, next to it, with one section per section of the Design doc. */
-	bool CreateTechDoc(const FString& DesignId, FString& OutId, FText& OutError);
 
 	/** Move a doc under another (its frontmatter changes; the file stays where it is). Refuses loops and moving the Game doc. */
 	bool SetParent(const FString& Id, const FString& NewParentId, FText& OutError);
 
-	/** Put an existing doc on the map by adding ProtoBoy's frontmatter. The doc's text is left alone. */
-	bool AddToMap(const FString& Path, EProtoBoyDocLayer Layer, FText& OutError);
+	/**
+	 * Put an existing doc on the map under ParentId (empty = the Game doc) by adding ProtoBoy's frontmatter; its text is
+	 * left alone. Refused for a second Game doc.
+	 */
+	bool AddToMap(const FString& Path, EProtoBoyDocLayer Layer, const FString& ParentId, FText& OutError);
 
 	/**
 	 * Append a dated entry to a doc's Decisions section (created at the end if missing): what was decided, why, and what
@@ -136,13 +158,13 @@ public:
 	 */
 	bool RecordDecision(const FString& Id, const FString& Decision, const FString& Why, const FString& RulesOut, const FString& By, FText& OutError);
 
-	/** What ApplyTemplate would create and what it would leave alone. */
+	/** What ApplyTemplate would remove and create. */
 	FProtoBoyDocTemplatePlan PlanTemplate(const FProtoBoyDocTemplate& Template) const;
 
 	/**
-	 * Create a template's docs: the Game doc (with the template's design pillars) if missing, then each of its docs that
-	 * doesn't exist yet, in the same places CreateDoc would put them. Never overwrites a doc: existing ones are kept, and
-	 * the template's docs below them still go under them. OutCreated counts the docs written.
+	 * Replace the documentation with a template's: every doc on the map (the Game doc included) goes to the provider's
+	 * trash, then a new Game doc (with the template's design pillars) and the template's docs are written, in the same places CreateDoc would put them. Notes that aren't on the map are kept, unless one sits where a template doc goes.
+	 * OutCreated counts the docs written.
 	 */
 	bool ApplyTemplate(const FProtoBoyDocTemplate& Template, int32& OutCreated, FText& OutError);
 
@@ -167,7 +189,7 @@ private:
 	bool WriteFrontmatter(const FString& Path, const TArray<TPair<FString, FString>>& Values, FText& OutError);
 	/** Refresh, update the Areas index (errors there are logged, not returned) and notify. */
 	void AfterWrite();
-	/** Write Game.md if there's no Game doc, without refreshing. Pillars (from a template) replace the example pillar. */
+	/** Write <Project>.md if there's no Game doc, without refreshing. Pillars (from a template) replace the example pillar. */
 	bool WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePillar>* Pillars, const FString& TemplateName, bool& bOutWrote, FText& OutError);
 
 	FProtoBoyDocGenerator& Docs;

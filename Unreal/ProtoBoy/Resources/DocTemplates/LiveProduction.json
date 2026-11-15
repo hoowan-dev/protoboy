@@ -24,39 +24,88 @@
 	],
 	"docs": [
 		{
-			"id": "gameplay",
-			"title": "Gameplay",
+			"id": "core-gameplay",
+			"title": "Core Gameplay",
 			"kind": "design",
 			"parent": "",
-			"summary": "The core loop, mechanics and rules the player interacts with."
+			"summary": "What the player does over and over: the core loop's mechanics and rules."
 		},
 		{
-			"id": "content",
-			"title": "Content",
+			"id": "gameplay-framework",
+			"title": "Gameplay Framework",
+			"kind": "tech",
+			"parent": "core-gameplay",
+			"summary": "Game mode, player controller and pawn, and how the core loop runs in code."
+		},
+		{
+			"id": "characters",
+			"title": "Characters",
 			"kind": "content",
-			"parent": "",
-			"summary": "Levels, encounters, items and other authored content."
+			"parent": "core-gameplay",
+			"summary": "Player and NPC meshes, rigs and animations."
 		},
 		{
-			"id": "art",
-			"title": "Art",
-			"kind": "style",
+			"id": "levels",
+			"title": "Levels",
+			"kind": "design",
 			"parent": "",
-			"summary": "The visual style, assets and their budgets."
+			"summary": "Where the player plays, and what they can do and see there."
 		},
 		{
-			"id": "audio",
-			"title": "Audio",
-			"kind": "style",
+			"id": "environment-art",
+			"title": "Environment Art",
+			"kind": "content",
+			"parent": "levels",
+			"summary": "Meshes, materials, props and lighting setups the levels are built from."
+		},
+		{
+			"id": "live-content",
+			"title": "Live Content",
+			"kind": "design",
 			"parent": "",
-			"summary": "Music, sound effects and how they react to play."
+			"summary": "Events, seasons and updates: what's new for players and how often."
+		},
+		{
+			"id": "content-pipeline",
+			"title": "Content Pipeline",
+			"kind": "tech",
+			"parent": "live-content",
+			"summary": "How new content is authored, tested and shipped without a client patch."
+		},
+		{
+			"id": "season-assets",
+			"title": "Season Assets",
+			"kind": "content",
+			"parent": "live-content",
+			"summary": "The assets each update adds, by season."
 		},
 		{
 			"id": "ui",
 			"title": "UI",
-			"kind": "style",
+			"kind": "design",
 			"parent": "",
-			"summary": "Menus, HUD and how the game communicates with the player."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+		},
+		{
+			"id": "ui-framework",
+			"title": "UI Framework",
+			"kind": "tech",
+			"parent": "ui",
+			"summary": "How screens and widgets are built, opened, navigated and fed data."
+		},
+		{
+			"id": "ui-art",
+			"title": "UI Art",
+			"kind": "content",
+			"parent": "ui",
+			"summary": "Icons, fonts, panels and widget skins."
+		},
+		{
+			"id": "music-and-sound",
+			"title": "Music and Sound",
+			"kind": "content",
+			"parent": "",
+			"summary": "Music, sound effects and ambience, and where each is used."
 		},
 		{
 			"id": "platform-and-services",
@@ -98,12 +147,12 @@
 			"title": "Localization",
 			"kind": "content",
 			"parent": "",
-			"summary": "Text, audio and culture across languages."
+			"summary": "Text, audio and fonts for each language."
 		},
 		{
 			"id": "accessibility",
 			"title": "Accessibility",
-			"kind": "style",
+			"kind": "design",
 			"parent": "",
 			"summary": "Options and design that let more people play."
 		},

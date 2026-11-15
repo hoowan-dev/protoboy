@@ -97,13 +97,6 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Asset Sourcing|Fab", meta = (EditCondition = "bEnableFabSource"))
 	FString FabAssetFormat = TEXT("unreal-engine");
 
-	/**
-	 * Optional doc (relative to the docs folder) describing the art style, references and asset goals, e.g.
-	 * "Art Direction.md". Agents read it before searching for assets. Empty: agents search the docs for art direction.
-	 */
-	UPROPERTY(Config, EditAnywhere, Category = "Asset Sourcing")
-	FString ArtDirectionDocPath;
-
 	/** Connect to the ProtoBoy background daemon. */
 	UPROPERTY(Config, EditAnywhere, Category = "Daemon")
 	bool bConnectToDaemon = false;

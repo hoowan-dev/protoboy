@@ -58,7 +58,7 @@ public:
 	virtual FText GetNodeTitle(ENodeTitleType::Type TitleType) const override;
 	virtual FText GetTooltipText() const override;
 	virtual bool GetCanRenameNode() const override { return false; }
-	virtual bool CanUserDeleteNode() const override { return false; }
+	virtual bool CanUserDeleteNode() const override { return !IsRoot(); }
 	virtual bool CanDuplicateNode() const override { return false; }
 	virtual TSharedPtr<SGraphNode> CreateVisualWidget() override;
 };

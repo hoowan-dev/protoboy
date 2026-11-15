@@ -539,11 +539,6 @@ void SProtoBoyDashboard::RebuildDocsSection()
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 	const FProtoBoyObsidianConnector* Obsidian = Subsystem ? &Subsystem->GetObsidianConnector() : nullptr;
 	bHasGameDoc = Obsidian && Obsidian->IsConnected() && Subsystem->GetDocMap().HasGameDoc();
-	// The docs folder may have changed, which changes whether the art direction doc exists.
-	if (AssetSourcingPanel.IsValid())
-	{
-		AssetSourcingPanel->RefreshArtDirectionStatus();
-	}
 
 	TSharedRef<SVerticalBox> Content = SNew(SVerticalBox);
 
@@ -704,13 +699,11 @@ void SProtoBoyDashboard::BuildSetupSteps()
 			Sources.Add(LOCTEXT("SourceFab", "Fab"));
 		}
 
-		const FString ArtDirection = ProtoBoyAssetSourcing::GetArtDirectionDocPath();
-		OutDetail = FText::Format(LOCTEXT("StepSourcingDetail", "{0} Sources: {1}. Art direction: {2}."),
+		OutDetail = FText::Format(LOCTEXT("StepSourcingDetail", "{0} Sources: {1}. Style: from Content docs."),
 			Settings->bPreferSourcedAssets
 				? LOCTEXT("SourcingPreferSourced", "Agents source assets instead of generating them with AI.")
 				: LOCTEXT("SourcingAllowGenerated", "Agents may generate assets with AI."),
-			Sources.IsEmpty() ? LOCTEXT("SourcesNone", "none enabled") : FText::Join(LOCTEXT("SourcesSeparator", ", "), Sources),
-			ArtDirection.IsEmpty() ? LOCTEXT("ArtDirectionNone", "no note set (agents search the docs)") : FText::FromString(ArtDirection));
+			Sources.IsEmpty() ? LOCTEXT("SourcesNone", "none enabled") : FText::Join(LOCTEXT("SourcesSeparator", ", "), Sources));
 		return true;
 	};
 
@@ -760,8 +753,7 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeArchitectureSection()
 		.AutoHeight()
 		.Padding(0.f, 6.f, 0.f, 0.f)
 		[
-			MakeSetupStep(LOCTEXT("StepSourcing", "Asset sourcing"), SourcingStep, &SProtoBoyDashboard::OnAssetSourcingSettingsClicked,
-				LOCTEXT("ChangeSourcing", "Change..."))
+			MakeSetupStep(LOCTEXT("StepSourcing", "Asset sourcing"), SourcingStep, nullptr)
 		];
 
 	// The doc map is where the Game doc gets created, so it only waits on the other checks and on the docs being
@@ -842,7 +834,7 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
 	return SNullWidget::NullWidget;
 }
 
-TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupStep(const FText& Title, FSetupStepState GetState, FReply (SProtoBoyDashboard::*OnSetUp)(), const FText& ChangeText)
+TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupStep(const FText& Title, FSetupStepState GetState, FReply (SProtoBoyDashboard::*OnSetUp)())
 {
 	auto IsDone = [GetState]() { FText Ignored; return GetState(Ignored); };
 
@@ -893,9 +885,9 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupStep(const FText& Title, FSetup
 		.Padding(8.f, 0.f, 0.f, 0.f)
 		[
 			SNew(SButton)
-			.Visibility_Lambda([IsDone, ChangeText]() { return IsDone() && ChangeText.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible; })
-			.Text(ChangeText.IsEmpty() ? LOCTEXT("SetUpStep", "Set Up...") : ChangeText)
-			.OnClicked(this, OnSetUp)
+			.Visibility_Lambda([IsDone, OnSetUp]() { return !OnSetUp || IsDone() ? EVisibility::Collapsed : EVisibility::Visible; })
+			.Text(LOCTEXT("SetUpStep", "Set Up..."))
+			.OnClicked_Lambda([this, OnSetUp]() { return OnSetUp ? (this->*OnSetUp)() : FReply::Handled(); })
 		];
 }
 
@@ -1038,16 +1030,6 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeEnabledAgents()
 		[
 			Chips
 		];
-}
-
-FReply SProtoBoyDashboard::OnAssetSourcingSettingsClicked()
-{
-	// Asset sourcing is edited on the Setup page.
-	if (PageList.IsValid() && Pages.IsValidIndex(0))
-	{
-		PageList->SetSelection(Pages[0]);
-	}
-	return FReply::Handled();
 }
 
 FReply SProtoBoyDashboard::OnOpenPluginSettingsClicked()

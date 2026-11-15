@@ -26,65 +26,128 @@
 		{
 			"id": "story",
 			"title": "Story",
-			"kind": "content",
+			"kind": "design",
 			"parent": "",
 			"summary": "The narrative and how the player's choices shape it."
 		},
 		{
-			"id": "branching",
-			"title": "Branching",
-			"kind": "content",
-			"parent": "story",
-			"summary": "How the story forks and comes back together."
-		},
-		{
 			"id": "choices-and-consequences",
 			"title": "Choices and Consequences",
-			"kind": "content",
+			"kind": "design",
 			"parent": "story",
 			"summary": "Which choices matter, and how and when they pay off."
+		},
+		{
+			"id": "story-state",
+			"title": "Story State",
+			"kind": "tech",
+			"parent": "story",
+			"summary": "Story flags, branching logic, and keeping saves valid as the story changes."
+		},
+		{
+			"id": "script",
+			"title": "Script",
+			"kind": "content",
+			"parent": "story",
+			"summary": "The written story: scenes, branches and dialogue lines."
 		},
 		{
 			"id": "dialogue",
 			"title": "Dialogue",
 			"kind": "design",
 			"parent": "",
-			"summary": "Conversations: how they're authored, presented and chosen from."
+			"summary": "Conversations: how they're presented and chosen from."
 		},
 		{
-			"id": "exploration-and-interaction",
-			"title": "Exploration and Interaction",
+			"id": "dialogue-system",
+			"title": "Dialogue System",
+			"kind": "tech",
+			"parent": "dialogue",
+			"summary": "How dialogue is authored, triggered and displayed."
+		},
+		{
+			"id": "voice-over",
+			"title": "Voice Over",
+			"kind": "content",
+			"parent": "dialogue",
+			"summary": "Recorded lines, by character and scene."
+		},
+		{
+			"id": "exploration",
+			"title": "Exploration",
 			"kind": "design",
 			"parent": "",
 			"summary": "Moving through scenes and examining or using things in them."
 		},
 		{
+			"id": "interaction-system",
+			"title": "Interaction System",
+			"kind": "tech",
+			"parent": "exploration",
+			"summary": "Interactables, prompts and examine views."
+		},
+		{
+			"id": "environments",
+			"title": "Environments",
+			"kind": "content",
+			"parent": "exploration",
+			"summary": "Scene art, props and lighting for each location."
+		},
+		{
 			"id": "characters",
 			"title": "Characters",
-			"kind": "content",
+			"kind": "design",
 			"parent": "",
-			"summary": "The cast: who they are, how they change, and how they're performed."
+			"summary": "The cast: who they are, how they change, and how the player meets them."
+		},
+		{
+			"id": "character-assets",
+			"title": "Character Assets",
+			"kind": "content",
+			"parent": "characters",
+			"summary": "Character meshes, faces, rigs and animations."
 		},
 		{
 			"id": "cinematics",
 			"title": "Cinematics",
-			"kind": "style",
+			"kind": "design",
 			"parent": "",
 			"summary": "Cutscenes, camera work and staging."
 		},
 		{
-			"id": "save-state",
-			"title": "Save State",
+			"id": "sequencer-setup",
+			"title": "Sequencer Setup",
 			"kind": "tech",
-			"parent": "",
-			"summary": "Story flags, persistence and keeping saves valid as the story changes."
+			"parent": "cinematics",
+			"summary": "How cinematics are built and triggered with Sequencer."
 		},
 		{
 			"id": "ui",
 			"title": "UI",
-			"kind": "style",
+			"kind": "design",
 			"parent": "",
-			"summary": "Menus, HUD and how the game communicates with the player."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+		},
+		{
+			"id": "ui-framework",
+			"title": "UI Framework",
+			"kind": "tech",
+			"parent": "ui",
+			"summary": "How screens and widgets are built, opened, navigated and fed data."
+		},
+		{
+			"id": "ui-art",
+			"title": "UI Art",
+			"kind": "content",
+			"parent": "ui",
+			"summary": "Icons, fonts, panels and widget skins."
+		},
+		{
+			"id": "music-and-sound",
+			"title": "Music and Sound",
+			"kind": "content",
+			"parent": "",
+			"summary": "Music, sound effects and ambience, and where each is used."
 		}
 	]
 }

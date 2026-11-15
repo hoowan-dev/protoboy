@@ -22,16 +22,16 @@ come later (see [Roadmap](#roadmap)).
    prompts: plan-feature, implement-task, record-decision
         |
         +--> Docs provider  -> Obsidian vault (or a project folder)
-        |                      Game.md, Design/, Tech/, Content/
+        |                      <Project>.md, Design/, Tech/, Content/
         +--> Task provider  -> Trello board (To Do / In Progress / Done)
 ```
 
-1. **The model.** The project's docs in four layers: the Game doc (pitch, design pillars, non-goals, core loop),
-   Design docs per feature with paired Tech docs, shared Tech docs, and Content docs, each ending with its Decisions;
-   plus tasks that link to the Design doc they implement. Each doc's layer is in its own frontmatter (see
+1. **The model.** The project's docs: the Game doc (pitch, design pillars, non-goals, core loop), and Design, Tech
+   and Content docs nested however suits the team, each ending with its Decisions; plus
+   tasks that link to the Design doc they implement. Each doc's layer is in its own frontmatter (see
    [Doc map](#doc-map)).
 2. **Tools.** Agents call `get_project_context` before designing (the Game doc and the doc map), `locate_feature` to
-   find the Design or shared Tech doc new work belongs to, and docs and task tools to read and update both.
+   find the Design or Tech doc new work belongs to, and docs and task tools to read and update both.
 3. **Workflow.** The guidance agents follow comes from three places: a managed section ProtoBoy writes into the
    project's `CLAUDE.md` / `GEMINI.md`, the MCP server's instructions, and workflow prompts that show up as slash
    commands. A new feature or system the docs don't cover needs your agreement first, recorded as a decision.
@@ -49,8 +49,7 @@ page you used):
 - **Architecture**: two sections.
   - **Setup Checks**: a check or warning for connecting an agent (MCP), documentation (Obsidian, plus the Game doc) and a task board (Trello, with lists mapped). Each has a **Set Up...** shortcut until it's done. A fourth check,
     **Asset sourcing**, is always green because sourcing is optional. It shows the team's choices: whether agents source
-    assets instead of generating them, the enabled sources, and the art direction note. Its **Change...** button opens the
-    Setup page.
+    assets instead of generating them, the enabled sources, and that the style comes from Content docs. Change them on the Setup page.
   - **Doc Map**: the project's docs by layer (see [Doc map](#doc-map)). It's disabled until an agent, documentation and a task board are connected (a missing Game doc doesn't lock it, since this is where you create it).
 - **Documentation** and **Tasks**: blank for now.
 
@@ -108,24 +107,22 @@ one and adding ProtoBoy's local address under **Allowed origins**.
 
 ### Doc map
 
-The project's docs in four layers, from why the game exists down to how each piece is built. It's on the
-**Architecture > Doc Map** page:
+The project's docs, on the **Architecture > Doc Map** page:
 
 ```
-Game             why the game exists, and what it is     1 doc: pitch, pillars, core loop, an index of the rest
-  ├ Design       what each feature is (player view)      one per feature, nestable
-  │   └ Tech     how that feature is built               pairs with its Design doc and mirrors its sections
-  ├ Tech         shared tech with no player face         save/load, input, networking, the AI framework
-  └ Content      what's in the game, and how it reads    levels, items, characters; art, audio, UX, writing style
+Game         the game as a whole                       1 doc, <Project>.md: pitch, pillars, core loop, an index of the rest
+Design       what a player should be able to do or see
+Tech         the technical details of how something works
+Content      the assets to make it happen                and the style they must have: what agents look for on storefronts
 ```
 
 - **The docs are the model.** Each doc says which layer it's in through a few properties in its frontmatter (what
   Obsidian shows as note properties): `protoboy-id`, `protoboy-layer`, and when needed `protoboy-parent` (the doc it
-  sits under) and `protoboy-implements` (the Design doc a Tech doc implements). There's no separate file to keep in
-  sync: ProtoBoy builds the map by reading the docs, and anything it changes is written into them. Edits made in
-  Obsidian show up after **Refresh**.
-- **Where docs sit.** The Game doc is the top. Without a `protoboy-parent`, a feature's Tech doc sits under the Design
-  doc it implements, and everything else under the Game doc. Nothing restricts which layer goes under which.
+  sits under). There's no separate file to keep in sync: ProtoBoy builds the map by reading the docs, and anything it
+  changes is written into them. Edits made in Obsidian show up after **Refresh**.
+- **Where docs sit.** The Game doc is always the top. Every other doc goes wherever makes sense to you: a Tech doc
+  under the Design doc it implements, a Content doc under a Tech doc, a Design doc under another. Without a
+  `protoboy-parent`, a doc sits under the Game doc.
 - **Decisions live in the docs.** Every doc ends with a **Decisions** section: dated entries for what was decided there,
   why, and what it rules out. Agents add entries with `record_decision`, in the doc the decision affects (the Game doc
   for scope, pillars and project-wide conventions).
@@ -135,41 +132,48 @@ Game             why the game exists, and what it is     1 doc: pitch, pillars, 
   | Doc | Sections |
   |---|---|
   | **Game** | Pitch · Player Fantasy · Design Pillars (3-5, one `###` each, with the feeling it gives and what it rules out) · Non-goals · Core Loop · Game Flow · Areas (generated) · Glossary |
-  | **Design** | Purpose (which pillars it serves) · Player Experience · Rules · What the Player Sees · Edge Cases · Open Questions |
-  | **Tech** (a feature's) | The same sections as its Design doc, each answered from the engine side |
-  | **Tech** (shared) | Responsibilities · Interface · Data · Used By |
-  | **Content** | Inventory · Authoring Rules · Where the Data Lives · Fed Into |
-  | **Content** (style guide) | Goals · Style · References · Budgets |
+  | **Design** | Purpose (which pillars it serves) · The Player Can · The Player Sees · Rules · Edge Cases · Open Questions |
+  | **Tech** | How It Works · Code · Data · Dependencies · Constraints |
+  | **Content** | Assets Needed (name, type, status, source) · Style · What to Look For (search terms, tags, technical needs) · What to Avoid · Sourcing · Where They Live |
 
-- **Set Up from Template.** A window that lists preset doc sets, by genre (Action / Platformer, RPG, Shooter, Strategy /
+- **Set Up from Template.** A window that lists preset doc sets: **Blank** (just the Game doc) first, then by genre (Action / Platformer, RPG, Shooter, Strategy /
   Management, Puzzle, Narrative / Adventure, Survival / Crafting, Roguelike) and by size (Game Jam, Prototype / Vertical
-  Slice, Multiplayer, Live / Production), plus Generic. Each preview shows the template's suggested design pillars and its
-  docs as a tree. **Next** lists exactly what will be written and what's already there; applying creates only the docs
-  that don't exist yet and never overwrites one. A new Game doc gets the template's pillars as placeholders to rewrite,
-  and each new doc starts from its template's sections with a line on what it covers. Templates are JSON files in
+  Slice, Multiplayer, Live / Production), plus Generic. Each preview shows the template's suggested design pillars, and its docs as a tree (Tech and Content docs under the features they serve). **A template replaces your documentation:** **Next** lists every doc that moves to the trash first
+  (everything on the map, the Game doc included, plus any other file where the template writes) and every doc that will
+  be written, and the button reads **Replace with N Docs**. Folders the old docs leave empty are removed too, so the
+  old folder structure goes with them. Other notes in the docs folder aren't touched (nor the folders holding them), and the
+  removed docs can be recovered from the vault's `.trash` (or `Saved/ProtoBoy/DeletedDocs`). The new Game doc gets the
+  template's pillars as placeholders to rewrite, and each doc starts from its template's sections with a line on what it covers. Templates are JSON files in
   `Unreal/ProtoBoy/Resources/DocTemplates/`. The button is on the doc map's toolbar, next to **Create Game Doc** when
   the map is empty, and on the Obsidian page of **Connect to Documentation**.
-- **The Game doc first.** **Create Game Doc** writes `Game.md` at the top of the docs folder. The documentation setup
-  check needs it. Its **Areas** section is a managed block that ProtoBoy keeps listing every doc below it, grouped by
+- **The Game doc first.** **Create Game Doc** writes `<Project>.md` (named after the project) at the top of the docs
+  folder, titled with the project's name; the root node always shows that name. The documentation setup check needs it. Its **Areas** section is a managed block that ProtoBoy keeps listing every doc below it, grouped by
   layer; write anything else around it.
-- **Adding docs.** Type a title, then **Add Doc** and pick **Design Doc**, **Shared Tech Doc**, **Content Doc** or
-  **Style Guide**; the doc goes under the selected one (or the Game doc). Design docs nest in folders the way features do
-  (`Design/Combat/Weapons/Weapons.md`); shared tech goes in `Tech/`, content and style guides in `Content/`. You can also
-  drag off a node's bottom bar into empty space, or right-click a node.
-- **Design and Tech pairs.** **Add Tech Doc** creates the selected Design doc's Tech doc next to it
-  (`Combat.tech.md`), with one section for each `##` section of the Design doc, so every design question gets its
-  engine-side answer. The details pane shows each Design doc's Tech doc, or says it has none.
-- **Existing notes.** **Map Existing Doc** lists the notes in the docs folder that aren't on the map and gives one a
-  layer. Only its frontmatter changes. Adding the properties by hand in Obsidian works too.
-- **Docs from the eight-layer version** stay on the map without changes: a Vision and an Overview are both Game docs
-  (the Vision is the top, the Overview sits under it), Systems docs are shared Tech, Direction docs are Content. ADRs
-  stay in `ADR/` as files but aren't on the map.
+- **Adding docs: drag off a node.** Drag off a doc's bottom bar into empty space and a menu offers every kind (Design
+  Doc, Tech Doc, Content Doc), with a title box at the top (Enter creates the
+  first option). The kinds that usually go under that doc come first: Tech, Design and Content under a Design doc,
+  Tech and Content under a Tech doc. Right-clicking empty space adds under the Game doc. Files follow the map: under the
+  Game doc a doc goes in `Design/`, `Tech/` or `Content/`, under another doc in that doc's folder; Design docs get a
+  folder of their own (`Design/Combat/Weapons/Weapons.md`).
+- **Existing notes.** The same menu has **Link an Existing Note**: the notes in the docs folder that aren't on the map,
+  each linkable as any kind (a second Game doc is refused). Only its frontmatter changes. Adding the properties by hand in
+  Obsidian works too.
+- **Deleting docs.** Select a doc and press Delete (or right-click > **Delete...**). ProtoBoy asks first, since it
+  deletes the note itself: the file is moved to the vault's `.trash` folder (Obsidian's own trash), or to
+  `Saved/ProtoBoy/DeletedDocs` without Obsidian. Docs under it move back under the Game doc. The Game doc can't
+  be deleted.
+- **Docs from older versions** stay on the map without changes: an existing `Game.md` stays the Game doc, a feature
+  Tech doc stays under its Design doc (`protoboy-implements` counts as its parent until it's moved), Systems docs are
+  Tech, style guides and Direction docs are Content, and ADRs stay in `ADR/` as files but aren't on the map. A separate
+  Vision and Overview show a **Combine into One Game Doc** banner: it writes one `<Project>.md` titled with the project's
+  name, keeping every section
+  someone wrote (each Game section from the first doc that has it, everything else after), and moves the old files to
+  the trash.
 - **Moving docs.** Wire a doc's bottom bar to another doc's top bar to put the second under the first. This writes
-  `protoboy-parent` into the doc; the file itself doesn't move. Unhooking a doc sends it back to its layer's default
-  place.
+  `protoboy-parent` into the doc; the file itself doesn't move. Unhooking a doc sends it back under the Game doc.
 - **The graph.** Behavior Tree style, colored by layer, with each doc's first written line on its node. Double-click
-  opens a doc (in Obsidian when connected). The details pane shows a doc's layer, file, the doc it's under, its Tech or
-  Design doc, the docs below it, and for the Game doc, the design pillars it lists.
+  opens a doc (in Obsidian when connected). The details pane shows a doc's layer, file, the doc it's under, the docs below
+  it, and for the Game doc, the design pillars it lists.
 
 ### Asset sourcing (optional)
 
@@ -178,9 +182,11 @@ Stops agents from defaulting to AI-generated assets. In **Setup > Asset Sourcing
 - **Policy.** Whether agents should prefer sourced assets (on by default). Agents see the policy in
   `get_project_context` and in the agent guide.
 - **Sources.** Which ones are enabled. Today that's **Fab**: agents call `fab_search` with terms derived from the
-  design doc and art direction, ProtoBoy opens the fab.com search in your browser, and you pick the listings. Fab has
+  design doc and the style in its Content doc, ProtoBoy opens the fab.com search in your browser, and you pick the listings. Fab has
   no public search API, so ProtoBoy never reads Fab results itself.
-- **Art direction.** An optional art direction doc that agents read before choosing assets.
+- **Style.** Content docs say what style their assets must have. Before searching or choosing assets, agents read the
+  Content doc for the need (and the Content docs above it): its What to Look For section becomes their search terms,
+  and What to Avoid rules listings out.
 
 ## Getting started
 
@@ -224,7 +230,7 @@ Power-Up's secret is, and ProtoBoy never needs it.
 ## Known limitations
 
 - **Editor only.** Agents only get ProtoBoy's tools while the Unreal Editor is open with the MCP server running.
-- **`locate_feature` is a hint.** It matches keywords against the Design and shared Tech docs, so treat its answer as a
+- **`locate_feature` is a hint.** It matches keywords against the Design and Tech docs, so treat its answer as a
   suggestion rather than a decision.
 - **Moving a doc on the map doesn't move its file.** Its place is stored in its frontmatter; renaming or moving files
   is done in Obsidian.
@@ -236,21 +242,20 @@ Power-Up's secret is, and ProtoBoy never needs it.
 
 ## Direction: the doc layers
 
-> Partly built: the four layers, the doc map, the Game doc, Design and Tech pairs, Decisions sections and doc-set
-> templates are in. The rest is the direction; some decisions are still open.
+> Partly built: the layers, the doc map, the Game doc, Decisions sections and doc-set templates are in. The rest is the direction; some decisions are still open.
 
 Large teams document a game in layers: a short vision, a master doc that indexes everything, a doc per feature written
 from the player's side, a technical spec that mirrors it, and content and style docs alongside. Every feature traces
-back to the design pillars, the handful of experience goals used to decide what gets in. ProtoBoy keeps that to four
-layers (Game, Design, Tech, Content), maps them so agents read them in order before they build, and keeps the technical
+back to the design pillars, the handful of experience goals used to decide what gets in. ProtoBoy keeps that to the Game
+doc plus Design, Tech and Content docs, maps them so agents read them in order before they build, and keeps the technical
 layer current as they work.
 
 - **Links.** Beyond where a doc sits: Design docs say which pillars they serve, Content docs which features they feed,
   and Design and Tech docs which shared tech they use. Each is a frontmatter property, shown in a managed header block
   in the doc. A Design doc that serves no pillar gets a quiet note.
-- **Completeness notes.** The map shows what's missing without enforcing it: an empty section, a Design doc without a
-  Tech doc, a Tech section the Design doc no longer has.
-- **Agents read down the layers.** Before writing code, an agent reads the Game doc, the Design doc and its Tech doc.
+- **Completeness notes.** The map shows what's missing without enforcing it: an empty section, a Design doc with no
+  Tech doc near it, a Content doc whose assets are all placeholders.
+- **Agents read down the layers.** Before writing code, an agent reads the Game doc, the Design doc and the Tech docs near it.
   Tools: `get_doc_map`, `find_doc_for(topic)`, `get_game`.
 - **Write permissions by layer.** Agents may write Tech and Content docs (inventories and data, not style rules), only
   add Open Questions and proposed decisions to Design docs, and never write the Game doc. The design stays in human

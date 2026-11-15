@@ -1,6 +1,5 @@
 #include "UI/Sourcing/SPBAssetSourcingPanel.h"
 
-#include "Docs/PBDocGenerator.h"
 #include "PBSettings.h"
 #include "PBSubsystem.h"
 #include "Sourcing/PBAssetSourcing.h"
@@ -9,7 +8,6 @@
 #include "UI/PBStyle.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SCheckBox.h"
-#include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
@@ -18,7 +16,6 @@
 
 void SProtoBoyAssetSourcingPanel::Construct(const FArguments& InArgs)
 {
-	RefreshArtDirectionStatus();
 	ChildSlot
 	[
 		MakeContent()
@@ -115,7 +112,7 @@ TSharedRef<SWidget> SProtoBoyAssetSourcingPanel::MakeContent()
 					.Padding(0.f, 2.f, 0.f, 0.f)
 					[
 						SNew(STextBlock)
-						.Text(LOCTEXT("FabDesc", "Agents can search Fab for assets that fit your design and art direction. Searches open in your browser and you pick the listings; ProtoBoy doesn't read Fab results (Fab has no public search API)."))
+						.Text(LOCTEXT("FabDesc", "Agents can search Fab for assets that fit your design and the style in your Content docs. Searches open in your browser and you pick the listings; ProtoBoy doesn't read Fab results (Fab has no public search API)."))
 						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 						.AutoWrapText(true)
 					]
@@ -123,74 +120,20 @@ TSharedRef<SWidget> SProtoBoyAssetSourcingPanel::MakeContent()
 			]
 		]
 
-		// Art direction
 		+ SVerticalBox::Slot()
 		.AutoHeight()
-		.Padding(0.f, 10.f, 0.f, 4.f)
+		.Padding(0.f, 10.f, 0.f, 0.f)
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("ArtDirectionLabel", "Art direction doc (optional)"))
-			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
-		]
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		[
-			SNew(SEditableTextBox)
-			.Text(FText::FromString(GetDefault<UProtoBoySettings>()->ArtDirectionDocPath))
-			.HintText(LOCTEXT("ArtDirectionHint", "e.g. Art Direction.md (in the docs folder)"))
-			.ToolTipText(LOCTEXT("ArtDirectionTip", "The doc describing the art style, references and asset goals. Agents read it before searching for assets. Leave empty to let agents search the docs."))
-			.OnTextCommitted_Lambda([this](const FText& Text, ETextCommit::Type)
-			{
-				FString Path = Text.ToString().TrimStartAndEnd();
-				if (!Path.IsEmpty())
-				{
-					FString Normalized;
-					FText Error;
-					if (!FProtoBoyDocGenerator::NormalizeDocPath(Path, Normalized, Error))
-					{
-						return; // Keep the previous value; the box still shows what was typed.
-					}
-					Path = Normalized;
-				}
-				GetMutableDefault<UProtoBoySettings>()->ArtDirectionDocPath = Path;
-				OnAssetSourcingChanged();
-			})
-		]
-
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		.Padding(0.f, 4.f, 0.f, 0.f)
-		[
-			SNew(STextBlock)
-			.Text_Lambda([this]() { return ArtDirectionStatus; })
+			.Text(LOCTEXT("StyleNote", "The style assets must have is written in Content docs on the doc map: agents read the Content doc for an asset (its Style, What to Look For and What to Avoid sections) before searching for it."))
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 			.AutoWrapText(true)
 		];
 }
 
-void SProtoBoyAssetSourcingPanel::RefreshArtDirectionStatus()
-{
-	const FString Path = ProtoBoyAssetSourcing::GetArtDirectionDocPath();
-	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-	if (Path.IsEmpty())
-	{
-		ArtDirectionStatus = LOCTEXT("ArtDirectionNone", "Not set: agents will look for art direction in the docs, or ask.");
-	}
-	else if (Subsystem && Subsystem->GetDocsProvider().DocExists(Path))
-	{
-		ArtDirectionStatus = FText::Format(LOCTEXT("ArtDirectionFound", "Agents read {0} before choosing assets."), FText::FromString(Path));
-	}
-	else
-	{
-		ArtDirectionStatus = FText::Format(LOCTEXT("ArtDirectionMissing", "{0} doesn't exist in the docs folder yet."), FText::FromString(Path));
-	}
-}
-
 void SProtoBoyAssetSourcingPanel::OnAssetSourcingChanged()
 {
 	GetMutableDefault<UProtoBoySettings>()->TryUpdateDefaultConfigFile();
-	RefreshArtDirectionStatus();
 
 	// The agent guide states the asset policy.
 	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())

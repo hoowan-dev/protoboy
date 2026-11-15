@@ -26,44 +26,51 @@
 		{
 			"id": "core-rules",
 			"title": "Core Rules",
-			"kind": "tech",
+			"kind": "design",
 			"parent": "",
-			"summary": "The puzzle's logic: what's allowed, and how the player wins and loses."
+			"summary": "The puzzle's logic as the player sees it: what's allowed, and how a puzzle is won or lost."
 		},
 		{
 			"id": "board-logic",
 			"title": "Board Logic",
 			"kind": "tech",
 			"parent": "core-rules",
-			"summary": "The grid, pieces or board state, and how moves change it."
+			"summary": "The board state, moves, and checking for a solution."
 		},
 		{
-			"id": "win-and-lose-conditions",
-			"title": "Win and Lose Conditions",
-			"kind": "tech",
-			"parent": "core-rules",
-			"summary": "When a puzzle is solved or failed."
-		},
-		{
-			"id": "puzzle-content",
-			"title": "Puzzle Content",
+			"id": "puzzle-pieces",
+			"title": "Puzzle Pieces",
 			"kind": "content",
+			"parent": "core-rules",
+			"summary": "Piece and board meshes or sprites, and their move and match effects."
+		},
+		{
+			"id": "puzzles",
+			"title": "Puzzles",
+			"kind": "design",
 			"parent": "",
 			"summary": "The puzzles themselves and the order they come in."
 		},
 		{
-			"id": "level-progression",
-			"title": "Level Progression",
-			"kind": "content",
-			"parent": "puzzle-content",
-			"summary": "How puzzles are grouped, unlocked and sequenced."
-		},
-		{
 			"id": "difficulty-curve",
 			"title": "Difficulty Curve",
-			"kind": "content",
-			"parent": "puzzle-content",
+			"kind": "design",
+			"parent": "puzzles",
 			"summary": "Introducing ideas one at a time and combining them later."
+		},
+		{
+			"id": "level-data",
+			"title": "Level Data",
+			"kind": "tech",
+			"parent": "puzzles",
+			"summary": "How puzzles are authored, stored and loaded."
+		},
+		{
+			"id": "puzzle-levels",
+			"title": "Puzzle Levels",
+			"kind": "content",
+			"parent": "puzzles",
+			"summary": "The list of puzzles and the data asset for each."
 		},
 		{
 			"id": "hints-and-undo",
@@ -71,13 +78,6 @@
 			"kind": "design",
 			"parent": "",
 			"summary": "Helping stuck players without giving the answer away: undo, restart and hints."
-		},
-		{
-			"id": "presentation",
-			"title": "Presentation",
-			"kind": "style",
-			"parent": "",
-			"summary": "Art, audio and juice that make simple rules satisfying to play."
 		},
 		{
 			"id": "meta-progression",
@@ -89,9 +89,37 @@
 		{
 			"id": "ui",
 			"title": "UI",
-			"kind": "style",
+			"kind": "design",
 			"parent": "",
-			"summary": "Menus, HUD and how the game communicates with the player."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+		},
+		{
+			"id": "ui-framework",
+			"title": "UI Framework",
+			"kind": "tech",
+			"parent": "ui",
+			"summary": "How screens and widgets are built, opened, navigated and fed data."
+		},
+		{
+			"id": "ui-art",
+			"title": "UI Art",
+			"kind": "content",
+			"parent": "ui",
+			"summary": "Icons, fonts, panels and widget skins."
+		},
+		{
+			"id": "music-and-sound",
+			"title": "Music and Sound",
+			"kind": "content",
+			"parent": "",
+			"summary": "Music, sound effects and ambience, and where each is used."
+		},
+		{
+			"id": "save-and-load",
+			"title": "Save and Load",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Which puzzles are solved, and the player's settings."
 		}
 	]
 }

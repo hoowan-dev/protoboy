@@ -2,7 +2,7 @@
 	"version": 1,
 	"id": "generic",
 	"name": "Generic",
-	"description": "A starting point for any game: gameplay, content and UI, plus animation, art and audio direction. Add the features specific to your game below them.",
+	"description": "A starting point for any game: core gameplay, levels and UI, each with the tech and assets it needs. Add the features specific to your game next to them.",
 	"genre": "",
 	"sortOrder": 0,
 	"pillars": [
@@ -24,46 +24,81 @@
 	],
 	"docs": [
 		{
-			"id": "gameplay",
-			"title": "Gameplay",
+			"id": "core-gameplay",
+			"title": "Core Gameplay",
 			"kind": "design",
 			"parent": "",
-			"summary": "The core loop, mechanics and rules the player interacts with."
+			"summary": "What the player does over and over: the core loop's mechanics and rules."
 		},
 		{
-			"id": "animation",
-			"title": "Animation",
-			"kind": "style",
-			"parent": "",
-			"summary": "How characters and objects move, and how that supports game feel."
+			"id": "gameplay-framework",
+			"title": "Gameplay Framework",
+			"kind": "tech",
+			"parent": "core-gameplay",
+			"summary": "Game mode, player controller and pawn, and how the core loop runs in code."
 		},
 		{
-			"id": "art",
-			"title": "Art",
-			"kind": "style",
-			"parent": "",
-			"summary": "The visual style, assets and their budgets."
-		},
-		{
-			"id": "audio",
-			"title": "Audio",
-			"kind": "style",
-			"parent": "",
-			"summary": "Music, sound effects and how they react to play."
-		},
-		{
-			"id": "content",
-			"title": "Content",
+			"id": "characters",
+			"title": "Characters",
 			"kind": "content",
+			"parent": "core-gameplay",
+			"summary": "Player and NPC meshes, rigs and animations."
+		},
+		{
+			"id": "levels",
+			"title": "Levels",
+			"kind": "design",
 			"parent": "",
-			"summary": "Levels, encounters, items and other authored content."
+			"summary": "Where the player plays, and what they can do and see there."
+		},
+		{
+			"id": "level-streaming",
+			"title": "Level Streaming",
+			"kind": "tech",
+			"parent": "levels",
+			"summary": "How levels load, stream and transition."
+		},
+		{
+			"id": "environment-art",
+			"title": "Environment Art",
+			"kind": "content",
+			"parent": "levels",
+			"summary": "Meshes, materials, props and lighting setups the levels are built from."
 		},
 		{
 			"id": "ui",
 			"title": "UI",
-			"kind": "style",
+			"kind": "design",
 			"parent": "",
-			"summary": "Menus, HUD and how the game communicates with the player."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+		},
+		{
+			"id": "ui-framework",
+			"title": "UI Framework",
+			"kind": "tech",
+			"parent": "ui",
+			"summary": "How screens and widgets are built, opened, navigated and fed data."
+		},
+		{
+			"id": "ui-art",
+			"title": "UI Art",
+			"kind": "content",
+			"parent": "ui",
+			"summary": "Icons, fonts, panels and widget skins."
+		},
+		{
+			"id": "music-and-sound",
+			"title": "Music and Sound",
+			"kind": "content",
+			"parent": "",
+			"summary": "Music, sound effects and ambience, and where each is used."
+		},
+		{
+			"id": "save-and-load",
+			"title": "Save and Load",
+			"kind": "tech",
+			"parent": "",
+			"summary": "What persists between sessions, how it's stored, and how saves stay compatible."
 		}
 	]
 }

@@ -3,18 +3,19 @@
 #include "CoreMinimal.h"
 
 /**
- * The layers of the project's documentation, from why the game exists down to how each piece is built:
+ * The layers of the project's documentation:
  *
- *   Game         why the game exists and what it is: pitch, design pillars, non-goals, core loop, and an index of
- *                every other doc. One doc, the top of the map.
- *     Design     what a feature is, from the player's side. Nestable.
- *       Tech     how something is built: a feature's Tech doc implements a Design doc (and mirrors its sections);
- *                shared tech (save/load, input, networking) stands on its own.
- *     Content    what's in the game (levels, items, characters) and how it looks, sounds and reads (style guides).
+ *   Game       the game as a whole: pitch, design pillars, non-goals, core loop, and an index of every other doc. One
+ *              doc, named after the project, at the top of the map.
+ *   Design     what a player should be able to do or see.
+ *   Tech       the technical details of how something works.
+ *   Content    the assets needed to make it happen, and the style they must have. Agents read the Content doc for an
+ *              asset before looking for it on storefronts (Fab), so it says what to search for and what to avoid.
  *
  * Every doc ends with a Decisions section: dated entries for what was decided there, why, and what it rules out.
- * A doc's layer, id and links live in its frontmatter (see the keys below), so the docs themselves are the model:
- * FProtoBoyDocMap builds the map by reading them. Nothing restricts which layer sits under which.
+ * A doc's layer, id and parent live in its frontmatter (see the keys below), so the docs themselves are the model:
+ * FProtoBoyDocMap builds the map by reading them. The Game doc is always the root; every other doc can go under any
+ * doc the team likes (a Tech doc under a Design doc, Content under Tech, a Design doc under Content, ...).
  */
 enum class EProtoBoyDocLayer : uint8
 {
@@ -24,19 +25,13 @@ enum class EProtoBoyDocLayer : uint8
 	Content,
 };
 
-/** Which template a new doc starts from. Each belongs to one layer (ProtoBoyDocLayers::GetLayer). */
+/** Which template a new doc starts from. One per layer (ProtoBoyDocLayers::GetLayer). */
 enum class EProtoBoyDocKind : uint8
 {
 	Game,
 	Design,
-	/** Implements a Design doc: one section per section of it. Made with Add Tech Doc. */
-	FeatureTech,
-	/** Shared tech with no Design doc of its own. */
-	SharedTech,
-	/** What exists: levels, items, quests, characters, balance tables. */
+	Tech,
 	Content,
-	/** How it's presented: art, audio, UX, writing style. A Content doc. */
-	StyleGuide,
 };
 
 namespace ProtoBoyDocLayers
@@ -45,7 +40,8 @@ namespace ProtoBoyDocLayers
 	PROTOBOY_API extern const TCHAR* IdKey;
 	PROTOBOY_API extern const TCHAR* LayerKey;
 	PROTOBOY_API extern const TCHAR* ParentKey;
-	PROTOBOY_API extern const TCHAR* ImplementsKey;
+	/** Older versions linked a feature's Tech doc to its Design doc with this. Read as the parent when there's no parent key. */
+	PROTOBOY_API extern const TCHAR* LegacyImplementsKey;
 
 	/** Every layer, top to bottom. */
 	PROTOBOY_API TArray<EProtoBoyDocLayer> GetAllLayers();
@@ -53,8 +49,8 @@ namespace ProtoBoyDocLayers
 	/** The frontmatter value, e.g. "design". */
 	PROTOBOY_API FString ToKey(EProtoBoyDocLayer Layer);
 	/**
-	 * Parse a frontmatter value (any case). Keys from the eight-layer version still work: vision and overview are
-	 * Game, systems is Tech, direction is Content. False for anything else, including "decision" (see IsRetiredKey).
+	 * Parse a frontmatter value (any case). Keys from older versions still work: vision and overview are Game, systems
+	 * is Tech, direction and style are Content. False for anything else, including "decision" (see IsRetiredKey).
 	 */
 	PROTOBOY_API bool FromKey(const FString& Key, EProtoBoyDocLayer& OutLayer);
 	/** Layers that no longer exist and whose docs stay off the map: "decision" (ADRs). */
@@ -67,12 +63,13 @@ namespace ProtoBoyDocLayers
 	PROTOBOY_API EProtoBoyDocLayer GetLayer(EProtoBoyDocKind Kind);
 	PROTOBOY_API FText GetKindName(EProtoBoyDocKind Kind);
 	PROTOBOY_API FText GetKindDescription(EProtoBoyDocKind Kind);
-	/** Kinds added from the map's Add menu. The Game doc is one per project; feature Tech docs come from Add Tech Doc. */
+	PROTOBOY_API EProtoBoyDocKind GetKind(EProtoBoyDocLayer Layer);
+	/** Kinds added from the map's Add menu: Design, Tech and Content (the Game doc is one per project). */
 	PROTOBOY_API TArray<EProtoBoyDocKind> GetAddableKinds();
-	/** Template files name kinds as "design", "tech" (shared), "content" and "style". */
+	/** Template files name kinds as "design", "tech" and "content". */
 	PROTOBOY_API bool FromTemplateKey(const FString& Key, EProtoBoyDocKind& OutKind);
 
-	/** Folder new docs of this kind go in, relative to the docs root. Empty for the Game doc; feature Tech docs sit next to their Design doc. */
+	/** Folder new docs of this kind go in when they sit under the Game doc, relative to the docs root. Empty for the Game doc (docs root). */
 	PROTOBOY_API FString GetFolder(EProtoBoyDocKind Kind);
 
 	struct FHeading
@@ -86,11 +83,8 @@ namespace ProtoBoyDocLayers
 	PROTOBOY_API const TCHAR* GetDecisionsHeadingTitle();
 	PROTOBOY_API FHeading GetDecisionsHeading();
 
-	/** The "## " sections a new doc of this kind starts with, Decisions last. FeatureTech mirrors its Design doc (FProtoBoyDocMap). */
+	/** The "## " sections a new doc of this kind starts with, Decisions last. */
 	PROTOBOY_API TArray<FHeading> GetHeadings(EProtoBoyDocKind Kind);
-
-	/** The hint under each mirrored section of a feature Tech doc. */
-	PROTOBOY_API FString GetTechSectionHint();
 
 	/** The intro line under a new doc's title. */
 	PROTOBOY_API FString GetIntro(EProtoBoyDocKind Kind);

@@ -205,10 +205,7 @@ FText SProtoBoyDocMapNode::GetLayerText() const
 	{
 		return FText::GetEmpty();
 	}
-	// Tech without a Design doc is shared tech; say so, since it reads differently from a feature's Tech doc.
-	return Doc->Layer == EProtoBoyDocLayer::Tech && Doc->ImplementsId.IsEmpty()
-		? ProtoBoyDocLayers::GetKindName(EProtoBoyDocKind::SharedTech)
-		: ProtoBoyDocLayers::GetDisplayName(Doc->Layer);
+	return ProtoBoyDocLayers::GetDisplayName(Doc->Layer);
 }
 
 FText SProtoBoyDocMapNode::GetSummary() const

@@ -34,11 +34,11 @@ struct PROTOBOY_API FProtoBoyDocTemplateDoc
 	UPROPERTY()
 	FString Title;
 
-	/** Which template the doc starts from (ProtoBoyDocLayers::FromTemplateKey): design, tech (shared), content or style. */
+	/** Which template the doc starts from (ProtoBoyDocLayers::FromTemplateKey): design, tech or content. */
 	UPROPERTY()
 	FString Kind;
 
-	/** Id of the template doc this one goes under; empty = the Game doc. Parents come before their children. */
+	/** Id of the template doc this one goes under (any kind); empty = the Game doc. Parents come before their children. */
 	UPROPERTY()
 	FString Parent;
 
@@ -48,9 +48,10 @@ struct PROTOBOY_API FProtoBoyDocTemplateDoc
 };
 
 /**
- * A starting set of docs for the doc map: design pillars for the Game doc, and a tree of docs below it.
- * One JSON file each in the plugin's Resources/DocTemplates/ (FJsonObjectConverter format). Applying one only creates
- * docs that don't exist yet (FProtoBoyDocMap::ApplyTemplate).
+ * A starting set of docs for the doc map: design pillars for the Game doc, and a tree of Design, Tech and Content docs
+ * below it.
+ * One JSON file each in the plugin's Resources/DocTemplates/ (FJsonObjectConverter format). Applying one replaces
+ * the docs on the map with its own (FProtoBoyDocMap::ApplyTemplate).
  */
 USTRUCT()
 struct PROTOBOY_API FProtoBoyDocTemplate

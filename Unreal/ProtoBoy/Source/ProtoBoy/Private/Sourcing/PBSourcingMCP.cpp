@@ -36,7 +36,7 @@ namespace ProtoBoySourcingMCP
 		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT(
 			"Opened a Fab search in the user's browser: %s\n\n"
 			"ProtoBoy can't see Fab results (Fab has no public search API). Tell the user what to look for (style, scale, "
-			"poly budget, license) based on the design doc and art direction, and ask which listings they pick. "
+			"poly budget, license) based on the design doc and the Content doc's style, and ask which listings they pick. "
 			"Then record the choices (listing name and link, what each is for) in the relevant design doc with docs_update_section. "
 			"Don't substitute AI-generated assets if nothing fits; use a marked placeholder and ask the user."), *Url)));
 	}
@@ -44,9 +44,9 @@ namespace ProtoBoySourcingMCP
 	void RegisterTools(TArray<FProtoBoyMCPTool>& OutTools)
 	{
 		OutTools.Add(ProtoBoyMCPTools::MakeTool(TEXT("fab_search"), LOCTEXT("FabTitle", "Search Fab"),
-			LOCTEXT("FabDesc", "Opens a Fab (fab.com) asset search in the user's browser, for assets that fit the design and art direction. You get the URL, not results: the user browses and picks. Use instead of generating assets."),
+			LOCTEXT("FabDesc", "Opens a Fab (fab.com) asset search in the user's browser, for assets that fit the design and the style in its Content doc. You get the URL, not results: the user browses and picks. Use instead of generating assets."),
 			false, {
-				{ TEXT("query"), TEXT("string"), TEXT("Search terms derived from the design need and art style, e.g. \"stylized low poly medieval crates\"."), true },
+				{ TEXT("query"), TEXT("string"), TEXT("Search terms derived from the design need and the Content doc's What to Look For section, e.g. \"stylized low poly medieval crates\"."), true },
 				{ TEXT("listing_type"), TEXT("string"), TEXT("Optional Fab listing type filter, e.g. \"3d-model\", \"material\", \"audio\".") },
 				{ TEXT("free_only"), TEXT("boolean"), TEXT("Only free listings.") },
 				{ TEXT("open"), TEXT("boolean"), TEXT("Open it in the user's browser (default true). False returns the URL only.") },
@@ -58,7 +58,7 @@ namespace ProtoBoySourcingMCP
 		OutPrompts.Add({
 			TEXT("source-assets"),
 			TEXT("Source assets"),
-			TEXT("Find assets for a need from the project's enabled sources (e.g. Fab) that fit the design and art direction, instead of generating them."),
+			TEXT("Find assets for a need from the project's enabled sources (e.g. Fab) that fit the design and the style in its Content doc, instead of generating them."),
 			{ { TEXT("need"), TEXT("What the assets are for, e.g. \"props for the tavern level\"."), true } },
 			[](const TMap<FString, FString>& Args)
 			{
@@ -66,13 +66,15 @@ namespace ProtoBoySourcingMCP
 
 Need: %s
 
-1. Call `get_project_context` and read its Asset sourcing section: the policy, the enabled sources, and the art
-   direction doc. Read the art direction doc (`docs_read`) and the design doc for this feature, if there is one.
-2. Write down what fits: style, scale, level of detail or poly budget, palette, mood, license, and anything to avoid.
-   Check it against the art direction; if they conflict, ask me.
+1. Call `get_project_context` and read its Asset sourcing section: the policy and the enabled sources. Find the
+   Content doc for this need on the doc map and read it (`docs_read`), with the Content docs above it and the Design
+   doc for this feature, if there are ones. If no Content doc covers it, ask me what style to look for.
+2. Write down what fits: style, scale, level of detail or poly budget, palette, mood, license, and anything to avoid,
+   starting from the Content doc's Style, What to Look For and What to Avoid sections. If the need conflicts with them,
+   ask me.
 3. If Fab is enabled, call `fab_search` with search terms built from that (one search per distinct asset type). You
    only get the URL, not results: tell me what to look for on each search.
-4. Ask which listings I pick. Record them in the design doc (`docs_update_section`, mode "append"): name, link, what
+4. Ask which listings I pick. Record them in the Content doc for this feature (or the Design doc if it has none) (`docs_update_section`, mode "append"): name, link, what
    each is for, license.
 5. Where nothing fits, propose a clearly marked placeholder and a follow-up task (`task_create`), never an
    AI-generated asset.)MD"), *Args.FindRef(TEXT("need")).TrimStartAndEnd());

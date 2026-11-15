@@ -35,6 +35,20 @@ public:
 
 	/** Write a doc, creating folders as needed. bMustNotExist fails if the file already exists. */
 	virtual bool WriteDoc(const FString& RelativePath, const FString& Text, bool bMustNotExist, FText& OutError) = 0;
+
+	/**
+	 * Delete a doc. Folder providers move it to a trash folder instead, so it can be recovered, and remove the folders
+	 * that leaves empty (up to the docs root).
+	 */
+	virtual bool DeleteDoc(const FString& RelativePath, FText& OutError) = 0;
+	/** Where deleted docs go, for confirmation prompts, e.g. "the vault's .trash folder". */
+	virtual FText GetDeletedDocsLocation() const = 0;
+
+	/**
+	 * Remove RelativeFolder and every folder below it that holds no files (hidden folders such as .obsidian count as
+	 * files and are kept). For replacing a set of docs, so the old folder structure goes with them. No-op by default.
+	 */
+	virtual void PruneEmptyFolders(const FString& RelativeFolder) {}
 };
 
 /** Docs stored as Markdown files in a folder on disk. GetDocsRoot decides which folder. */
@@ -49,6 +63,13 @@ public:
 	virtual bool DocExists(const FString& RelativePath) const override;
 	virtual bool ReadDoc(const FString& RelativePath, FString& OutText, FText& OutError) const override;
 	virtual bool WriteDoc(const FString& RelativePath, const FString& Text, bool bMustNotExist, FText& OutError) override;
+	/** Moves the file into GetTrashDir() (a numbered name if one with that name is already there). */
+	virtual bool DeleteDoc(const FString& RelativePath, FText& OutError) override;
+	virtual FText GetDeletedDocsLocation() const override;
+	virtual void PruneEmptyFolders(const FString& RelativeFolder) override;
+
+	/** Absolute folder deleted docs are moved to. Default: <Project>/Saved/ProtoBoy/DeletedDocs. */
+	virtual FString GetTrashDir() const;
 
 	/** Validate a relative .md path and turn it into an absolute one inside the root. */
 	bool ResolvePath(const FString& RelativePath, FString& OutAbsolutePath, FText& OutError) const;

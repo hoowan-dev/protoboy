@@ -29,7 +29,7 @@ namespace ProtoBoyDocTemplates
 			}
 			if (!ProtoBoyDocLayers::FromTemplateKey(Doc.Kind, Kind))
 			{
-				return FString::Printf(TEXT("doc \"%s\" has kind \"%s\" (expected design, tech, content or style)"), *Doc.Id, *Doc.Kind);
+				return FString::Printf(TEXT("doc \"%s\" has kind \"%s\" (expected design, tech or content)"), *Doc.Id, *Doc.Kind);
 			}
 			if (!Doc.Parent.IsEmpty() && !Seen.Contains(Doc.Parent))
 			{

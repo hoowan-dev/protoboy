@@ -24,32 +24,39 @@
 	],
 	"docs": [
 		{
-			"id": "run-structure",
-			"title": "Run Structure",
-			"kind": "content",
+			"id": "runs",
+			"title": "Runs",
+			"kind": "design",
 			"parent": "",
-			"summary": "How a run is built and paced: generation, encounters and rewards."
-		},
-		{
-			"id": "procedural-generation",
-			"title": "Procedural Generation",
-			"kind": "tech",
-			"parent": "run-structure",
-			"summary": "Generating floors, rooms and layouts that stay fair."
+			"summary": "How a run is built and paced: rooms, encounters and rewards."
 		},
 		{
 			"id": "encounters",
 			"title": "Encounters",
-			"kind": "content",
-			"parent": "run-structure",
+			"kind": "design",
+			"parent": "runs",
 			"summary": "Fights, events and choices along the way."
 		},
 		{
 			"id": "rewards",
 			"title": "Rewards",
 			"kind": "design",
-			"parent": "run-structure",
+			"parent": "runs",
 			"summary": "What the player is offered during a run, and when."
+		},
+		{
+			"id": "procedural-generation",
+			"title": "Procedural Generation",
+			"kind": "tech",
+			"parent": "runs",
+			"summary": "Generating floors, rooms and layouts that stay fair."
+		},
+		{
+			"id": "room-kit",
+			"title": "Room Kit",
+			"kind": "content",
+			"parent": "runs",
+			"summary": "Room tiles, props and the room templates the generator draws from."
 		},
 		{
 			"id": "combat",
@@ -59,32 +66,46 @@
 			"summary": "Moment-to-moment fighting."
 		},
 		{
-			"id": "build-variety",
-			"title": "Build Variety",
-			"kind": "content",
-			"parent": "",
-			"summary": "What makes each run play differently: the item pool and the systems that combine it."
+			"id": "combat-code",
+			"title": "Combat Code",
+			"kind": "tech",
+			"parent": "combat",
+			"summary": "Attacks, damage, projectiles and status effects."
 		},
 		{
-			"id": "items",
-			"title": "Items",
+			"id": "enemies",
+			"title": "Enemies",
 			"kind": "content",
-			"parent": "build-variety",
-			"summary": "Items and relics and their effects."
+			"parent": "combat",
+			"summary": "Enemy meshes or sprites, animations and sounds."
+		},
+		{
+			"id": "builds",
+			"title": "Builds",
+			"kind": "design",
+			"parent": "",
+			"summary": "What makes each run play differently: items, upgrades and how they combine."
 		},
 		{
 			"id": "synergies",
 			"title": "Synergies",
 			"kind": "design",
-			"parent": "build-variety",
+			"parent": "builds",
 			"summary": "How items and upgrades combine into builds."
 		},
 		{
-			"id": "upgrades",
-			"title": "Upgrades",
-			"kind": "design",
-			"parent": "build-variety",
-			"summary": "In-run upgrades to stats and abilities."
+			"id": "item-effects",
+			"title": "Item Effects",
+			"kind": "tech",
+			"parent": "builds",
+			"summary": "How item effects are defined, stacked and applied."
+		},
+		{
+			"id": "items",
+			"title": "Items",
+			"kind": "content",
+			"parent": "builds",
+			"summary": "Item and relic icons, and the item data tables."
 		},
 		{
 			"id": "meta-progression",
@@ -94,18 +115,39 @@
 			"summary": "Unlocks and progress that carry over between runs."
 		},
 		{
-			"id": "content-pools",
-			"title": "Content Pools",
-			"kind": "content",
-			"parent": "",
-			"summary": "The enemies, rooms and events the generator draws from, and how they're weighted."
-		},
-		{
 			"id": "ui",
 			"title": "UI",
-			"kind": "style",
+			"kind": "design",
 			"parent": "",
-			"summary": "Menus, HUD and how the game communicates with the player."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+		},
+		{
+			"id": "ui-framework",
+			"title": "UI Framework",
+			"kind": "tech",
+			"parent": "ui",
+			"summary": "How screens and widgets are built, opened, navigated and fed data."
+		},
+		{
+			"id": "ui-art",
+			"title": "UI Art",
+			"kind": "content",
+			"parent": "ui",
+			"summary": "Icons, fonts, panels and widget skins."
+		},
+		{
+			"id": "music-and-sound",
+			"title": "Music and Sound",
+			"kind": "content",
+			"parent": "",
+			"summary": "Music, sound effects and ambience, and where each is used."
+		},
+		{
+			"id": "save-and-load",
+			"title": "Save and Load",
+			"kind": "tech",
+			"parent": "",
+			"summary": "Meta progress, unlocks and run history."
 		}
 	]
 }

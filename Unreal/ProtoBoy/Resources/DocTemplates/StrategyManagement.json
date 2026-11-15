@@ -52,37 +52,58 @@
 			"summary": "Simulation speed, pausing and keeping it deterministic and fast."
 		},
 		{
-			"id": "units-and-agents",
-			"title": "Units and Agents",
+			"id": "units",
+			"title": "Units",
 			"kind": "design",
 			"parent": "",
-			"summary": "The things that act in the world."
+			"summary": "The things that act in the world, and what the player can tell them to do."
 		},
 		{
-			"id": "agent-ai",
-			"title": "Agent AI",
-			"kind": "design",
-			"parent": "units-and-agents",
+			"id": "unit-ai",
+			"title": "Unit AI",
+			"kind": "tech",
+			"parent": "units",
 			"summary": "How units decide what to do."
 		},
 		{
 			"id": "pathfinding",
 			"title": "Pathfinding",
 			"kind": "tech",
-			"parent": "units-and-agents",
+			"parent": "units",
 			"summary": "How units move across the map at scale."
 		},
 		{
-			"id": "building-and-placement",
-			"title": "Building and Placement",
+			"id": "unit-assets",
+			"title": "Unit Assets",
+			"kind": "content",
+			"parent": "units",
+			"summary": "Unit meshes, animations and selection sounds."
+		},
+		{
+			"id": "building",
+			"title": "Building",
 			"kind": "design",
 			"parent": "",
 			"summary": "Placing, connecting and upgrading structures."
 		},
 		{
+			"id": "placement-code",
+			"title": "Placement Code",
+			"kind": "tech",
+			"parent": "building",
+			"summary": "Grid or free placement, validation and connections."
+		},
+		{
+			"id": "building-assets",
+			"title": "Building Assets",
+			"kind": "content",
+			"parent": "building",
+			"summary": "Building meshes for each stage, and construction effects."
+		},
+		{
 			"id": "economy-and-balancing",
 			"title": "Economy and Balancing",
-			"kind": "content",
+			"kind": "design",
 			"parent": "",
 			"summary": "Costs, rates and tuning that keep choices meaningful."
 		},
@@ -94,39 +115,67 @@
 			"summary": "How the player views the map and selects and commands things."
 		},
 		{
-			"id": "map-generation",
-			"title": "Map Generation",
+			"id": "map",
+			"title": "Map",
 			"kind": "design",
 			"parent": "",
 			"summary": "Hand-made or generated maps, terrain and resource placement."
 		},
 		{
+			"id": "map-generation",
+			"title": "Map Generation",
+			"kind": "tech",
+			"parent": "map",
+			"summary": "Generating terrain and placing resources."
+		},
+		{
+			"id": "terrain-art",
+			"title": "Terrain Art",
+			"kind": "content",
+			"parent": "map",
+			"summary": "Terrain materials, foliage and resource node meshes."
+		},
+		{
 			"id": "ui",
 			"title": "UI",
-			"kind": "style",
+			"kind": "design",
 			"parent": "",
-			"summary": "Information-dense panels, overlays, tooltips and notifications: the player's main window into the simulation."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+		},
+		{
+			"id": "ui-framework",
+			"title": "UI Framework",
+			"kind": "tech",
+			"parent": "ui",
+			"summary": "How screens and widgets are built, opened, navigated and fed data."
+		},
+		{
+			"id": "ui-art",
+			"title": "UI Art",
+			"kind": "content",
+			"parent": "ui",
+			"summary": "Icons, fonts, panels and widget skins."
 		},
 		{
 			"id": "overlays",
 			"title": "Overlays",
-			"kind": "style",
+			"kind": "design",
 			"parent": "ui",
-			"summary": "Map overlays that visualize simulation data."
-		},
-		{
-			"id": "panels-and-tooltips",
-			"title": "Panels and Tooltips",
-			"kind": "style",
-			"parent": "ui",
-			"summary": "Detail views, tooltips and how deep information goes."
+			"summary": "Map overlays that show simulation data."
 		},
 		{
 			"id": "notifications",
 			"title": "Notifications",
-			"kind": "style",
+			"kind": "design",
 			"parent": "ui",
 			"summary": "Alerts that pull the player's attention to what matters."
+		},
+		{
+			"id": "music-and-sound",
+			"title": "Music and Sound",
+			"kind": "content",
+			"parent": "",
+			"summary": "Music, sound effects and ambience, and where each is used."
 		}
 	]
 }

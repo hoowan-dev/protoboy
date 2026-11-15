@@ -2,11 +2,72 @@
 
 #include "Docs/PBMarkdown.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformProcess.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "PBSettings.h"
 
 #define LOCTEXT_NAMESPACE "ProtoBoyDocsProvider"
+
+namespace ProtoBoyDocsProvider
+{
+	/**
+	 * Run a file operation, retrying briefly if it fails. Obsidian opens files and folders right after they change (to
+	 * index them), and on Windows a write, move or folder delete fails while another process has them open.
+	 */
+	bool WithRetries(TFunctionRef<bool()> Operation)
+	{
+		constexpr int32 Attempts = 8;
+		for (int32 Attempt = 0; Attempt < Attempts; ++Attempt)
+		{
+			if (Operation())
+			{
+				return true;
+			}
+			if (Attempt + 1 < Attempts)
+			{
+				FPlatformProcess::Sleep(0.025f * (Attempt + 1));
+			}
+		}
+		return false;
+	}
+
+	/** Delete Dir if it's empty, retrying while Obsidian has it open. */
+	bool DeleteIfEmpty(const FString& Dir)
+	{
+		return WithRetries([&Dir]()
+		{
+			bool bEmpty = true;
+			IFileManager::Get().IterateDirectory(*Dir, [&bEmpty](const TCHAR*, bool) { bEmpty = false; return false; });
+			return bEmpty && IFileManager::Get().DeleteDirectory(*Dir);
+		});
+	}
+
+	/** Remove the empty folders under Dir (bottom-up), then Dir itself if that leaves it empty. True if Dir is gone. */
+	bool PruneEmpty(const FString& Dir)
+	{
+		bool bHasFiles = false;
+		TArray<FString> Folders;
+		IFileManager::Get().IterateDirectory(*Dir, [&bHasFiles, &Folders](const TCHAR* Path, bool bIsDirectory)
+		{
+			if (bIsDirectory && !FPaths::GetCleanFilename(Path).StartsWith(TEXT(".")))
+			{
+				Folders.Add(Path);
+			}
+			else
+			{
+				bHasFiles = true;
+			}
+			return true;
+		});
+		bool bAllGone = true;
+		for (const FString& Folder : Folders)
+		{
+			bAllGone &= PruneEmpty(Folder);
+		}
+		return !bHasFiles && bAllGone && DeleteIfEmpty(Dir);
+	}
+}
 
 bool FProtoBoyFolderDocsProvider::IsReady(FText& OutWhyNot) const
 {
@@ -152,12 +213,79 @@ bool FProtoBoyFolderDocsProvider::WriteDoc(const FString& RelativePath, const FS
 	}
 
 	IFileManager::Get().MakeDirectory(*FPaths::GetPath(Absolute), true);
-	if (!FFileHelper::SaveStringToFile(Text, *Absolute, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	if (!ProtoBoyDocsProvider::WithRetries([&Text, &Absolute]() { return FFileHelper::SaveStringToFile(Text, *Absolute, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM); }))
 	{
 		OutError = FText::Format(LOCTEXT("WriteFailed", "Couldn't write \"{0}\"."), FText::FromString(RelativePath));
 		return false;
 	}
 	return true;
+}
+
+bool FProtoBoyFolderDocsProvider::DeleteDoc(const FString& RelativePath, FText& OutError)
+{
+	FString Absolute;
+	if (!ResolvePath(RelativePath, Absolute, OutError))
+	{
+		return false;
+	}
+	if (!FPaths::FileExists(Absolute))
+	{
+		OutError = FText::Format(LOCTEXT("DeleteMissing", "No doc at \"{0}\"."), FText::FromString(RelativePath));
+		return false;
+	}
+
+	const FString Trash = GetTrashDir();
+	const FString Base = FPaths::GetBaseFilename(Absolute);
+	FString Target = FPaths::Combine(Trash, FPaths::GetCleanFilename(Absolute));
+	for (int32 Suffix = 2; FPaths::FileExists(Target); ++Suffix)
+	{
+		Target = FPaths::Combine(Trash, FString::Printf(TEXT("%s %d.md"), *Base, Suffix));
+	}
+	IFileManager::Get().MakeDirectory(*Trash, true);
+	if (!ProtoBoyDocsProvider::WithRetries([&Target, &Absolute]() { return IFileManager::Get().Move(*Target, *Absolute); }))
+	{
+		OutError = FText::Format(LOCTEXT("DeleteFailed", "Couldn't move \"{0}\" to {1}."), FText::FromString(RelativePath), GetDeletedDocsLocation());
+		return false;
+	}
+
+	// Remove the folders this leaves empty (Design/Combat/Weapons/...), up to the docs root. A folder that still has
+	// anything in it (another note, an image) stays.
+	FString Root = FPaths::ConvertRelativePathToFull(GetDocsRoot());
+	FPaths::NormalizeDirectoryName(Root);
+	for (FString Dir = FPaths::GetPath(Absolute); Dir.StartsWith(Root + TEXT("/"), ESearchCase::IgnoreCase); Dir = FPaths::GetPath(Dir))
+	{
+		if (!ProtoBoyDocsProvider::DeleteIfEmpty(Dir))
+		{
+			break;
+		}
+	}
+	return true;
+}
+
+void FProtoBoyFolderDocsProvider::PruneEmptyFolders(const FString& RelativeFolder)
+{
+	// Same checks as doc paths: the folder must be inside the docs root (and never the root itself).
+	FString Absolute;
+	FText Ignored;
+	if (RelativeFolder.TrimStartAndEnd().IsEmpty() || !ResolvePath(RelativeFolder / TEXT("x.md"), Absolute, Ignored))
+	{
+		return;
+	}
+	const FString Dir = FPaths::GetPath(Absolute);
+	if (FPaths::DirectoryExists(Dir))
+	{
+		ProtoBoyDocsProvider::PruneEmpty(Dir);
+	}
+}
+
+FString FProtoBoyFolderDocsProvider::GetTrashDir() const
+{
+	return FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("ProtoBoy") / TEXT("DeletedDocs"));
+}
+
+FText FProtoBoyFolderDocsProvider::GetDeletedDocsLocation() const
+{
+	return FText::Format(LOCTEXT("TrashLocation", "{0}"), FText::FromString(GetTrashDir()));
 }
 
 FText FProtoBoyLocalDocsProvider::GetDisplayName() const

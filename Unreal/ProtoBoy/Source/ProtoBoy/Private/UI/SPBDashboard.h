@@ -76,9 +76,9 @@ private:
 
 	/**
 	 * One checklist row. GetState returns true when done and fills Detail; OnSetUp opens the window to finish it.
-	 * The "Set Up..." button hides once the step is done, unless ChangeText is given (then it's always shown with that label).
+	 * The "Set Up..." button hides once the step is done, and isn't shown at all when OnSetUp is null.
 	 */
-	TSharedRef<SWidget> MakeSetupStep(const FText& Title, FSetupStepState GetState, FReply (SProtoBoyDashboard::*OnSetUp)(), const FText& ChangeText = FText::GetEmpty());
+	TSharedRef<SWidget> MakeSetupStep(const FText& Title, FSetupStepState GetState, FReply (SProtoBoyDashboard::*OnSetUp)());
 
 	/** The checklist's steps, in order (also used for the "N of M" count). */
 	TArray<FSetupStepState> SetupSteps;
@@ -92,7 +92,6 @@ private:
 	FReply OnMCPSettingsClicked();
 	FReply OnTasksSettingsClicked();
 	/** Opens the Setup page, where Asset Sourcing is edited. */
-	FReply OnAssetSourcingSettingsClicked();
 
 	TSharedPtr<class SBox> DocsSection;
 	/** Setup > Asset Sourcing; refreshed with the docs section. */

@@ -8,9 +8,6 @@
  */
 namespace ProtoBoyAssetSourcing
 {
-	/** Normalized art direction doc path, or empty if none is set. */
-	PROTOBOY_API FString GetArtDirectionDocPath();
-
-	/** Markdown for agents: the sourcing policy, enabled sources and where the art direction lives. */
+	/** Markdown for agents: the sourcing policy, enabled sources, and where the style assets must match is written (Content docs). */
 	PROTOBOY_API FString DescribePolicyForAgents();
 }

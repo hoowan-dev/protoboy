@@ -1,6 +1,7 @@
 #include "Docs/Obsidian/PBObsidianDocsProvider.h"
 
 #include "Docs/Obsidian/PBObsidianConnector.h"
+#include "Misc/Paths.h"
 
 #define LOCTEXT_NAMESPACE "ProtoBoyObsidianDocsProvider"
 
@@ -27,6 +28,17 @@ bool FProtoBoyObsidianDocsProvider::IsReady(FText& OutWhyNot) const
 		return false;
 	}
 	return FProtoBoyFolderDocsProvider::IsReady(OutWhyNot);
+}
+
+FString FProtoBoyObsidianDocsProvider::GetTrashDir() const
+{
+	// Obsidian's own "move to .trash" location, so deleted notes show up where Obsidian users look for them.
+	return Connector.IsConnected() ? FPaths::Combine(Connector.GetVaultPath(), TEXT(".trash")) : FProtoBoyFolderDocsProvider::GetTrashDir();
+}
+
+FText FProtoBoyObsidianDocsProvider::GetDeletedDocsLocation() const
+{
+	return Connector.IsConnected() ? LOCTEXT("ObsidianTrash", "the vault's .trash folder") : FProtoBoyFolderDocsProvider::GetDeletedDocsLocation();
 }
 
 #undef LOCTEXT_NAMESPACE

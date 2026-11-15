@@ -139,7 +139,7 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeChooseStep()
 		.Padding(0.f, 0.f, 0.f, 12.f)
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("ChooseIntro", "Start the project's docs from a preset for your kind of game: the Game doc with suggested design pillars, and Design, Tech, Content and style guide docs from their templates. Nothing you've already written is overwritten, and you can add, move or delete docs afterwards."))
+			.Text(LOCTEXT("ChooseIntro", "Start the project's docs from a preset for your kind of game: the Game doc with suggested design pillars, and Design, Tech and Content docs from their templates. Nothing you've already written is overwritten, and you can add, move or delete docs afterwards."))
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 			.AutoWrapText(true)
 		]
@@ -272,7 +272,9 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakePreview(const FProtoBoyDocTemp
 	.Padding(0.f, 2.f, 0.f, 4.f)
 	[
 		SNew(STextBlock)
-		.Text(LOCTEXT("PillarsNote", "Written into a new Game doc as placeholders. Rewrite them for your game: every feature should serve one."))
+		.Text(Template.Pillars.IsEmpty()
+			? LOCTEXT("PillarsNoneNote", "None: the Game doc starts with one example pillar for you to replace with your own. Every feature should serve one.")
+			: LOCTEXT("PillarsNote", "Written into a new Game doc as placeholders. Rewrite them for your game: every feature should serve one."))
 		.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 		.AutoWrapText(true)
 	];
@@ -302,7 +304,7 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakePreview(const FProtoBoyDocTemp
 	[
 		ProtoBoySetupDocsDialog::MakeHeading(FText::Format(LOCTEXT("DocsHeading", "Docs ({0})"), FText::AsNumber(Template.Docs.Num() + 1)))
 	];
-	Scroll->AddSlot()[ ProtoBoySetupDocsDialog::MakeDocRow(0, EProtoBoyDocKind::Game, LOCTEXT("GameTitle", "Game"), LOCTEXT("GameDetail", "Pitch, the design pillars above, non-goals, core loop, and an index of everything below")) ];
+	Scroll->AddSlot()[ ProtoBoySetupDocsDialog::MakeDocRow(0, EProtoBoyDocKind::Game, FText::FromString(FProtoBoyDocMap::GetProjectTitle()), LOCTEXT("GameDetail", "The Game doc: pitch, the design pillars above, non-goals, core loop, and an index of everything below")) ];
 
 	TMap<FString, int32> Depths;
 	for (const FProtoBoyDocTemplateDoc& Doc : Template.Docs)
@@ -349,7 +351,9 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeConfirmStep()
 		.Text_Lambda([this]()
 		{
 			return PlannedCount > 0
-				? FText::Format(LOCTEXT("CreateDocs", "Create {0} {0}|plural(one=Doc,other=Docs)"), FText::AsNumber(PlannedCount))
+				? FText::Format(PlannedRemoved > 0
+					? LOCTEXT("ReplaceDocs", "Replace with {0} {0}|plural(one=Doc,other=Docs)")
+					: LOCTEXT("CreateDocs", "Create {0} {0}|plural(one=Doc,other=Docs)"), FText::AsNumber(PlannedCount))
 				: LOCTEXT("NothingToCreate", "Nothing to Create");
 		})
 		.IsEnabled_Lambda([this]() { return SelectedTemplate.IsValid() && PlannedCount > 0; })
@@ -364,19 +368,52 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakePlan(const FProtoBoyDocTemplat
 	if (!Map)
 	{
 		PlannedCount = 0;
+		PlannedRemoved = 0;
 		return SNew(STextBlock).Text(LOCTEXT("NoMap", "ProtoBoy isn't running."));
 	}
 	const FProtoBoyDocTemplatePlan Plan = Map->PlanTemplate(Template);
 	PlannedCount = Plan.NumToCreate;
-	const int32 Kept = Plan.Docs.FilterByPredicate([](const FProtoBoyDocTemplatePlan::FEntry& Entry) { return Entry.bExists; }).Num()
-		+ (Plan.bCreatesGame ? 0 : 1);
+	PlannedRemoved = Plan.Removed.Num();
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	const FText Trash = Subsystem ? Subsystem->GetDocsProvider().GetDeletedDocsLocation() : FText::GetEmpty();
 
 	TSharedRef<SScrollBox> Scroll = SNew(SScrollBox);
+	if (!Plan.Removed.IsEmpty())
+	{
+		// Applying a template replaces the documentation, so say so before anything else.
+		Scroll->AddSlot()
+		[
+			SNew(STextBlock)
+			.Text(FText::Format(LOCTEXT("PlanReplace", "This replaces your documentation. {0} existing {0}|plural(one=doc moves,other=docs move) to {1} first, the Game doc included:"),
+				FText::AsNumber(Plan.Removed.Num()), Trash))
+			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
+			.ColorAndOpacity(FStyleColors::Warning)
+			.AutoWrapText(true)
+		];
+		for (const FString& Path : Plan.Removed)
+		{
+			Scroll->AddSlot()
+			.Padding(16.f, 1.f, 0.f, 1.f)
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(Path))
+				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			];
+		}
+		Scroll->AddSlot()
+		.Padding(0.f, 2.f, 0.f, 12.f)
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("PlanReplaceKeep", "Folders they leave empty are removed too. Other notes in the docs folder aren't touched, and their folders stay. Copy anything you want to keep out of the trash afterwards."))
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true)
+		];
+	}
 	Scroll->AddSlot()
 	[
 		SNew(STextBlock)
-		.Text(FText::Format(LOCTEXT("PlanSummary", "{0}: {1} new {1}|plural(one=doc,other=docs) will be written. {2} {2}|plural(one=doc is,other=docs are) already there and won't be changed."),
-			FText::FromString(Template.Name), FText::AsNumber(Plan.NumToCreate), FText::AsNumber(Kept)))
+		.Text(FText::Format(LOCTEXT("PlanSummary", "{0}: {1} {1}|plural(one=doc,other=docs) will be written."),
+			FText::FromString(Template.Name), FText::AsNumber(Plan.NumToCreate)))
 		.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
 		.AutoWrapText(true)
 	];
@@ -384,24 +421,15 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakePlan(const FProtoBoyDocTemplat
 	.Padding(0.f, 2.f, 0.f, 10.f)
 	[
 		SNew(STextBlock)
-		.Text(Plan.bCreatesGame
-			? LOCTEXT("PlanGameNew", "The Game doc is created with the template's suggested design pillars. New docs start from their template's sections, with a line on what each covers.")
-			: LOCTEXT("PlanGameKept", "Your Game doc is kept as it is, so the template's pillars aren't added; copy any you want from the previous step. New docs start from their template's sections."))
+		.Text(LOCTEXT("PlanGameNew", "The Game doc is created with the template's suggested design pillars. New docs start from their template's sections, with a line on what each covers."))
 		.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 		.AutoWrapText(true)
 	];
 
-	auto Status = [](bool bExists, const FString& Path)
-	{
-		return bExists
-			? FText::Format(LOCTEXT("Keep", "Kept: {0} already exists"), FText::FromString(Path))
-			: FText::Format(LOCTEXT("New", "New: {0}"), FText::FromString(Path));
-	};
-	const FProtoBoyDocNode* Game = Map->GetGame();
-	Scroll->AddSlot()[ ProtoBoySetupDocsDialog::MakeDocRow(0, EProtoBoyDocKind::Game, LOCTEXT("PlanGame", "Game"), Status(!Plan.bCreatesGame, Game ? Game->Path : FString(TEXT("Game.md"))), !Plan.bCreatesGame) ];
+	Scroll->AddSlot()[ ProtoBoySetupDocsDialog::MakeDocRow(0, EProtoBoyDocKind::Game, FText::FromString(FProtoBoyDocMap::GetProjectTitle()), FText::FromString(FProtoBoyDocMap::GetGameDocPath())) ];
 	for (const FProtoBoyDocTemplatePlan::FEntry& Entry : Plan.Docs)
 	{
-		Scroll->AddSlot()[ ProtoBoySetupDocsDialog::MakeDocRow(Entry.Depth + 1, Entry.Kind, FText::FromString(Entry.Title), Status(Entry.bExists, Entry.Path), Entry.bExists) ];
+		Scroll->AddSlot()[ ProtoBoySetupDocsDialog::MakeDocRow(Entry.Depth + 1, Entry.Kind, FText::FromString(Entry.Title), FText::FromString(Entry.Path)) ];
 	}
 	return Scroll;
 }

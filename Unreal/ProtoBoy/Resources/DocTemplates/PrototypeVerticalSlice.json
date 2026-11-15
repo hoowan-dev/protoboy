@@ -29,22 +29,36 @@
 			"id": "player",
 			"title": "Player",
 			"kind": "design",
-			"parent": "",
+			"parent": "core-loop",
 			"summary": "The player character: controls, abilities and feel."
 		},
 		{
-			"id": "one-level",
-			"title": "One Level",
+			"id": "player-code",
+			"title": "Player Code",
+			"kind": "tech",
+			"parent": "core-loop",
+			"summary": "The player character's components and tuning values."
+		},
+		{
+			"id": "player-assets",
+			"title": "Player Assets",
 			"kind": "content",
+			"parent": "core-loop",
+			"summary": "The player's mesh, animations, effects and sounds."
+		},
+		{
+			"id": "slice-level",
+			"title": "Slice Level",
+			"kind": "design",
 			"parent": "",
 			"summary": "The single level that shows the game at its intended quality."
 		},
 		{
-			"id": "feel",
-			"title": "Feel",
-			"kind": "style",
-			"parent": "",
-			"summary": "Animation, VFX and audio polish on the core loop."
+			"id": "slice-level-art",
+			"title": "Slice Level Art",
+			"kind": "content",
+			"parent": "slice-level",
+			"summary": "Environment art, props and lighting for the slice."
 		},
 		{
 			"id": "tech-risks",
@@ -59,6 +73,13 @@
 			"kind": "tech",
 			"parent": "",
 			"summary": "Cheats, debug views and tuning panels for iterating on the slice."
+		},
+		{
+			"id": "music-and-sound",
+			"title": "Music and Sound",
+			"kind": "content",
+			"parent": "",
+			"summary": "Music, sound effects and ambience, and where each is used."
 		}
 	]
 }

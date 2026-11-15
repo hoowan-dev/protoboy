@@ -2,7 +2,7 @@
 	"version": 1,
 	"id": "multiplayer",
 	"name": "Multiplayer",
-	"description": "Generic's docs plus networking. Add your genre's Design docs below Gameplay.",
+	"description": "Generic's docs plus networking. Add your genre's Design docs next to Core Gameplay.",
 	"genre": "",
 	"sortOrder": 120,
 	"pillars": [
@@ -24,25 +24,46 @@
 	],
 	"docs": [
 		{
-			"id": "gameplay",
-			"title": "Gameplay",
+			"id": "core-gameplay",
+			"title": "Core Gameplay",
 			"kind": "design",
 			"parent": "",
-			"summary": "The core loop, mechanics and rules the player interacts with."
+			"summary": "What the player does over and over: the core loop's mechanics and rules."
+		},
+		{
+			"id": "gameplay-framework",
+			"title": "Gameplay Framework",
+			"kind": "tech",
+			"parent": "core-gameplay",
+			"summary": "Game mode, game state, player state and what runs on the server."
+		},
+		{
+			"id": "characters",
+			"title": "Characters",
+			"kind": "content",
+			"parent": "core-gameplay",
+			"summary": "Player meshes, rigs, animations and team colors."
+		},
+		{
+			"id": "sessions",
+			"title": "Sessions",
+			"kind": "design",
+			"parent": "",
+			"summary": "Hosting, finding and joining games, parties and invites, as the player sees them."
+		},
+		{
+			"id": "matchmaking",
+			"title": "Matchmaking",
+			"kind": "tech",
+			"parent": "sessions",
+			"summary": "Online subsystem, sessions and matchmaking."
 		},
 		{
 			"id": "networking",
 			"title": "Networking",
 			"kind": "tech",
 			"parent": "",
-			"summary": "Getting players into the same game and keeping it in sync."
-		},
-		{
-			"id": "sessions-and-matchmaking",
-			"title": "Sessions and Matchmaking",
-			"kind": "tech",
-			"parent": "networking",
-			"summary": "Hosting, finding and joining games, parties and invites."
+			"summary": "Keeping every player's game in sync."
 		},
 		{
 			"id": "replication",
@@ -59,32 +80,46 @@
 			"summary": "Who decides what's true, and how cheating is prevented or detected."
 		},
 		{
-			"id": "content",
-			"title": "Content",
+			"id": "levels",
+			"title": "Levels",
+			"kind": "design",
+			"parent": "",
+			"summary": "The maps players meet in."
+		},
+		{
+			"id": "environment-art",
+			"title": "Environment Art",
 			"kind": "content",
-			"parent": "",
-			"summary": "Levels, encounters, items and other authored content."
-		},
-		{
-			"id": "art",
-			"title": "Art",
-			"kind": "style",
-			"parent": "",
-			"summary": "The visual style, assets and their budgets."
-		},
-		{
-			"id": "audio",
-			"title": "Audio",
-			"kind": "style",
-			"parent": "",
-			"summary": "Music, sound effects and how they react to play."
+			"parent": "levels",
+			"summary": "Meshes, materials and props the maps are built from."
 		},
 		{
 			"id": "ui",
 			"title": "UI",
-			"kind": "style",
+			"kind": "design",
 			"parent": "",
-			"summary": "Menus, HUD and how the game communicates with the player."
+			"summary": "Menus and HUD: what the player sees and can do outside the game world."
+		},
+		{
+			"id": "ui-framework",
+			"title": "UI Framework",
+			"kind": "tech",
+			"parent": "ui",
+			"summary": "How screens and widgets are built, opened, navigated and fed data."
+		},
+		{
+			"id": "ui-art",
+			"title": "UI Art",
+			"kind": "content",
+			"parent": "ui",
+			"summary": "Icons, fonts, panels and widget skins."
+		},
+		{
+			"id": "music-and-sound",
+			"title": "Music and Sound",
+			"kind": "content",
+			"parent": "",
+			"summary": "Music, sound effects and ambience, and where each is used."
 		}
 	]
 }

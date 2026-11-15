@@ -2,7 +2,7 @@
 	"version": 1,
 	"id": "game-jam",
 	"name": "Game Jam",
-	"description": "Deliberately tiny: four docs, so the whole set fits a weekend. Grow it after the jam if the game sticks.",
+	"description": "Deliberately tiny, so the whole set fits a weekend. Grow it after the jam if the game sticks.",
 	"genre": "",
 	"sortOrder": 100,
 	"pillars": [
@@ -26,23 +26,23 @@
 			"summary": "The one thing the player does, over and over, and why it's fun."
 		},
 		{
-			"id": "art",
-			"title": "Art",
-			"kind": "style",
-			"parent": "",
-			"summary": "Just enough visuals to read the game and set its mood."
+			"id": "prototype-code",
+			"title": "Prototype Code",
+			"kind": "tech",
+			"parent": "core-loop",
+			"summary": "Where the jam code lives, and the shortcuts taken to finish in time."
 		},
 		{
-			"id": "audio",
-			"title": "Audio",
-			"kind": "style",
-			"parent": "",
-			"summary": "A few sounds and a track that sell the core loop."
+			"id": "jam-assets",
+			"title": "Jam Assets",
+			"kind": "content",
+			"parent": "core-loop",
+			"summary": "Every asset in the game, and the packs they came from."
 		},
 		{
-			"id": "ui",
-			"title": "UI",
-			"kind": "style",
+			"id": "menus",
+			"title": "Menus",
+			"kind": "design",
 			"parent": "",
 			"summary": "Title screen, the minimum HUD and a way to restart."
 		}

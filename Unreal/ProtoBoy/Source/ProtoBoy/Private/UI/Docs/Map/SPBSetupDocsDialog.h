@@ -13,7 +13,7 @@ class SWidgetSwitcher;
  * "Set Up Docs from Template" window, opened from the doc map (and the Obsidian page of Connect to Documentation).
  * Step one lists the doc-set templates (by genre, then by size) with a preview of the selected one: its design pillars
  * and the docs it creates. Step two shows exactly what applying it writes and what it leaves alone, then applies it.
- * Applying never overwrites a doc (FProtoBoyDocMap::ApplyTemplate).
+ * Applying replaces the documentation: the docs on the map go to the trash first (FProtoBoyDocMap::ApplyTemplate).
  */
 class SProtoBoySetupDocsDialog : public SCompoundWidget
 {
@@ -62,4 +62,6 @@ private:
 	/** Set when applying fails; shown on the confirm step. */
 	FText ApplyError;
 	int32 PlannedCount = 0;
+	/** Docs the selected template would move to the trash first. */
+	int32 PlannedRemoved = 0;
 };

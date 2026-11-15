@@ -164,6 +164,11 @@ void UProtoBoyDocMapGraphNode::AllocateDefaultPins()
 
 FText UProtoBoyDocMapGraphNode::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
+	// The root is the game itself, so it always reads as the project's name, whatever the Game doc's title says.
+	if (IsRoot())
+	{
+		return FText::FromString(FProtoBoyDocMap::GetProjectTitle());
+	}
 	const FProtoBoyDocNode* Doc = GetDoc();
 	return FText::FromString(Doc ? Doc->Title : DocId);
 }
@@ -229,7 +234,7 @@ bool UProtoBoyDocMapGraphSchema::TryCreateConnection(UEdGraphPin* A, UEdGraphPin
 
 void UProtoBoyDocMapGraphSchema::BreakPinLinks(UEdGraphPin& TargetPin, bool bSendsNodeNotifcation) const
 {
-	// Unhooking a doc sends it back to where its layer puts it by default (the Game doc, or its Design doc for a feature's Tech doc).
+	// Unhooking a doc sends it back under the Game doc.
 	if (TargetPin.Direction == EGPD_Input)
 	{
 		ProtoBoyDocMapGraph::Reparent(ProtoBoyDocMapGraph::OwningNode(&TargetPin), FString());
