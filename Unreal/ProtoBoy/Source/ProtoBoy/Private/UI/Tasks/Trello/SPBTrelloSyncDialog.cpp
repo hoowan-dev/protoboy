@@ -2,6 +2,7 @@
 
 #include "Framework/Application/SlateApplication.h"
 #include "PBSubsystem.h"
+#include "Tasks/PBTaskBoard.h"
 #include "Styling/AppStyle.h"
 #include "Styling/StyleColors.h"
 #include "Tasks/PBTaskProvider.h"
@@ -18,7 +19,7 @@
 
 TWeakPtr<SWindow> SProtoBoyTrelloSyncDialog::OpenWindow;
 
-void SProtoBoyTrelloSyncDialog::Open(const TSharedPtr<SWidget>& ParentWidget, const FProtoBoyTrelloCategorySync& Plan, FOnFinished OnFinished)
+void SProtoBoyTrelloSyncDialog::Open(const TSharedPtr<SWidget>& ParentWidget, const FProtoBoyTrelloCategorySync& Plan)
 {
 	if (const TSharedPtr<SWindow> Existing = OpenWindow.Pin())
 	{
@@ -33,7 +34,6 @@ void SProtoBoyTrelloSyncDialog::Open(const TSharedPtr<SWidget>& ParentWidget, co
 		[
 			SNew(SProtoBoyTrelloSyncDialog)
 			.Plan(Plan)
-			.OnFinished(MoveTemp(OnFinished))
 		];
 	OpenWindow = Window;
 
@@ -51,7 +51,6 @@ void SProtoBoyTrelloSyncDialog::Open(const TSharedPtr<SWidget>& ParentWidget, co
 void SProtoBoyTrelloSyncDialog::Construct(const FArguments& InArgs)
 {
 	Plan = InArgs._Plan;
-	OnFinished = InArgs._OnFinished;
 
 	TSharedRef<SVerticalBox> Actions = SNew(SVerticalBox);
 	for (const FText& Action : DescribeActions())
@@ -178,13 +177,22 @@ TArray<FText> SProtoBoyTrelloSyncDialog::DescribeActions() const
 {
 	const FText Uncategorized = FText::FromString(FProtoBoyTrelloClient::GetCategoryListName(ProtoBoyTasks::UncategorizedName));
 	TArray<FText> Lines;
-	for (const FString& Name : Plan.LabelsToCreate)
+	// Renames first: a doc was renamed, and its list and label follow it (their cards stay where they are).
+	for (const FProtoBoyTrelloCategorySync::FRename& Rename : Plan.ListsToRename)
 	{
-		Lines.Add(FText::Format(LOCTEXT("AddLabel", "Add the label \"{0}\" to the board."), FText::FromString(Name)));
+		Lines.Add(FText::Format(LOCTEXT("RenameList", "Rename the list \"{0}\" to \"{1}\" (its doc was renamed; its cards stay)."), FText::FromString(Rename.From), FText::FromString(Rename.To)));
 	}
-	for (const FString& Name : Plan.ListsToCreate)
+	for (const FProtoBoyTrelloCategorySync::FRename& Rename : Plan.LabelsToRename)
 	{
-		Lines.Add(FText::Format(LOCTEXT("AddList", "Add the list \"{0}\"."), FText::FromString(Name)));
+		Lines.Add(FText::Format(LOCTEXT("RenameLabel", "Rename the label \"{0}\" to \"{1}\"."), FText::FromString(Rename.From), FText::FromString(Rename.To)));
+	}
+	for (const FProtoBoyTrelloCategorySync::FNew& New : Plan.LabelsToCreate)
+	{
+		Lines.Add(FText::Format(LOCTEXT("AddLabel", "Add the label \"{0}\" to the board."), FText::FromString(New.Name)));
+	}
+	for (const FProtoBoyTrelloCategorySync::FNew& New : Plan.ListsToCreate)
+	{
+		Lines.Add(FText::Format(LOCTEXT("AddList", "Add the list \"{0}\"."), FText::FromString(New.Name)));
 	}
 	for (const FProtoBoyTrelloCategorySync::FExtraList& List : Plan.ListsToRemove)
 	{
@@ -231,7 +239,7 @@ TArray<FText> SProtoBoyTrelloSyncDialog::DescribeActions() const
 
 FReply SProtoBoyTrelloSyncDialog::OnResyncClicked()
 {
-	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 	if (!Subsystem)
 	{
 		return FReply::Handled();
@@ -239,25 +247,21 @@ FReply SProtoBoyTrelloSyncDialog::OnResyncClicked()
 	bSyncing = true;
 	ErrorText = FText::GetEmpty();
 
+	// The board checks itself again afterwards, so the Tasks page shows the result either way.
 	const TWeakPtr<SProtoBoyTrelloSyncDialog> WeakThis = SharedThis(this);
-	FOnFinished Finished = OnFinished;
-	Subsystem->GetTrelloClient().ApplyCategorySync(Plan, [WeakThis, Finished](const TProtoBoyTaskResult<bool>& Result)
+	Subsystem->GetTaskBoard().ApplySync(Plan, [WeakThis](bool bOk, const FText& Error)
 	{
 		if (const TSharedPtr<SProtoBoyTrelloSyncDialog> Dialog = WeakThis.Pin())
 		{
 			Dialog->bSyncing = false;
-			if (Result.bOk)
+			if (bOk)
 			{
 				Dialog->CloseWindow();
 			}
 			else
 			{
-				Dialog->ErrorText = FText::Format(LOCTEXT("SyncFailed", "Resync stopped: {0} Changes made before this are kept; close this window and press Sync with Trello again to see what's left."), Result.Error);
+				Dialog->ErrorText = FText::Format(LOCTEXT("SyncFailed", "Resync stopped: {0} Changes made before this are kept; close this window and press Sync with Trello again to see what's left."), Error);
 			}
-		}
-		if (Finished)
-		{
-			Finished(Result.bOk);
 		}
 	});
 	return FReply::Handled();

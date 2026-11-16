@@ -24,14 +24,14 @@ struct FProtoBoyDocSearchHit
  *
  * Docs must survive human edits: writes only append, create new files, or replace ProtoBoy managed blocks.
  */
-class PROTOBOY_API FProtoBoyDocGenerator
+class PROTOBOY_API FProtoBoyDocsService
 {
 public:
 	/** A safe docs-relative Markdown path: no drive, no "..", no leading '/'. Adds ".md" if missing. */
 	static bool NormalizeDocPath(const FString& Path, FString& OutNormalized, FText& OutError);
 
 
-	explicit FProtoBoyDocGenerator(const FProtoBoyObsidianConnector& InObsidian);
+	explicit FProtoBoyDocsService(const FProtoBoyObsidianConnector& InObsidian);
 
 	/** The provider docs currently go to. */
 	IProtoBoyDocsProvider& GetProvider() const;

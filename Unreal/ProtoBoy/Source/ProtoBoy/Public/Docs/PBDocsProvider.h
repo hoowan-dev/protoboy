@@ -16,7 +16,7 @@ struct FProtoBoyDocInfo
 /**
  * Where living docs are stored (Obsidian vault, project folder; later Notion, Confluence, ...).
  * Paths are always relative to the docs root and must be .md files inside it.
- * Higher-level rules (sections, managed blocks, templates) live in FProtoBoyDocGenerator, not here.
+ * Higher-level rules (sections, managed blocks, templates) live in FProtoBoyDocsService, not here.
  */
 class PROTOBOY_API IProtoBoyDocsProvider
 {

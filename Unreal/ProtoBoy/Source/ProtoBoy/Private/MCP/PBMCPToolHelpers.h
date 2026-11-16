@@ -7,8 +7,20 @@
  * Helpers for writing MCP tools: input schemas and argument access.
  * Shared by the tool registries (MCP/PBMCPTools.cpp, Sourcing/PBSourcingMCP.cpp, ...); call them qualified.
  */
+class UProtoBoySubsystem;
+
 namespace ProtoBoyMCPTools
 {
+	/** The subsystem, or null after finishing the call with an error (defined in PBMCPTools.cpp). */
+	UProtoBoySubsystem* GetSubsystemOrFail(const FProtoBoyMCPToolDone& Done);
+
+	/** A prompt argument, trimmed, or Fallback when it's missing or blank. */
+	inline FString ArgOr(const TMap<FString, FString>& Args, const TCHAR* Name, const TCHAR* Fallback)
+	{
+		const FString Value = Args.FindRef(Name).TrimStartAndEnd();
+		return Value.IsEmpty() ? FString(Fallback) : Value;
+	}
+
 	struct FParam
 	{
 		const TCHAR* Name;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MCP/PBAgentRun.h"
+#include "Agents/PBAgentRun.h"
 #include "Tasks/PBTaskProvider.h"
 
 /**
@@ -19,18 +19,14 @@
 class PROTOBOY_API FProtoBoyTaskGenerationRun : public TSharedFromThis<FProtoBoyTaskGenerationRun>
 {
 public:
-	struct FCategory
-	{
-		/** The task category's doc on the doc map. */
-		FString DocId;
-		/** Titles already in its To Do list (from the last Sync), so the agent doesn't repeat them. */
-		TArray<FString> ExistingTasks;
-	};
-
 	~FProtoBoyTaskGenerationRun();
 
-	/** Write the prompt and start the agent. False (nothing started) with a reason. Use a new run for each attempt. */
-	bool Start(EProtoBoyMCPClient Client, const TArray<FCategory>& Categories, const FString& ExtraContext, FText& OutError);
+	/**
+	 * Write the prompt and start the agent for the task categories with these doc ids (in map order). The tasks already
+	 * in each one's To Do list come from FProtoBoyTaskBoard (the last Sync). False (nothing started) with a reason. Use a
+	 * new run for each attempt.
+	 */
+	bool Start(EProtoBoyMCPClient Client, const TArray<FString>& CategoryIds, const FString& ExtraContext, FText& OutError);
 	/** Read the agent's output, and once it exits, read the ideas it returned. Call often while the agent runs. */
 	void Tick();
 	/** Stop the agent, or stop adding tasks. Tasks already on the board stay. */
@@ -44,7 +40,7 @@ public:
 	bool Succeeded() const { return bSucceeded; }
 
 	/**
-	 * The agent's ideas, in its order. Category is the picked category's title as it is on the doc map, or empty for
+	 * The agent's ideas, in its order. CategoryId / Category are the picked category's doc id and title, or empty for
 	 * Uncategorized; Description is the agent's text (AddTasks adds the doc link).
 	 */
 	const TArray<FProtoBoyNewTask>& GetIdeas() const { return Ideas; }
@@ -69,8 +65,15 @@ private:
 	void Complete();
 
 	FProtoBoyAgentRun Agent;
-	/** Category title -> its doc's path, for the categories picked, in map order. */
-	TArray<TPair<FString, FString>> CategoryDocs;
+	/** A picked category: its doc's id, title and path. */
+	struct FPicked
+	{
+		FString DocId;
+		FString Title;
+		FString Path;
+	};
+	/** In map order. */
+	TArray<FPicked> Picked;
 	TArray<FProtoBoyNewTask> Ideas;
 	bool bAdding = false;
 	bool bCancelled = false;

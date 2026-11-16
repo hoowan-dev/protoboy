@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Tasks/PBTaskProvider.h"
+#include "Tasks/Trello/PBTrelloCategorySync.h"
 
 class FProtoBoyTrelloConnector;
+namespace ProtoBoyTrelloCategorySync { struct FList; }
 class FJsonObject;
 
 /** A Trello board or list, for the board picker. */
@@ -26,73 +28,10 @@ struct FProtoBoyTrelloBoardSetup
 };
 
 /**
- * What it takes to make the board's To Do lists match the doc map's task categories: one "To Do - Uncategorized" list
- * plus one "To Do - <Category>" list per task category. Other lists are left alone.
- */
-struct FProtoBoyTrelloCategorySync
-{
-	/** A "To Do - <Category>" list whose category no longer exists. */
-	struct FExtraList
-	{
-		FString Id;
-		FString Name;
-		int32 NumCards = 0;
-	};
-
-	/** A "To Do - <Category>" list that matches a task category (or Uncategorized), with its open cards in board order. */
-	struct FCategoryList
-	{
-		/** The category as the list names it (e.g. "Combat"). */
-		FString Category;
-		FString ListId;
-		TArray<FProtoBoyTask> Tasks;
-	};
-
-	/** A category label to add to a card, or another category's label to take off it. */
-	struct FLabelChange
-	{
-		FString CardId;
-		/** The category the label is named after. */
-		FString LabelName;
-		/** Empty when the label is in LabelsToCreate (resolved when it's created). */
-		FString LabelId;
-		bool bAdd = true;
-		/** The list the card ends up in, for the window ("To Do - Combat"). */
-		FString ListName;
-	};
-
-	/** The lists that stay, with their tasks: what the Tasks page shows under each category. */
-	TArray<FCategoryList> CategoryLists;
-	/** Open cards in the team's In Progress list (TrelloInProgressListId), in board order. */
-	TArray<FProtoBoyTask> InProgressTasks;
-	/** Open cards in the team's Done list (TrelloDoneListId), most recently active first. */
-	TArray<FProtoBoyTask> DoneTasks;
-	/** Names of the lists to create, in board order ("To Do - Uncategorized" first when it's missing). */
-	TArray<FString> ListsToCreate;
-	/** Lists whose cards move to "To Do - Uncategorized" before the list is archived (Trello can't delete lists). */
-	TArray<FExtraList> ListsToRemove;
-	/** The existing "To Do - Uncategorized" list; empty when it has to be created. */
-	FString UncategorizedListId;
-	/** True when the team's mapped To Do list (TrelloToDoListId) is one of ListsToRemove: it moves to Uncategorized. */
-	bool bRemapsToDoList = false;
-	/** Categories with no board label of that name yet. Uncategorized gets none. */
-	TArray<FString> LabelsToCreate;
-	/**
-	 * Every card in a "To Do - <Category>" list carries that category's label and no other category's, so a card can be
-	 * traced to its category after it moves on (In Progress, Done). Cards in Uncategorized (and those moved there from
-	 * ListsToRemove) carry no category label.
-	 */
-	TArray<FLabelChange> LabelChanges;
-	/** New lists go between these positions (board order), after the existing To Do lists. Unset = board edge. */
-	TOptional<double> InsertAfterPos;
-	TOptional<double> InsertBeforePos;
-
-	bool IsInSync() const { return ListsToCreate.IsEmpty() && ListsToRemove.IsEmpty() && LabelsToCreate.IsEmpty() && LabelChanges.IsEmpty(); }
-};
-
-/**
  * Trello REST client and task provider. Uses the user's token from FProtoBoyTrelloConnector and the team's board and
  * list mapping from UProtoBoySettings (TrelloBoardId, TrelloToDoListId, ...). Every task call is limited to that board.
+ * Implemented in three files: PBTrelloClient.cpp (REST calls and the task provider), PBTrelloBoardSetup.cpp (board
+ * picker and template) and PBTrelloCategorySync.cpp (task category lists and labels).
  */
 class PROTOBOY_API FProtoBoyTrelloClient : public IProtoBoyTaskProvider
 {
@@ -123,16 +62,22 @@ public:
 	static bool ParseCategoryListName(const FString& ListName, FString& OutCategory);
 
 	/**
-	 * Compare the configured board's lists with Categories (task category titles, in map order), and read the open cards
-	 * in each matching list (FProtoBoyTrelloCategorySync::CategoryLists). Changes nothing.
+	 * Compare the configured board's lists and labels with Categories (in map order), and read the open cards in each
+	 * category's list and in the In Progress and Done lists. Changes nothing on the board.
 	 */
-	void PlanCategorySync(const TArray<FString>& Categories, FCategorySyncCallback OnDone);
+	void PlanCategorySync(const TArray<FProtoBoyTaskCategory>& Categories, FCategorySyncCallback OnDone);
 	/**
-	 * Carry out a plan: create the missing labels and lists, for each extra list move its cards to "To Do - Uncategorized"
-	 * and archive it, then add and remove the cards' category labels. Stops at the first error. If the mapped To Do list
+	 * Carry out a plan: rename lists and labels after their docs, create the missing labels and lists, for each extra
+	 * list move its cards to "To Do - Uncategorized" and archive it, then add and remove the cards' category labels.
+	 * Stops at the first error. Remembers each category's list and label (RememberCategoryIds). If the mapped To Do list
 	 * was archived, TrelloToDoListId moves to Uncategorized.
 	 */
 	void ApplyCategorySync(const FProtoBoyTrelloCategorySync& Plan, FDoneCallback OnDone);
+	/**
+	 * Save which list and label belong to each category (doc id -> id) in the team settings, if they changed. Only the
+	 * given categories are kept, so former categories are forgotten.
+	 */
+	static void RememberCategoryIds(const TMap<FString, FString>& ListIds, const TMap<FString, FString>& LabelIds);
 
 	/** The list for a status: by name ("To Do", "Doing", "Done", ...). Empty if none matches. */
 	static FString GuessListId(const TArray<FProtoBoyTrelloItem>& Lists, EProtoBoyTaskStatus Status);
@@ -153,11 +98,20 @@ public:
 private:
 	using FJsonCallback = TFunction<void(bool bOk, const FText& Error, const TSharedPtr<class FJsonValue>& Json)>;
 
-	/** Authenticated call to https://api.trello.com/1/<Path>. */
+	/**
+	 * Authenticated call to https://api.trello.com/1/<Path>. When Trello says it's rate limited (HTTP 429, nothing was
+	 * done), the call is retried after Retry-After or a doubling delay, up to MaxRetries times.
+	 */
 	void Call(const FString& Verb, const FString& Path, const TSharedPtr<FJsonObject>& Body, FJsonCallback OnDone) const;
+	void CallAttempt(const FString& Verb, const FString& Path, const FString& Body, FJsonCallback OnDone, int32 Attempt) const;
+	static constexpr int32 MaxRetries = 5;
 
 	/** Fetch a card and make sure it belongs to the configured board before acting on it. */
 	void GetCardOnBoard(const FString& Id, const FString& ExtraQuery, FJsonCallback OnDone) const;
+
+	/** The category plan from the board's lists (with their cards) and labels. See PBTrelloCategorySync.cpp. */
+	FProtoBoyTrelloCategorySync BuildCategoryPlan(const TArray<FProtoBoyTaskCategory>& Categories, const TArray<ProtoBoyTrelloCategorySync::FList>& Lists,
+		const TArray<FProtoBoyTrelloItem>& Labels, const TMap<FString, FString>& ListNames) const;
 
 	FProtoBoyTask ParseCard(const TSharedPtr<FJsonObject>& Card, const TMap<FString, FString>& ListNames) const;
 	FString ListIdFor(EProtoBoyTaskStatus Status) const;

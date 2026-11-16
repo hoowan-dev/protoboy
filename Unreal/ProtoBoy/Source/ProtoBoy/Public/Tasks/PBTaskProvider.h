@@ -37,10 +37,25 @@ struct FProtoBoyTask
 	TArray<FProtoBoyTaskComment> Comments;
 };
 
+/**
+ * A task category: a doc marked as one on the doc map. The board keeps a To Do list and a label per category, tied to
+ * the doc's id (so renaming the doc renames them) and named after its title.
+ */
+struct FProtoBoyTaskCategory
+{
+	/** The doc's protoboy-id. */
+	FString DocId;
+	FString Title;
+
+	bool operator==(const FProtoBoyTaskCategory& Other) const { return DocId == Other.DocId && Title == Other.Title; }
+};
+
 /** A task to create in a task category's To Do list (IProtoBoyTaskProvider::CreateTasks). */
 struct FProtoBoyNewTask
 {
-	/** A task category's title; empty or unknown = Uncategorized. */
+	/** The task category's doc id; empty (or no longer a category) = Uncategorized. */
+	FString CategoryId;
+	/** The category's title, for display and as a fallback when its list isn't known yet. */
 	FString Category;
 	FString Title;
 	FString Description;

@@ -1,7 +1,7 @@
 #include "UI/Docs/Map/SPBDocMapEditor.h"
 
 #include "Docs/Obsidian/PBObsidianConnector.h"
-#include "Docs/PBDocGenerator.h"
+#include "Docs/PBDocsService.h"
 #include "Docs/PBDocMap.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Commands/GenericCommands.h"
@@ -1016,7 +1016,7 @@ void SProtoBoyDocMapEditor::OpenDoc(const FString& Id)
 		}
 		return;
 	}
-	const FString File = FPaths::ConvertRelativePathToFull(Subsystem->GetDocGenerator().GetDocsRoot() / Doc->Path);
+	const FString File = FPaths::ConvertRelativePathToFull(Subsystem->GetDocsService().GetDocsRoot() / Doc->Path);
 	FPlatformProcess::LaunchFileInDefaultExternalApplication(*File);
 }
 

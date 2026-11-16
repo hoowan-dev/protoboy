@@ -12,6 +12,7 @@
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
 #include "UI/Docs/Map/SPBDocMapNode.h"
+#include "UI/Agents/SPBAgentPicker.h"
 #include "UI/PBStyle.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Images/SThrobber.h"
@@ -101,15 +102,7 @@ namespace ProtoBoySetupDocsDialog
 void SProtoBoySetupDocsDialog::Construct(const FArguments& InArgs)
 {
 	ParentWindow = InArgs._ParentWindow;
-	Agents = FProtoBoyDocGenerationRun::GetSetUpAgents();
-	for (const EProtoBoyMCPClient Agent : Agents)
-	{
-		FText Ignored;
-		if (!SelectedAgent.IsSet() && FProtoBoyDocGenerationRun::CanRun(Agent, Ignored))
-		{
-			SelectedAgent = Agent;
-		}
-	}
+	SelectedAgent = SProtoBoyAgentPicker::GetDefaultAgent();
 	for (FProtoBoyDocTemplate& Template : ProtoBoyDocTemplates::LoadTemplates())
 	{
 		Templates.Add(MakeShared<FProtoBoyDocTemplate>(MoveTemp(Template)));
@@ -258,23 +251,6 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeStartOption(const FName& Icon,
 
 TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeFromProjectStep()
 {
-	TSharedRef<SVerticalBox> AgentList = SNew(SVerticalBox);
-	for (const EProtoBoyMCPClient Agent : Agents)
-	{
-		AgentList->AddSlot().AutoHeight().Padding(0.f, 2.f)[ MakeAgentRow(Agent) ];
-	}
-	if (Agents.IsEmpty())
-	{
-		AgentList->AddSlot()
-		.AutoHeight()
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("NoAgents", "No agents are set up yet. Connect Claude Code or Gemini CLI in MCP Settings (Setup > MCP on the dashboard), then come back."))
-			.ColorAndOpacity(FStyleColors::Warning)
-			.AutoWrapText(true)
-		];
-	}
-
 	auto Paragraph = [](const FText& Text)
 	{
 		return SNew(STextBlock).Text(Text).AutoWrapText(true);
@@ -302,7 +278,9 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeFromProjectStep()
 
 		+ SScrollBox::Slot()
 		[
-			AgentList
+			SNew(SProtoBoyAgentPicker)
+			.SelectedAgent_Lambda([this]() { return SelectedAgent; })
+			.OnAgentPicked_Lambda([this](EProtoBoyMCPClient Agent) { SelectedAgent = Agent; })
 		]
 
 		+ SScrollBox::Slot()
@@ -327,50 +305,6 @@ TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeFromProjectStep()
 		.OnClicked(this, &SProtoBoySetupDocsDialog::OnGenerateClicked);
 
 	return MakeStepLayout(LOCTEXT("FromProjectTitle", "Generate Docs from the Project (EXPERIMENTAL)"), Body, EStep::Start, Generate);
-}
-
-TSharedRef<SWidget> SProtoBoySetupDocsDialog::MakeAgentRow(EProtoBoyMCPClient Agent)
-{
-	FText WhyNot;
-	const bool bCanRun = FProtoBoyDocGenerationRun::CanRun(Agent, WhyNot);
-	const EProtoBoyLLMProvider Provider = Agent == EProtoBoyMCPClient::GeminiCLI ? EProtoBoyLLMProvider::Gemini : EProtoBoyLLMProvider::Claude;
-
-	return SNew(SCheckBox)
-		.Style(FAppStyle::Get(), "RadioButton")
-		.IsEnabled(bCanRun)
-		.IsChecked_Lambda([this, Agent]() { return SelectedAgent.IsSet() && SelectedAgent.GetValue() == Agent ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
-		.OnCheckStateChanged_Lambda([this, Agent](ECheckBoxState) { SelectedAgent = Agent; })
-		[
-			SNew(SHorizontalBox)
-
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			.Padding(4.f, 0.f, 6.f, 0.f)
-			[
-				SNew(SImage)
-				.Image(FProtoBoyStyle::Get().GetBrush(FProtoBoyMCPClientConfig::GetProviderIcon(Provider)))
-			]
-
-			+ SHorizontalBox::Slot()
-			.FillWidth(1.f)
-			.VAlign(VAlign_Center)
-			[
-				SNew(SVerticalBox)
-				+ SVerticalBox::Slot().AutoHeight()
-				[
-					SNew(STextBlock).Text(FProtoBoyMCPClientConfig::GetClientName(Agent))
-				]
-				+ SVerticalBox::Slot().AutoHeight()
-				[
-					SNew(STextBlock)
-					.Visibility(bCanRun ? EVisibility::Collapsed : EVisibility::Visible)
-					.Text(WhyNot)
-					.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-					.AutoWrapText(true)
-				]
-			]
-		];
 }
 
 FReply SProtoBoySetupDocsDialog::OnGenerateClicked()

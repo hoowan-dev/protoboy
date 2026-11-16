@@ -1,4 +1,4 @@
-#include "Docs/PBDocGenerator.h"
+#include "Docs/PBDocsService.h"
 
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "Docs/PBMarkdown.h"
@@ -7,10 +7,10 @@
 #include "PBModule.h"
 #include "PBSettings.h"
 
-#define LOCTEXT_NAMESPACE "ProtoBoyDocGenerator"
+#define LOCTEXT_NAMESPACE "ProtoBoyDocsService"
 
 
-namespace ProtoBoyDocGenerator
+namespace ProtoBoyDocsService
 {
 	/** Lowercase words of 2+ letters/digits. */
 	TArray<FString> Tokenize(const FString& Text)
@@ -54,13 +54,13 @@ namespace ProtoBoyDocGenerator
 
 }
 
-FProtoBoyDocGenerator::FProtoBoyDocGenerator(const FProtoBoyObsidianConnector& InObsidian)
+FProtoBoyDocsService::FProtoBoyDocsService(const FProtoBoyObsidianConnector& InObsidian)
 	: Obsidian(InObsidian)
 	, ObsidianDocs(InObsidian)
 {
 }
 
-bool FProtoBoyDocGenerator::NormalizeDocPath(const FString& Path, FString& OutNormalized, FText& OutError)
+bool FProtoBoyDocsService::NormalizeDocPath(const FString& Path, FString& OutNormalized, FText& OutError)
 {
 	FString Out = Path.TrimStartAndEnd();
 	Out.ReplaceInline(TEXT("\\"), TEXT("/"));
@@ -94,7 +94,7 @@ bool FProtoBoyDocGenerator::NormalizeDocPath(const FString& Path, FString& OutNo
 	return true;
 }
 
-IProtoBoyDocsProvider& FProtoBoyDocGenerator::GetProvider() const
+IProtoBoyDocsProvider& FProtoBoyDocsService::GetProvider() const
 {
 	if (Obsidian.IsConnected())
 	{
@@ -103,15 +103,15 @@ IProtoBoyDocsProvider& FProtoBoyDocGenerator::GetProvider() const
 	return LocalDocs;
 }
 
-FString FProtoBoyDocGenerator::GetDocsRoot() const
+FString FProtoBoyDocsService::GetDocsRoot() const
 {
 	return Obsidian.IsConnected() ? ObsidianDocs.GetDocsRoot() : LocalDocs.GetDocsRoot();
 }
 
-TArray<FProtoBoyDocSearchHit> FProtoBoyDocGenerator::Search(const FString& Query, int32 MaxResults) const
+TArray<FProtoBoyDocSearchHit> FProtoBoyDocsService::Search(const FString& Query, int32 MaxResults) const
 {
 	TArray<FProtoBoyDocSearchHit> Hits;
-	const TArray<FString> Words = ProtoBoyDocGenerator::Tokenize(Query);
+	const TArray<FString> Words = ProtoBoyDocsService::Tokenize(Query);
 	if (Words.IsEmpty())
 	{
 		return Hits;
@@ -134,8 +134,8 @@ TArray<FProtoBoyDocSearchHit> FProtoBoyDocGenerator::Search(const FString& Query
 		int32 FirstMatch = INDEX_NONE;
 		for (const FString& Word : Words)
 		{
-			Score += 5 * ProtoBoyDocGenerator::CountOccurrences(LowerTitle, Word);
-			Score += ProtoBoyDocGenerator::CountOccurrences(LowerText, Word);
+			Score += 5 * ProtoBoyDocsService::CountOccurrences(LowerTitle, Word);
+			Score += ProtoBoyDocsService::CountOccurrences(LowerText, Word);
 			const int32 At = LowerText.Find(Word, ESearchCase::CaseSensitive);
 			if (At != INDEX_NONE && (FirstMatch == INDEX_NONE || At < FirstMatch))
 			{
@@ -164,12 +164,12 @@ TArray<FProtoBoyDocSearchHit> FProtoBoyDocGenerator::Search(const FString& Query
 	return Hits;
 }
 
-bool FProtoBoyDocGenerator::CreateDoc(const FString& Path, const FString& Text, FText& OutError)
+bool FProtoBoyDocsService::CreateDoc(const FString& Path, const FString& Text, FText& OutError)
 {
 	return GetProvider().WriteDoc(Path, Text, /*bMustNotExist*/ true, OutError);
 }
 
-bool FProtoBoyDocGenerator::AppendToSection(const FString& Path, const FString& Heading, const FString& Content, FText& OutError)
+bool FProtoBoyDocsService::AppendToSection(const FString& Path, const FString& Heading, const FString& Content, FText& OutError)
 {
 	IProtoBoyDocsProvider& Provider = GetProvider();
 	FString Text;
@@ -188,7 +188,7 @@ bool FProtoBoyDocGenerator::AppendToSection(const FString& Path, const FString& 
 	return Provider.WriteDoc(Path, ProtoBoyMarkdown::AppendToSection(Text, Heading, Content), false, OutError);
 }
 
-bool FProtoBoyDocGenerator::SetManagedBlock(const FString& Path, const FString& Heading, const FString& BlockId, const FString& Content, FText& OutError)
+bool FProtoBoyDocsService::SetManagedBlock(const FString& Path, const FString& Heading, const FString& BlockId, const FString& Content, FText& OutError)
 {
 	if (!ProtoBoyMarkdown::IsValidBlockId(BlockId))
 	{
@@ -213,7 +213,7 @@ bool FProtoBoyDocGenerator::SetManagedBlock(const FString& Path, const FString& 
 	return Provider.WriteDoc(Path, ProtoBoyMarkdown::SetManagedBlock(Text, Heading, BlockId, Content), false, OutError);
 }
 
-FString FProtoBoyDocGenerator::GenerateTDDStub(const FSoftObjectPath& AssetPath)
+FString FProtoBoyDocsService::GenerateTDDStub(const FSoftObjectPath& AssetPath)
 {
 	// TODO: Extract class/variables/functions and write <DocsRoot>/TDD/<Asset>.md,
 	//       regenerating only the auto-generated block so human edits survive.

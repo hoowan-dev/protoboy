@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MCP/PBAgentRun.h"
+#include "Agents/PBAgentRun.h"
 
 class FProtoBoyDocMap;
 

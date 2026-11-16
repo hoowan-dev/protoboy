@@ -2,7 +2,7 @@
 
 #include "Docs/PBDocMap.h"
 #include "Framework/Application/SlateApplication.h"
-#include "MCP/PBAgentRun.h"
+#include "Agents/PBAgentRun.h"
 #include "MCP/PBMCPClientConfig.h"
 #include "Misc/MessageDialog.h"
 #include "PBSubsystem.h"
@@ -10,7 +10,9 @@
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
 #include "Tasks/Generation/PBTaskGeneration.h"
+#include "Tasks/PBTaskBoard.h"
 #include "Tasks/PBTaskProvider.h"
+#include "UI/Agents/SPBAgentPicker.h"
 #include "UI/PBStyle.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Images/SThrobber.h"
@@ -43,7 +45,7 @@ namespace ProtoBoyGenerateTasksDialog
 	}
 }
 
-void SProtoBoyGenerateTasksDialog::Open(const TSharedPtr<SWidget>& ParentWidget, const FExistingTasks& ExistingTasks, TFunction<void(bool bAddedTasks)> OnClosed)
+void SProtoBoyGenerateTasksDialog::Open(const TSharedPtr<SWidget>& ParentWidget)
 {
 	TSharedRef<SWindow> Window = SNew(SWindow)
 		.Title(LOCTEXT("WindowTitle", "Generate Tasks"))
@@ -52,17 +54,10 @@ void SProtoBoyGenerateTasksDialog::Open(const TSharedPtr<SWidget>& ParentWidget,
 		.SupportsMaximize(false);
 
 	const TSharedRef<SProtoBoyGenerateTasksDialog> Dialog = SNew(SProtoBoyGenerateTasksDialog)
-		.ParentWindow(Window)
-		.ExistingTasks(ExistingTasks);
+		.ParentWindow(Window);
 	Window->SetContent(Dialog);
 	Window->SetRequestDestroyWindowOverride(FRequestDestroyWindowOverride::CreateSP(Dialog, &SProtoBoyGenerateTasksDialog::OnWindowCloseRequested));
 	FSlateApplication::Get().AddModalWindow(Window, ParentWidget);
-
-	// Modal: this runs once the window has closed.
-	if (OnClosed)
-	{
-		OnClosed(Dialog->Run.IsValid() && Dialog->Run->GetNumAdded() > 0);
-	}
 }
 
 SProtoBoyGenerateTasksDialog::~SProtoBoyGenerateTasksDialog()
@@ -76,18 +71,8 @@ SProtoBoyGenerateTasksDialog::~SProtoBoyGenerateTasksDialog()
 void SProtoBoyGenerateTasksDialog::Construct(const FArguments& InArgs)
 {
 	ParentWindow = InArgs._ParentWindow;
-	ExistingTasks = InArgs._ExistingTasks;
 
-	Agents = FProtoBoyAgentRun::GetSetUpAgents();
-	for (const EProtoBoyMCPClient Agent : Agents)
-	{
-		FText Ignored;
-		if (FProtoBoyAgentRun::CanRun(Agent, Ignored))
-		{
-			SelectedAgent = Agent;
-			break;
-		}
-	}
+	SelectedAgent = SProtoBoyAgentPicker::GetDefaultAgent();
 	if (const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
 	{
 		for (const FProtoBoyDocNode* Doc : Subsystem->GetDocMap().GetTaskCategories())
@@ -117,24 +102,6 @@ TSharedRef<SWidget> SProtoBoyGenerateTasksDialog::MakeSetupStep()
 {
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 	const FProtoBoyDocMap* Map = Subsystem ? &Subsystem->GetDocMap() : nullptr;
-
-	// Agents
-	TSharedRef<SVerticalBox> AgentList = SNew(SVerticalBox);
-	for (const EProtoBoyMCPClient Agent : Agents)
-	{
-		AgentList->AddSlot().AutoHeight().Padding(0.f, 2.f)[ MakeAgentRow(Agent) ];
-	}
-	if (Agents.IsEmpty())
-	{
-		AgentList->AddSlot()
-		.AutoHeight()
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("NoAgents", "No agents are set up yet. Connect Claude Code or Gemini CLI in MCP Settings (Setup > MCP on the dashboard), then come back."))
-			.ColorAndOpacity(FStyleColors::Warning)
-			.AutoWrapText(true)
-		];
-	}
 
 	// Categories
 	TSharedRef<SVerticalBox> CategoryList = SNew(SVerticalBox);
@@ -210,7 +177,9 @@ TSharedRef<SWidget> SProtoBoyGenerateTasksDialog::MakeSetupStep()
 
 		+ SScrollBox::Slot()
 		[
-			AgentList
+			SNew(SProtoBoyAgentPicker)
+			.SelectedAgent_Lambda([this]() { return SelectedAgent; })
+			.OnAgentPicked_Lambda([this](EProtoBoyMCPClient Agent) { SelectedAgent = Agent; })
 		]
 
 		+ SScrollBox::Slot()
@@ -317,50 +286,6 @@ TSharedRef<SWidget> SProtoBoyGenerateTasksDialog::MakeSetupStep()
 		];
 }
 
-TSharedRef<SWidget> SProtoBoyGenerateTasksDialog::MakeAgentRow(EProtoBoyMCPClient Agent)
-{
-	FText WhyNot;
-	const bool bCanRun = FProtoBoyAgentRun::CanRun(Agent, WhyNot);
-	const EProtoBoyLLMProvider Provider = Agent == EProtoBoyMCPClient::GeminiCLI ? EProtoBoyLLMProvider::Gemini : EProtoBoyLLMProvider::Claude;
-
-	return SNew(SCheckBox)
-		.Style(FAppStyle::Get(), "RadioButton")
-		.IsEnabled(bCanRun)
-		.IsChecked_Lambda([this, Agent]() { return SelectedAgent.IsSet() && SelectedAgent.GetValue() == Agent ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
-		.OnCheckStateChanged_Lambda([this, Agent](ECheckBoxState) { SelectedAgent = Agent; })
-		[
-			SNew(SHorizontalBox)
-
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			.Padding(4.f, 0.f, 6.f, 0.f)
-			[
-				SNew(SImage)
-				.Image(FProtoBoyStyle::Get().GetBrush(FProtoBoyMCPClientConfig::GetProviderIcon(Provider)))
-			]
-
-			+ SHorizontalBox::Slot()
-			.FillWidth(1.f)
-			.VAlign(VAlign_Center)
-			[
-				SNew(SVerticalBox)
-				+ SVerticalBox::Slot().AutoHeight()
-				[
-					SNew(STextBlock).Text(FProtoBoyMCPClientConfig::GetClientName(Agent))
-				]
-				+ SVerticalBox::Slot().AutoHeight()
-				[
-					SNew(STextBlock)
-					.Visibility(bCanRun ? EVisibility::Collapsed : EVisibility::Visible)
-					.Text(WhyNot)
-					.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-					.AutoWrapText(true)
-				]
-			]
-		];
-}
-
 bool SProtoBoyGenerateTasksDialog::CanGenerate() const
 {
 	FText Ignored;
@@ -373,22 +298,13 @@ FReply SProtoBoyGenerateTasksDialog::OnGenerateClicked()
 	{
 		return FReply::Handled();
 	}
-	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-	const FProtoBoyDocMap* Map = Subsystem ? &Subsystem->GetDocMap() : nullptr;
-
-	// In map order, with the tasks each already has.
-	TArray<FProtoBoyTaskGenerationRun::FCategory> Categories;
+	// In map order.
+	TArray<FString> Categories;
 	for (const FString& Id : CategoryIds)
 	{
-		const FProtoBoyDocNode* Doc = Map ? Map->Find(Id) : nullptr;
-		if (Doc && SelectedCategories.Contains(Id))
+		if (SelectedCategories.Contains(Id))
 		{
-			FProtoBoyTaskGenerationRun::FCategory& Category = Categories.AddDefaulted_GetRef();
-			Category.DocId = Id;
-			if (const TArray<FString>* Existing = ExistingTasks.Find(Doc->Title.TrimStartAndEnd().ToLower()))
-			{
-				Category.ExistingTasks = *Existing;
-			}
+			Categories.Add(Id);
 		}
 	}
 
@@ -918,6 +834,13 @@ FReply SProtoBoyGenerateTasksDialog::OnDoneClicked()
 		}
 		This->bAddFinished = true;
 		This->AddErrors = Errors;
+		if (This->Run.IsValid() && This->Run->GetNumAdded() > 0)
+		{
+			if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+			{
+				Subsystem->GetTaskBoard().CheckSync();
+			}
+		}
 		// All added: nothing left to look at here.
 		if (Errors.IsEmpty())
 		{

@@ -2,11 +2,12 @@
 
 #include "Containers/Ticker.h"
 #include "Daemon/PBDaemonClient.h"
-#include "Docs/PBDocGenerator.h"
+#include "Docs/PBDocsService.h"
 #include "Docs/PBDocMap.h"
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "EditorSubsystem.h"
 #include "MCP/PBMCPServer.h"
+#include "Tasks/PBTaskBoard.h"
 #include "Tasks/Trello/PBTrelloClient.h"
 #include "Tasks/Trello/PBTrelloConnector.h"
 #include "PBSubsystem.generated.h"
@@ -27,7 +28,7 @@ public:
 	static UProtoBoySubsystem* Get();
 
 	FProtoBoyObsidianConnector& GetObsidianConnector() const { return *ObsidianConnector; }
-	FProtoBoyDocGenerator& GetDocGenerator() const { return *DocGenerator; }
+	FProtoBoyDocsService& GetDocsService() const { return *DocsService; }
 	FProtoBoyDaemonClient& GetDaemonClient() const { return *DaemonClient; }
 	FProtoBoyMCPServer& GetMCPServer() const { return *MCPServer; }
 	FProtoBoyTrelloConnector& GetTrelloConnector() const { return *TrelloConnector; }
@@ -36,10 +37,12 @@ public:
 	FProtoBoyDocMap& GetDocMap() const { return *DocMap; }
 
 	/** The docs platform in use (Obsidian when connected, else the project's DocsDirectory). */
-	IProtoBoyDocsProvider& GetDocsProvider() const { return DocGenerator->GetProvider(); }
+	IProtoBoyDocsProvider& GetDocsProvider() const { return DocsService->GetProvider(); }
 
 	/** The task board in use, or null if none is connected. Check IsReady before use. */
 	IProtoBoyTaskProvider* GetTaskProvider() const;
+	/** The board as ProtoBoy last saw it: category sync state and the loaded tasks (filled by Sync). */
+	FProtoBoyTaskBoard& GetTaskBoard() const { return *TaskBoard; }
 
 private:
 	// TODO: Bind asset registry / package save / live coding events and route them to the services.
@@ -58,12 +61,13 @@ private:
 	FTSTicker::FDelegateHandle CoreTickHandle;
 
 	TUniquePtr<FProtoBoyObsidianConnector> ObsidianConnector;
-	TUniquePtr<FProtoBoyDocGenerator> DocGenerator;
+	TUniquePtr<FProtoBoyDocsService> DocsService;
 	TUniquePtr<FProtoBoyDaemonClient> DaemonClient;
 	TUniquePtr<FProtoBoyMCPServer> MCPServer;
 	TUniquePtr<FProtoBoyTrelloConnector> TrelloConnector;
 	TUniquePtr<FProtoBoyTrelloClient> TrelloClient;
 	TUniquePtr<FProtoBoyDocMap> DocMap;
+	TUniquePtr<FProtoBoyTaskBoard> TaskBoard;
 	/** Re-read the doc map when the docs folder changes (Obsidian connect / disconnect). */
 	FDelegateHandle DocsConnectionChangedHandle;
 };

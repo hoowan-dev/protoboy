@@ -4,7 +4,7 @@
 #include "Docs/PBDocLayers.h"
 #include "Docs/PBDocsProvider.h"
 
-class FProtoBoyDocGenerator;
+class FProtoBoyDocsService;
 struct FProtoBoyDocTemplate;
 struct FProtoBoyDocTemplatePillar;
 struct FProtoBoyDocTemplateSection;
@@ -87,11 +87,14 @@ struct FProtoBoyDocTemplatePlan
  * Overview hangs under it), Systems docs are Tech, Direction docs are Content, and a feature Tech doc's
  * "protoboy-implements" counts as its parent. ADRs ("decision", or in the ADR folder) stay off the map: decisions now
  * live in each doc's Decisions section (RecordDecision).
+ *
+ * Implemented in PBDocMap.cpp (loading, the tree, editing), PBDocMapTemplates.cpp (ClearDocs, PlanTemplate,
+ * ApplyTemplate) and PBDocMapMigration.cpp (CombineGameDocs); shared helpers are in Private/Docs/PBDocMapUtils.h.
  */
 class PROTOBOY_API FProtoBoyDocMap
 {
 public:
-	explicit FProtoBoyDocMap(FProtoBoyDocGenerator& InDocs);
+	explicit FProtoBoyDocMap(FProtoBoyDocsService& InDocs);
 
 	/** Re-read every doc. Fires OnChanged. */
 	void Refresh();
@@ -217,7 +220,7 @@ private:
 	bool WriteMissingGameDoc(const TArray<FProtoBoyDocTemplatePillar>* Pillars, const FString& TemplateName, bool& bOutWrote, FText& OutError,
 		const TArray<FProtoBoyDocTemplateSection>* Examples = nullptr, bool bGenerated = false);
 
-	FProtoBoyDocGenerator& Docs;
+	FProtoBoyDocsService& Docs;
 	mutable bool bLoaded = false;
 	mutable TArray<FProtoBoyDocNode> Nodes;
 	mutable TArray<FProtoBoyDocInfo> Unmapped;

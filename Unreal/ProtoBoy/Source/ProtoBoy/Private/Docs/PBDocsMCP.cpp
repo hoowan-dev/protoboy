@@ -1,0 +1,426 @@
+#include "Docs/PBDocsMCP.h"
+
+#include "Docs/PBDocsService.h"
+#include "Docs/PBDocMap.h"
+#include "Docs/PBMarkdown.h"
+#include "MCP/PBMCPToolHelpers.h"
+#include "PBSubsystem.h"
+
+#define LOCTEXT_NAMESPACE "ProtoBoyDocsMCP"
+
+namespace ProtoBoyDocsMCP
+{
+	using ProtoBoyMCPTools::FParam;
+	using ProtoBoyMCPTools::GetBool;
+	using ProtoBoyMCPTools::GetInt;
+	using ProtoBoyMCPTools::GetString;
+	using ProtoBoyMCPTools::GetSubsystemOrFail;
+	using ProtoBoyMCPTools::MakeTool;
+	using ProtoBoyMCPTools::Require;
+
+	/** Lowercase words of 3+ letters, minus filler words, for matching feature descriptions to docs. */
+	TArray<FString> Keywords(const FString& Text)
+	{
+		static const TSet<FString> Stop = { TEXT("the"), TEXT("and"), TEXT("for"), TEXT("with"), TEXT("that"), TEXT("this"),
+			TEXT("from"), TEXT("into"), TEXT("when"), TEXT("should"), TEXT("will"), TEXT("can"), TEXT("add"), TEXT("make"),
+			TEXT("new"), TEXT("player"), TEXT("game"), TEXT("feature"), TEXT("system") };
+
+		TArray<FString> Words;
+		FString Current;
+		auto Flush = [&]()
+		{
+			if (Current.Len() >= 3 && !Stop.Contains(Current))
+			{
+				Words.AddUnique(Current);
+			}
+			Current.Reset();
+		};
+		for (const TCHAR C : Text)
+		{
+			if (FChar::IsAlnum(C)) { Current.AppendChar(FChar::ToLower(C)); }
+			else { Flush(); }
+		}
+		Flush();
+		return Words;
+	}
+
+	/** True if Path is the Game doc, which humans own. */
+	bool IsHumanOwnedDoc(const FProtoBoyDocMap& Map, const FString& Path)
+	{
+		const FProtoBoyDocNode* Node = Map.FindByPath(Path);
+		return Node && Node->Layer == EProtoBoyDocLayer::Game;
+	}
+
+	/** Where new work goes: features in Design docs, how things work in Tech docs. */
+	bool IsPlaceableDoc(const FProtoBoyDocNode& Doc)
+	{
+		return Doc.Layer == EProtoBoyDocLayer::Design || Doc.Layer == EProtoBoyDocLayer::Tech;
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Placement
+
+	void LocateFeature(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
+	{
+		UProtoBoySubsystem* Subsystem = GetSubsystemOrFail(Done);
+		if (!Subsystem || !Require(Call, Done, { TEXT("description") }))
+		{
+			return;
+		}
+
+		FProtoBoyDocMap& Map = Subsystem->GetDocMap();
+		Map.Refresh();
+		const IProtoBoyDocsProvider& Provider = Subsystem->GetDocsProvider();
+
+		// Features are described in Design docs and how things work in Tech docs: those are where new work goes.
+		struct FScored { const FProtoBoyDocNode* Doc; FString Text; int32 Score; };
+		TArray<FScored> Scored;
+		const TArray<FString> Words = Keywords(GetString(Call, TEXT("description")));
+		for (const FProtoBoyDocNode& Doc : Map.GetNodes())
+		{
+			if (!IsPlaceableDoc(Doc))
+			{
+				continue;
+			}
+			FString Text;
+			FText Ignored;
+			Provider.ReadDoc(Doc.Path, Text, Ignored);
+			const FString Title = Doc.Title.ToLower();
+			const FString Lower = Text.ToLower();
+			int32 Score = 0;
+			for (const FString& Word : Words)
+			{
+				Score += Title.Contains(Word) ? 5 : 0;
+				Score += Lower.Contains(Word) ? 2 : 0;
+			}
+			Scored.Add({ &Doc, MoveTemp(Text), Score });
+		}
+
+		if (Scored.IsEmpty())
+		{
+			Done(FProtoBoyMCPToolResult::Error(TEXT("There are no Design or Tech docs on the doc map yet, so ProtoBoy can't place this. "
+				"Ask the user where it belongs, or propose a new Design doc for them to add from the Doc Map.")));
+			return;
+		}
+		Scored.Sort([](const FScored& A, const FScored& B) { return A.Score > B.Score; });
+
+		FString Out;
+		if (Scored[0].Score == 0)
+		{
+			Out = TEXT("No Design or Tech doc clearly matches this. Either it extends one of the docs below (pick the "
+				"closest and say why), or it's a new feature or system: propose a new doc to the user, check it against the Game "
+				"doc's design pillars, and once they agree record the decision with record_decision (in the Game doc for new "
+				"scope) before writing code.\n\n## Design and Tech docs\n\n");
+			for (const FScored& Entry : Scored)
+			{
+				Out += FString::Printf(TEXT("- [%s] %s: %s\n"), *ProtoBoyDocLayers::ToKey(Entry.Doc->Layer), *Entry.Doc->Path, *Entry.Doc->Title);
+			}
+		}
+		else
+		{
+			Out = TEXT("Best matches by keyword (check them against the docs themselves; keyword matching is a hint, not a decision):\n");
+			for (int32 i = 0; i < Scored.Num() && i < 3 && Scored[i].Score > 0; ++i)
+			{
+				const FProtoBoyDocNode& Doc = *Scored[i].Doc;
+				Out += FString::Printf(TEXT("\n## %s (%s, %s)\n\n"), *Doc.Title, *ProtoBoyDocLayers::GetDisplayName(Doc.Layer).ToString(), *Doc.Path);
+				if (const FProtoBoyDocNode* Parent = Map.GetParent(Doc.Id); Parent && Parent != Map.GetGame())
+				{
+					Out += FString::Printf(TEXT("Under: [%s] %s\n"), *ProtoBoyDocLayers::ToKey(Parent->Layer), *Parent->Path);
+				}
+				TArray<FString> Below;
+				for (const FProtoBoyDocNode* Child : Map.GetChildren(Doc.Id))
+				{
+					Below.Add(FString::Printf(TEXT("[%s] %s"), *ProtoBoyDocLayers::ToKey(Child->Layer), *Child->Path));
+				}
+				Out += Below.IsEmpty()
+					? FString(TEXT("Nothing below it on the map yet.\n\n"))
+					: FString::Printf(TEXT("Below it (read the Tech docs before changing code): %s\n\n"), *FString::Join(Below, TEXT(", ")));
+				Out += Scored[i].Text.Left(4000) + TEXT("\n");
+			}
+		}
+		Done(FProtoBoyMCPToolResult::Ok(Out));
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Docs
+
+	void DocsList(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
+	{
+		UProtoBoySubsystem* Subsystem = GetSubsystemOrFail(Done);
+		if (!Subsystem)
+		{
+			return;
+		}
+
+		FString Folder = GetString(Call, TEXT("folder")).Replace(TEXT("\\"), TEXT("/"));
+		if (!Folder.IsEmpty() && !Folder.EndsWith(TEXT("/")))
+		{
+			Folder += TEXT("/");
+		}
+
+		const IProtoBoyDocsProvider& Provider = Subsystem->GetDocsProvider();
+		FString Out = FString::Printf(TEXT("Docs in %s%s:\n\n"), *Provider.GetDisplayName().ToString(),
+			Folder.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" under %s"), *Folder));
+		int32 Count = 0;
+		for (const FProtoBoyDocInfo& Doc : Provider.ListDocs())
+		{
+			if (Folder.IsEmpty() || Doc.Path.StartsWith(Folder, ESearchCase::IgnoreCase))
+			{
+				Out += FString::Printf(TEXT("- %s: %s (modified %s)\n"), *Doc.Path, *Doc.Title, *Doc.ModifiedUtc.ToString(TEXT("%Y-%m-%d")));
+				++Count;
+			}
+		}
+		if (Count == 0)
+		{
+			Out += TEXT("_No docs._\n");
+		}
+		Done(FProtoBoyMCPToolResult::Ok(Out));
+	}
+
+	void DocsSearch(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
+	{
+		UProtoBoySubsystem* Subsystem = GetSubsystemOrFail(Done);
+		if (!Subsystem || !Require(Call, Done, { TEXT("query") }))
+		{
+			return;
+		}
+
+		const TArray<FProtoBoyDocSearchHit> Hits = Subsystem->GetDocsService().Search(GetString(Call, TEXT("query")), GetInt(Call, TEXT("limit"), 10, 1, 50));
+		if (Hits.IsEmpty())
+		{
+			Done(FProtoBoyMCPToolResult::Ok(TEXT("No docs match. Try other words, or docs_list to browse.")));
+			return;
+		}
+
+		FString Out;
+		for (const FProtoBoyDocSearchHit& Hit : Hits)
+		{
+			Out += FString::Printf(TEXT("- **%s** (%s): ...%s...\n"), *Hit.Path, *Hit.Title, *Hit.Snippet);
+		}
+		Done(FProtoBoyMCPToolResult::Ok(Out));
+	}
+
+	void DocsRead(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
+	{
+		UProtoBoySubsystem* Subsystem = GetSubsystemOrFail(Done);
+		if (!Subsystem || !Require(Call, Done, { TEXT("path") }))
+		{
+			return;
+		}
+
+		const FString Path = GetString(Call, TEXT("path"));
+		FString Text;
+		FText Error;
+		if (!Subsystem->GetDocsProvider().ReadDoc(Path, Text, Error))
+		{
+			Done(FProtoBoyMCPToolResult::Error(Error));
+			return;
+		}
+
+		const FString Section = GetString(Call, TEXT("section"));
+		if (!Section.IsEmpty())
+		{
+			const FString Body = ProtoBoyMarkdown::GetSectionBody(Text, Section);
+			if (Body.IsEmpty() && !ProtoBoyMarkdown::FindSection(ProtoBoyMarkdown::ParseSections(Text), Section))
+			{
+				Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("\"%s\" has no section \"%s\"."), *Path, *Section)));
+				return;
+			}
+			Text = FString::Printf(TEXT("## %s\n\n%s\n"), *Section, *Body);
+		}
+
+		constexpr int32 MaxChars = 100000;
+		if (Text.Len() > MaxChars)
+		{
+			Text = Text.Left(MaxChars) + TEXT("\n\n[Truncated. Read one section at a time with the \"section\" argument.]");
+		}
+		Done(FProtoBoyMCPToolResult::Ok(Text));
+	}
+
+	void DocsCreate(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
+	{
+		UProtoBoySubsystem* Subsystem = GetSubsystemOrFail(Done);
+		if (!Subsystem || !Require(Call, Done, { TEXT("path"), TEXT("content") }))
+		{
+			return;
+		}
+
+		const FString Path = GetString(Call, TEXT("path"));
+		FText Error;
+		if (!Subsystem->GetDocsService().CreateDoc(Path, GetString(Call, TEXT("content")) + TEXT("\n"), Error))
+		{
+			Done(FProtoBoyMCPToolResult::Error(Error));
+			return;
+		}
+		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Created %s."), *Path)));
+	}
+
+	void DocsUpdateSection(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
+	{
+		UProtoBoySubsystem* Subsystem = GetSubsystemOrFail(Done);
+		if (!Subsystem || !Require(Call, Done, { TEXT("path"), TEXT("heading"), TEXT("content") }))
+		{
+			return;
+		}
+
+		const FString Path = GetString(Call, TEXT("path"));
+		const FString Heading = GetString(Call, TEXT("heading"));
+		const FString Content = GetString(Call, TEXT("content"));
+		const FString Mode = GetString(Call, TEXT("mode")).IsEmpty() ? FString(TEXT("append")) : GetString(Call, TEXT("mode"));
+
+		FString NormalizedPath;
+		FText PathError;
+		const bool bHumanOwned = FProtoBoyDocsService::NormalizeDocPath(Path, NormalizedPath, PathError)
+			&& IsHumanOwnedDoc(Subsystem->GetDocMap(), NormalizedPath);
+		if (bHumanOwned && Mode != TEXT("append"))
+		{
+			Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("%s is the Game doc, which humans own: agents may only append to it, and only when the user asks."), *NormalizedPath)));
+			return;
+		}
+
+		FText Error;
+		bool bOk = false;
+		if (Mode == TEXT("append"))
+		{
+			bOk = Subsystem->GetDocsService().AppendToSection(Path, Heading, Content, Error);
+		}
+		else if (Mode == TEXT("managed"))
+		{
+			if (!Require(Call, Done, { TEXT("block_id") }))
+			{
+				return;
+			}
+			bOk = Subsystem->GetDocsService().SetManagedBlock(Path, Heading, GetString(Call, TEXT("block_id")), Content, Error);
+		}
+		else
+		{
+			Done(FProtoBoyMCPToolResult::Error(TEXT("mode must be \"append\" or \"managed\".")));
+			return;
+		}
+
+		if (!bOk)
+		{
+			Done(FProtoBoyMCPToolResult::Error(Error));
+			return;
+		}
+		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Updated section \"%s\" in %s (%s)."), *Heading, *Path, *Mode)));
+	}
+
+	void RecordDecision(const FProtoBoyMCPToolCall& Call, FProtoBoyMCPToolDone Done)
+	{
+		UProtoBoySubsystem* Subsystem = GetSubsystemOrFail(Done);
+		if (!Subsystem || !Require(Call, Done, { TEXT("path"), TEXT("decision") }))
+		{
+			return;
+		}
+
+		FProtoBoyDocMap& Map = Subsystem->GetDocMap();
+		Map.Refresh();
+		FString Path;
+		FText PathError;
+		if (!FProtoBoyDocsService::NormalizeDocPath(GetString(Call, TEXT("path")), Path, PathError))
+		{
+			Done(FProtoBoyMCPToolResult::Error(PathError));
+			return;
+		}
+		const FProtoBoyDocNode* Doc = Map.FindByPath(Path);
+		if (!Doc)
+		{
+			Done(FProtoBoyMCPToolResult::Error(FString::Printf(TEXT("%s isn't on the doc map. Record decisions in the Game, Design, Tech or Content doc they affect (get_project_context lists them)."), *Path)));
+			return;
+		}
+
+		FText Error;
+		if (!Map.RecordDecision(Doc->Id, GetString(Call, TEXT("decision")), GetString(Call, TEXT("why")), GetString(Call, TEXT("rules_out")),
+			FString::Printf(TEXT("%s via ProtoBoy"), *Call.ClientName), Error))
+		{
+			Done(FProtoBoyMCPToolResult::Error(Error));
+			return;
+		}
+		Done(FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Recorded in the Decisions section of %s. If it changes what the doc says elsewhere, propose that edit to the user."), *Path)));
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Registration
+
+	void RegisterTools(TArray<FProtoBoyMCPTool>& OutTools)
+	{
+		auto Add = [&OutTools](const TCHAR* Name, const FText& Title, const FText& Description, bool bWrites,
+			const TArray<FParam>& Params, FProtoBoyMCPToolHandler Handler)
+		{
+			OutTools.Add(MakeTool(Name, Title, Description, bWrites, Params, MoveTemp(Handler)));
+		};
+
+		Add(TEXT("locate_feature"), LOCTEXT("LocateTitle", "Locate feature"),
+			LOCTEXT("LocateDesc", "Finds the Design or Tech doc a feature or change belongs to, and the docs around it on the map. Use before writing code."),
+			false, { { TEXT("description"), TEXT("string"), TEXT("What you're about to build or change."), true } }, &LocateFeature);
+		Add(TEXT("docs_list"), LOCTEXT("ListTitle", "List docs"),
+			LOCTEXT("ListDesc", "Lists the project's docs (Game, Design, Tech, Content, ...)."),
+			false, { { TEXT("folder"), TEXT("string"), TEXT("Only list docs under this folder, e.g. \"Design\" or \"Tech\".") } }, &DocsList);
+		Add(TEXT("docs_search"), LOCTEXT("SearchTitle", "Search docs"),
+			LOCTEXT("SearchDesc", "Keyword search over the project's docs."),
+			false, {
+				{ TEXT("query"), TEXT("string"), TEXT("Words to look for."), true },
+				{ TEXT("limit"), TEXT("integer"), TEXT("Maximum results (default 10).") },
+			}, &DocsSearch);
+		Add(TEXT("docs_read"), LOCTEXT("ReadTitle", "Read doc"),
+			LOCTEXT("ReadDesc", "Reads a doc, or one section of it."),
+			false, {
+				{ TEXT("path"), TEXT("string"), TEXT("Doc path relative to the docs root, e.g. \"Design/Combat.md\"."), true },
+				{ TEXT("section"), TEXT("string"), TEXT("Only return the section under this heading.") },
+			}, &DocsRead);
+		Add(TEXT("docs_create"), LOCTEXT("CreateTitle", "Create doc"),
+			LOCTEXT("CreateDesc", "Creates a new Markdown doc (fails if it exists). Put feature designs under Design/."),
+			true, {
+				{ TEXT("path"), TEXT("string"), TEXT("New doc path, e.g. \"Design/Inventory.md\"."), true },
+				{ TEXT("content"), TEXT("string"), TEXT("Markdown content, starting with a \"# Title\" heading."), true },
+			}, &DocsCreate);
+		Add(TEXT("docs_update_section"), LOCTEXT("UpdateTitle", "Update doc section"),
+			LOCTEXT("UpdateDesc", "Adds to a doc without rewriting human text: \"append\" adds to the end of a section (created if missing); \"managed\" replaces a ProtoBoy-managed block in that section."),
+			true, {
+				{ TEXT("path"), TEXT("string"), TEXT("Doc path; created if it doesn't exist."), true },
+				{ TEXT("heading"), TEXT("string"), TEXT("Section heading, without #."), true },
+				{ TEXT("content"), TEXT("string"), TEXT("Markdown to add."), true },
+				{ TEXT("mode"), TEXT("string"), TEXT("append (default) or managed."), false, { TEXT("append"), TEXT("managed") } },
+				{ TEXT("block_id"), TEXT("string"), TEXT("For managed mode: block id (lowercase letters, digits, -).") },
+			}, &DocsUpdateSection);
+		Add(TEXT("record_decision"), LOCTEXT("DecisionTitle", "Record decision"),
+			LOCTEXT("DecisionDesc", "Appends a dated entry to a doc's Decisions section: what was decided, why, and what it rules out. Use the doc the decision affects (the Game doc for scope, pillars and project-wide conventions). Get the user's agreement first; required before adding a feature or system the docs don't cover."),
+			true, {
+				{ TEXT("path"), TEXT("string"), TEXT("The doc the decision belongs to, e.g. \"Design/Combat/Combat.md\" or the Game doc's path."), true },
+				{ TEXT("decision"), TEXT("string"), TEXT("What was decided, in a sentence."), true },
+				{ TEXT("why"), TEXT("string"), TEXT("Why: the reason or trade-off.") },
+				{ TEXT("rules_out"), TEXT("string"), TEXT("What this decision rules out.") },
+			}, &RecordDecision);
+	}
+
+	void RegisterPrompts(TArray<FProtoBoyMCPPrompt>& OutPrompts)
+	{
+		OutPrompts.Add({
+			TEXT("record-decision"),
+			TEXT("Record a decision"),
+			TEXT("Record a design or architecture decision in the Decisions section of the doc it affects."),
+			{
+				{ TEXT("decision"), TEXT("The decision to record."), true },
+				{ TEXT("context"), TEXT("Why it came up (optional)."), false },
+			},
+			[](const TMap<FString, FString>& Args)
+			{
+				return FString::Printf(TEXT(R"MD(Record this decision with ProtoBoy.
+
+Decision: %s
+Context: %s
+
+1. Call `get_project_context` and find the doc this decision belongs to (`locate_feature`, `docs_read`): the Game doc
+   for scope, design pillars and project-wide conventions, otherwise the Design, Tech or Content doc it changes.
+2. Read that doc's Decisions section. If an earlier entry conflicts, say whether this one replaces it.
+3. Draft the entry: what was decided (one sentence), why, and what it rules out. Show me the draft, and which doc it
+   goes in.
+4. Once I agree, add it with `record_decision`.
+5. If it changes what the doc says elsewhere, propose the exact edit. For the Game doc, only propose it: humans own it.)MD"), *ProtoBoyMCPTools::ArgOr(Args, TEXT("decision"), TEXT("")), *ProtoBoyMCPTools::ArgOr(Args, TEXT("context"), TEXT("(not given)")));
+			}
+		});
+	}
+}
+
+#undef LOCTEXT_NAMESPACE

@@ -11,12 +11,13 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 
 	ObsidianConnector = MakeUnique<FProtoBoyObsidianConnector>();
-	DocGenerator = MakeUnique<FProtoBoyDocGenerator>(*ObsidianConnector);
+	DocsService = MakeUnique<FProtoBoyDocsService>(*ObsidianConnector);
 	DaemonClient = MakeUnique<FProtoBoyDaemonClient>();
 	MCPServer = MakeUnique<FProtoBoyMCPServer>();
 	TrelloConnector = MakeUnique<FProtoBoyTrelloConnector>();
 	TrelloClient = MakeUnique<FProtoBoyTrelloClient>(*TrelloConnector);
-	DocMap = MakeUnique<FProtoBoyDocMap>(*DocGenerator);
+	DocMap = MakeUnique<FProtoBoyDocMap>(*DocsService);
+	TaskBoard = MakeUnique<FProtoBoyTaskBoard>(*TrelloClient, *TrelloConnector, *DocMap);
 	DocsConnectionChangedHandle = ObsidianConnector->OnConnectionChanged.AddLambda([this]() { DocMap->Refresh(); });
 
 	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
@@ -41,12 +42,13 @@ void UProtoBoySubsystem::Deinitialize()
 	DaemonClient->Disconnect();
 
 	ObsidianConnector->OnConnectionChanged.Remove(DocsConnectionChangedHandle);
+	TaskBoard.Reset();
 	DocMap.Reset();
 	TrelloClient.Reset();
 	TrelloConnector.Reset();
 	MCPServer.Reset();
 	DaemonClient.Reset();
-	DocGenerator.Reset();
+	DocsService.Reset();
 	ObsidianConnector.Reset();
 
 	Super::Deinitialize();

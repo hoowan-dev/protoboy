@@ -17,6 +17,8 @@ namespace ProtoBoyHttp
 		bool bReachedServer = false;
 		int32 Code = 0;
 		FString Body;
+		/** The Retry-After header in seconds (rate limits), or 0 when there's none. */
+		float RetryAfterSeconds = 0.f;
 
 		bool IsOk() const { return bReachedServer && Code >= 200 && Code < 300; }
 	};
@@ -27,6 +29,12 @@ namespace ProtoBoyHttp
 	void SendRequest(const FString& Verb, const FString& Url, const TMap<FString, FString>& Headers, const FString& Body,
 		FOnResponse OnResponse, float TimeoutSeconds = 20.f);
 
-	/** Run queued callbacks. Game thread only. */
+	/**
+	 * Run Callback on the game thread after Seconds, from PumpGameThreadQueue (so it also runs while a modal window is
+	 * open, unlike the core ticker). For retrying requests after a delay.
+	 */
+	void RunAfter(float Seconds, TFunction<void()> Callback);
+
+	/** Run queued callbacks, and delayed ones that are due. Game thread only. */
 	void PumpGameThreadQueue();
 }

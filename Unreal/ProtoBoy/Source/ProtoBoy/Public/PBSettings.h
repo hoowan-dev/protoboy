@@ -75,6 +75,17 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Tasks|Trello")
 	FString TrelloDoneListId;
 
+	/**
+	 * Each task category's "To Do - <Category>" list, by the category doc's protoboy-id. Kept by Sync with Trello, so
+	 * renaming a doc renames its list (and keeps its cards) instead of replacing it.
+	 */
+	UPROPERTY(Config)
+	TMap<FString, FString> TrelloCategoryListIds;
+
+	/** Each task category's board label, by the category doc's protoboy-id. Kept by Sync, like TrelloCategoryListIds. */
+	UPROPERTY(Config)
+	TMap<FString, FString> TrelloCategoryLabelIds;
+
 	/** Local port Trello redirects back to while connecting. Must match the allowed origin on the Trello API key. */
 	UPROPERTY(Config, EditAnywhere, Category = "Tasks", meta = (ClampMin = "1024", ClampMax = "65535"))
 	int32 TasksCallbackPort = 47802;

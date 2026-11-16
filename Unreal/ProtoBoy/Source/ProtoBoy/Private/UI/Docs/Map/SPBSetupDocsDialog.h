@@ -53,7 +53,6 @@ private:
 	TSharedRef<SWidget> MakeStartOption(const FName& Icon, const FText& Title, const FText& Description, EStep Step);
 	/** What generating from the project does, the user's agents to pick from, and Generate. */
 	TSharedRef<SWidget> MakeFromProjectStep();
-	TSharedRef<SWidget> MakeAgentRow(EProtoBoyMCPClient Agent);
 	/** Warns that the docs are overwritten, then starts the agent and shows its progress. */
 	FReply OnGenerateClicked();
 	/** The agent's progress log, with Cancel and Finish. */
@@ -97,8 +96,6 @@ private:
 	bool bWriteExamples = false;
 
 	EStep CurrentStep = EStep::Start;
-	/** Agents set up in MCP settings (FProtoBoyDocGenerationRun::GetSetUpAgents). */
-	TArray<EProtoBoyMCPClient> Agents;
 	TOptional<EProtoBoyMCPClient> SelectedAgent;
 	TUniquePtr<FProtoBoyDocGenerationRun> Run;
 	TSharedPtr<SScrollBox> LogScroll;

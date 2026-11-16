@@ -21,19 +21,15 @@ class SWindow;
 class SProtoBoyGenerateTasksDialog : public SCompoundWidget
 {
 public:
-	/** Category title (lowercase) -> the titles already in its To Do list, from the dashboard's last Sync. */
-	using FExistingTasks = TMap<FString, TArray<FString>>;
-
 	SLATE_BEGIN_ARGS(SProtoBoyGenerateTasksDialog) {}
 		SLATE_ARGUMENT(TWeakPtr<SWindow>, ParentWindow)
-		SLATE_ARGUMENT(FExistingTasks, ExistingTasks)
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
 	virtual ~SProtoBoyGenerateTasksDialog() override;
 
-	/** Opens the window as a modal over ParentWidget's window. OnClosed runs after it closes (true if tasks were added). */
-	static void Open(const TSharedPtr<SWidget>& ParentWidget, const FExistingTasks& ExistingTasks, TFunction<void(bool bAddedTasks)> OnClosed);
+	/** Opens the window as a modal over ParentWidget's window. Adding tasks checks the board again (FProtoBoyTaskBoard). */
+	static void Open(const TSharedPtr<SWidget>& ParentWidget);
 
 private:
 	enum class EStep : int32
@@ -45,7 +41,6 @@ private:
 
 	/** Description, agent, categories and extra context, with Generate. */
 	TSharedRef<SWidget> MakeSetupStep();
-	TSharedRef<SWidget> MakeAgentRow(EProtoBoyMCPClient Agent);
 	/** The agent's progress log, with Cancel (Close once it's done) and Next. */
 	TSharedRef<SWidget> MakeGeneratingStep();
 	bool CanGenerate() const;
@@ -75,12 +70,10 @@ private:
 	TSharedPtr<SWidgetSwitcher> StepSwitcher;
 	EStep CurrentStep = EStep::Setup;
 
-	TArray<EProtoBoyMCPClient> Agents;
 	TOptional<EProtoBoyMCPClient> SelectedAgent;
 	/** Task category doc ids, in map order, and the ones ticked. */
 	TArray<FString> CategoryIds;
 	TSet<FString> SelectedCategories;
-	FExistingTasks ExistingTasks;
 	TSharedPtr<SMultiLineEditableTextBox> ContextBox;
 	FText GenerateError;
 
