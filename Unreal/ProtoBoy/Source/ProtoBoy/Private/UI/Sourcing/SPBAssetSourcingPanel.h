@@ -3,7 +3,7 @@
 #include "Widgets/SCompoundWidget.h"
 
 /**
- * Setup > Asset Sourcing (optional) on the dashboard: whether agents should avoid AI-generated assets, which sources
+ * Setup > Asset Sourcing on the dashboard: whether agents should avoid AI-generated assets, which sources
  * are enabled (Fab today). Team-wide (UProtoBoySettings, Asset Sourcing); the style assets must have lives in Content
  * docs on the doc map.
  */

@@ -3,8 +3,85 @@
 #include "PBSettings.h"
 #include "Sourcing/Fab/PBFabSource.h"
 
+#define LOCTEXT_NAMESPACE "ProtoBoyAssetSourcing"
+
 namespace ProtoBoyAssetSourcing
 {
+	const TArray<FProtoBoyAssetSource>& GetSources()
+	{
+		static const TArray<FProtoBoyAssetSource> Sources = {
+			{
+				LOCTEXT("FabName", "Fab"),
+				LOCTEXT("FabDesc", "Epic's marketplace for Unreal assets: 3D models, materials, audio, VFX and more, free and paid. Searches open in your browser and you pick the listings."),
+				"ProtoBoy.Icon.Fab",
+				&ProtoBoyFab::IsEnabled,
+				[](const FProtoBoyAssetSearch& Search, FString& OutUrl, FText& OutError)
+				{
+					return ProtoBoyFab::OpenSearch(ProtoBoyFab::MakeSearch(Search), OutUrl, OutError);
+				}
+			},
+		};
+		return Sources;
+	}
+
+	bool HasEnabledSource()
+	{
+		return GetSources().ContainsByPredicate([](const FProtoBoyAssetSource& Source) { return Source.IsEnabled(); });
+	}
+
+	FText GetAssetTypeName(EProtoBoyAssetType Type)
+	{
+		switch (Type)
+		{
+		case EProtoBoyAssetType::Model3D:     return LOCTEXT("Type3D", "3D Models");
+		case EProtoBoyAssetType::Material:    return LOCTEXT("TypeMaterial", "Materials");
+		case EProtoBoyAssetType::Animation:   return LOCTEXT("TypeAnimation", "Animations");
+		case EProtoBoyAssetType::Audio:       return LOCTEXT("TypeAudio", "Audio");
+		case EProtoBoyAssetType::VFX:         return LOCTEXT("TypeVFX", "VFX");
+		case EProtoBoyAssetType::Environment: return LOCTEXT("TypeEnvironment", "Environments");
+		case EProtoBoyAssetType::UI:          return LOCTEXT("TypeUI", "UI");
+		case EProtoBoyAssetType::HDRI:        return LOCTEXT("TypeHDRI", "HDRIs");
+		default:                              return FText::GetEmpty();
+		}
+	}
+
+	int32 OpenSearch(const FProtoBoyAssetSearch& Search, TArray<FText>& OutErrors)
+	{
+		int32 Opened = 0;
+		for (const FProtoBoyAssetSource& Source : GetSources())
+		{
+			if (!Source.IsEnabled())
+			{
+				continue;
+			}
+			FString Url;
+			FText Error;
+			if (Source.OpenSearch(Search, Url, Error))
+			{
+				++Opened;
+			}
+			else
+			{
+				OutErrors.Add(FText::Format(LOCTEXT("SourceError", "{0}: {1}"), Source.Name, Error));
+			}
+		}
+		return Opened;
+	}
+
+	TArray<FText> GetMissingSetup()
+	{
+		TArray<FText> Missing;
+		if (!GetDefault<UProtoBoySettings>()->bPreferSourcedAssets)
+		{
+			Missing.Add(LOCTEXT("MissingPreferSourced", "suggesting existing assets instead of generating them with AI"));
+		}
+		if (!HasEnabledSource())
+		{
+			Missing.Add(LOCTEXT("MissingSource", "at least one asset source (like Fab)"));
+		}
+		return Missing;
+	}
+
 	FString DescribePolicyForAgents()
 	{
 		const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
@@ -12,8 +89,8 @@ namespace ProtoBoyAssetSourcing
 		FString Out;
 		if (Settings->bPreferSourcedAssets)
 		{
-			Out += TEXT("- **Policy:** don't generate art, audio or other assets with AI. Use the sources below, or clearly "
-				"marked placeholders (greybox shapes, temp audio), and ask the user before anything else.\n");
+			Out += TEXT("- **Policy:** don't generate art, audio or other assets with AI. Suggest paid and free assets from the "
+				"sources below (say which are paid), or clearly marked placeholders (greybox shapes, temp audio), and ask the user before anything else.\n");
 		}
 		else
 		{
@@ -30,7 +107,10 @@ namespace ProtoBoyAssetSourcing
 		Out += TEXT("- **Style:** Content docs (layer content on the doc map) say what assets are needed and the style they must "
 			"have. Before searching or choosing assets, read the Content doc for that need (docs_read), and the Content docs above "
 			"it on the map: build searches from its What to Look For section, and skip anything its What to Avoid section rules "
-			"out. If no Content doc covers the need, ask the user what style to look for.\n");
+			"out. Also look at the project's existing assets (folders and names under Content/) so suggestions match what's "
+			"already there and don't duplicate it. If no Content doc covers the need, ask the user what style to look for.\n");
 		return Out;
 	}
 }
+
+#undef LOCTEXT_NAMESPACE

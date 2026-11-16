@@ -49,10 +49,19 @@ TSharedRef<SWidget> SProtoBoyAssetSourcingPanel::MakeContent()
 				GetMutableDefault<UProtoBoySettings>()->bPreferSourcedAssets = State == ECheckBoxState::Checked;
 				OnAssetSourcingChanged();
 			})
-			.ToolTipText(LOCTEXT("PreferSourcedTip", "Agents are told to use the sources below, or marked placeholders, instead of AI-generated assets."))
 			[
-				SNew(STextBlock).Text(LOCTEXT("PreferSourced", "Prefer sourced assets over AI-generated ones"))
+				SNew(STextBlock).Text(LOCTEXT("PreferSourced", "Suggest existing assets instead of generating them with AI"))
 			]
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(24.f, 2.f, 0.f, 0.f)
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("PreferSourcedDesc", "When checked, AI agents suggest paid and free assets from several curated sources and asset stores, instead of defaulting to generating them with AI. They use your documentation and the project's existing assets to find assets that suit your game's art direction. Pick at least one source below."))
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true)
 		]
 
 		// Sources

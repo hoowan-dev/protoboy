@@ -260,6 +260,19 @@ and `PBDocMapMigration.cpp` (merging old Game docs), with shared helpers in Priv
 - Team settings (Asset Sourcing category) say whether agents should avoid AI-generated assets and which sources are
   enabled (Fab today); the style assets must have comes from Content docs. `DescribePolicyForAgents()` feeds
   `get_project_context` and the agent guide.
+- **Sourcing setup:** `GetMissingSetup()` lists what the Asset Sourcing page's lock waits on: suggesting existing
+  assets instead of AI-generated ones (`bPreferSourcedAssets`) and at least one enabled source (`HasEnabledSource()`;
+  add new sources there). The Setup page's Asset Sourcing check is looser: done when `bPreferSourcedAssets` is off
+  (allowing AI generation is a valid choice), and when it's on, only once a source is enabled.
+- With `bPreferSourcedAssets` on, agents are told to suggest paid and free assets from the enabled sources, matched to
+  the Content docs and the project's existing assets.
+- **Sources and searches:** `GetSources()` is the list of supported sources (`FProtoBoyAssetSource`: name,
+  description, icon, `IsEnabled`, `OpenSearch`); add a new source there. Searches are source-independent
+  (`FProtoBoyAssetSearch`: query, `EProtoBoyAssetType` filters, free only, price range) and `OpenSearch` opens one on
+  every enabled source; each source maps it to its own URL (`ProtoBoyFab::MakeSearch`, `GetListingType`).
+- UI: `SProtoBoyAssetSourcingPanel` (Setup > Asset Sourcing: the policy and source checkboxes) and
+  `SProtoBoyAssetSourcingPage` (the dashboard's Asset Sourcing page: **Sources**, every supported source and whether
+  it's enabled, and **Search For Assets**, the query and filters; listing asset needs from Content docs is a TODO).
 - Fab has no public search API, so `fab_search` only builds a fab.com search URL and opens it in the user's browser;
   never fetch or scrape Fab listings.
 - Asset lifecycle tagging / Greybox Replacement Matrix and the Prototype-to-Production Viability Index are **removed for
@@ -281,8 +294,10 @@ and `PBDocMapMigration.cpp` (merging old Game docs), with shared helpers in Priv
 
 ## Dashboard and UI (UI/)
 
-- `SProtoBoyDashboard`: a sidebar of pages (Setup, Documentation, Tasks) and the selected page; the open page is
-  remembered per user. It owns the setup checks and the lock that keeps Documentation and Tasks disabled until setup is
-  done (`GetMissingSetup`, `MakeSetupLock`). Feature pages are their own widgets in their feature's folder.
+- `SProtoBoyDashboard`: a sidebar of pages (Setup, Documentation, Tasks, Asset Sourcing) and the selected page; the
+  open page is remembered per user (by index, so add new pages at the end). It owns the setup checks and the lock that
+  keeps the feature pages disabled until setup is done (`GetMissingSetup`, `MakeSetupLock`, which takes the list of
+  what's missing). Asset Sourcing also waits on the sourcing setup (`GetMissingSourcingSetup`). Feature pages are
+  their own widgets in their feature's folder.
 - Shared widget builders are in `UI/PBWidgets.h` (`ProtoBoyWidgets::MakeSection`, the collapsible section card);
   `UI/PBStyle` has the plugin's brushes.

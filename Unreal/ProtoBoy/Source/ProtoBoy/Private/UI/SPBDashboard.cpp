@@ -16,6 +16,7 @@
 #include "Docs/PBDocMap.h"
 #include "UI/Docs/Map/SPBDocMapEditor.h"
 #include "UI/Health/SPBDocHealthPanel.h"
+#include "UI/Sourcing/SPBAssetSourcingPage.h"
 #include "UI/Sourcing/SPBAssetSourcingPanel.h"
 #include "Tasks/PBTasksConnection.h"
 #include "Tasks/Trello/PBTrelloConnector.h"
@@ -71,6 +72,7 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 		MakeShared<FPage>(FPage{ LOCTEXT("SetupPage", "Setup"), LOCTEXT("SetupPageTip", "Plugin settings and connections to agents, docs, task boards and asset sources."), "Icons.Settings" }),
 		MakeShared<FPage>(FPage{ LOCTEXT("DocumentationPage", "Documentation"), LOCTEXT("DocumentationPageTip", "Setup checklist and the map of the project's docs."), "Icons.Documentation" }),
 		MakeShared<FPage>(FPage{ LOCTEXT("TasksPage", "Tasks"), LOCTEXT("TasksPageTip", "The team's task board."), "Icons.Clipboard" }),
+		MakeShared<FPage>(FPage{ LOCTEXT("AssetSourcingPage", "Asset Sourcing"), LOCTEXT("AssetSourcingPageTip", "Find art, audio and other assets on the enabled sources instead of generating them with AI."), "MainFrame.OpenMarketplace" }),
 	};
 	BuildSetupSteps();
 
@@ -196,6 +198,11 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 			+ SWidgetSwitcher::Slot()
 			[
 				MakePage(2, MakeTasksSection())
+			]
+
+			+ SWidgetSwitcher::Slot()
+			[
+				MakePage(3, MakeAssetSourcingSection())
 			]
 		]
 	];
@@ -523,7 +530,7 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupSection()
 		.AutoHeight()
 		.Padding(0.f, 12.f, 0.f, 0.f)
 		[
-			MakeSection(LOCTEXT("AssetSourcingHeader", "Asset Sourcing (optional)"), SourcingStep, SAssignNew(AssetSourcingPanel, SProtoBoyAssetSourcingPanel))
+			MakeSection(LOCTEXT("AssetSourcingHeader", "Asset Sourcing"), SourcingStep, SAssignNew(AssetSourcingPanel, SProtoBoyAssetSourcingPanel))
 		]
 
 		+ SVerticalBox::Slot()
@@ -697,10 +704,21 @@ void SProtoBoyDashboard::BuildSetupSteps()
 		return true;
 	};
 
-	// Asset sourcing is optional, so this step is always done; it reports the team's current choices.
+	// Allowing AI-generated assets is a valid choice, so that's done. Preferring sourced assets is done only once a source
+	// is enabled. (The Asset Sourcing page itself needs both: ProtoBoyAssetSourcing::GetMissingSetup.)
 	SourcingStep = [](FText& OutDetail)
 	{
 		const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
+		if (!Settings->bPreferSourcedAssets)
+		{
+			OutDetail = LOCTEXT("StepSourcingAllowGenerated", "Agents may generate assets with AI. Check the box to have them suggest existing assets instead.");
+			return true;
+		}
+		if (!ProtoBoyAssetSourcing::HasEnabledSource())
+		{
+			OutDetail = LOCTEXT("StepSourcingNoSource", "Select at least one asset source.");
+			return false;
+		}
 
 		TArray<FText> Sources;
 		if (Settings->bEnableFabSource)
@@ -708,11 +726,8 @@ void SProtoBoyDashboard::BuildSetupSteps()
 			Sources.Add(LOCTEXT("SourceFab", "Fab"));
 		}
 
-		OutDetail = FText::Format(LOCTEXT("StepSourcingDetail", "{0} Sources: {1}. Style: from Content docs."),
-			Settings->bPreferSourcedAssets
-				? LOCTEXT("SourcingPreferSourced", "Agents source assets instead of generating them with AI.")
-				: LOCTEXT("SourcingAllowGenerated", "Agents may generate assets with AI."),
-			Sources.IsEmpty() ? LOCTEXT("SourcesNone", "none enabled") : FText::Join(LOCTEXT("SourcesSeparator", ", "), Sources));
+		OutDetail = FText::Format(LOCTEXT("StepSourcingDetail", "Agents source assets instead of generating them with AI. Sources: {0}. Style: from Content docs."),
+			FText::Join(LOCTEXT("SourcesSeparator", ", "), Sources));
 		return true;
 	};
 
@@ -752,10 +767,22 @@ TArray<FText> SProtoBoyDashboard::GetMissingSetup() const
 	return Missing;
 }
 
-TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupLock(const FText& LockedFormat)
+TArray<FText> SProtoBoyDashboard::GetMissingSourcingSetup() const
 {
+	TArray<FText> Missing = GetMissingSetup();
+	Missing.Append(ProtoBoyAssetSourcing::GetMissingSetup());
+	return Missing;
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupLock(const FText& LockedFormat, FGetMissing GetMissing)
+{
+	if (!GetMissing)
+	{
+		GetMissing = [this]() { return GetMissingSetup(); };
+	}
+
 	return SNew(SBorder)
-		.Visibility_Lambda([this]() { return IsSetupDone() ? EVisibility::Collapsed : EVisibility::Visible; })
+		.Visibility_Lambda([GetMissing]() { return GetMissing().IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible; })
 		.BorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
 		.Padding(10.f)
 		[
@@ -775,9 +802,9 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupLock(const FText& LockedFormat)
 			.VAlign(VAlign_Center)
 			[
 				SNew(STextBlock)
-				.Text_Lambda([this, LockedFormat]()
+				.Text_Lambda([GetMissing, LockedFormat]()
 				{
-					return FText::Format(LockedFormat, FText::Join(LOCTEXT("MissingSeparator", ", "), GetMissingSetup()));
+					return FText::Format(LockedFormat, FText::Join(LOCTEXT("MissingSeparator", ", "), GetMissing()));
 				})
 				.ColorAndOpacity(FStyleColors::Warning)
 				.AutoWrapText(true)
@@ -834,6 +861,17 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
 		.LockMessage()
 		[
 			MakeSetupLock(LOCTEXT("TasksLocked", "Finish setup to use tasks: connect {0} on the Setup page."))
+		];
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakeAssetSourcingSection()
+{
+	return SNew(SProtoBoyAssetSourcingPage)
+		.IsUnlocked_Lambda([this]() { return GetMissingSourcingSetup().IsEmpty(); })
+		.LockMessage()
+		[
+			MakeSetupLock(LOCTEXT("AssetSourcingLocked", "Finish setup to use asset sourcing. Still needed on the Setup page: {0}."),
+				[this]() { return GetMissingSourcingSetup(); })
 		];
 }
 

@@ -7,8 +7,9 @@ class SWidgetSwitcher;
 
 /**
  * ProtoBoy dashboard: a sidebar listing the pages, and the selected page beside it. Pages: Setup (plugin settings, MCP,
- * Documentation, Tasks, Asset Sourcing), Documentation (the doc map) and Tasks (SProtoBoyTasksPage). The open page is
- * remembered per user. Documentation and Tasks stay locked until setup is done.
+ * Documentation, Tasks, Asset Sourcing), Documentation (the doc map), Tasks (SProtoBoyTasksPage) and Asset Sourcing
+ * (SProtoBoyAssetSourcingPage). The open page is remembered per user. Documentation, Tasks and Asset Sourcing stay
+ * locked until setup is done; Asset Sourcing also needs its own setup (ProtoBoyAssetSourcing::GetMissingSetup).
  */
 class SProtoBoyDashboard : public SCompoundWidget
 {
@@ -50,7 +51,7 @@ private:
 	FSetupStepState AgentStep;
 	FSetupStepState DocsStep;
 	FSetupStepState TasksStep;
-	/** Asset sourcing is optional, so always done; the detail describes the team's choices. */
+	/** Done when sourced assets are preferred and at least one source is enabled (what the Asset Sourcing page needs). */
 	FSetupStepState SourcingStep;
 	FSetupStepState DocHealthStep;
 
@@ -71,14 +72,24 @@ private:
 	/** Tasks: SProtoBoyTasksPage, locked with a warning until setup is finished. */
 	TSharedRef<SWidget> MakeTasksSection();
 
+	/** Asset Sourcing: SProtoBoyAssetSourcingPage, locked until setup and the sourcing setup are finished. */
+	TSharedRef<SWidget> MakeAssetSourcingSection();
+
 	/**
 	 * What the Documentation and Tasks pages wait on: the agent (MCP), the docs connection and the task board. Empty
 	 * when setup is done. A missing Game doc doesn't count, since the doc map is where it gets created.
 	 */
 	TArray<FText> GetMissingSetup() const;
 	bool IsSetupDone() const { return GetMissingSetup().IsEmpty(); }
-	/** Warning row shown while setup isn't done: LockedFormat with {0} = what's missing, plus a Go to Setup button. */
-	TSharedRef<SWidget> MakeSetupLock(const FText& LockedFormat);
+	/** GetMissingSetup plus what asset sourcing needs (preferring sourced assets, an enabled source). */
+	TArray<FText> GetMissingSourcingSetup() const;
+
+	using FGetMissing = TFunction<TArray<FText>()>;
+	/**
+	 * Warning row shown while GetMissing returns anything: LockedFormat with {0} = what's missing, plus a Go to Setup
+	 * button. Defaults to GetMissingSetup.
+	 */
+	TSharedRef<SWidget> MakeSetupLock(const FText& LockedFormat, FGetMissing GetMissing = nullptr);
 
 	
 	/** The checklist's steps, in order (also used for the "N of M" count). */
@@ -92,7 +103,6 @@ private:
 	FReply OnConnectDocsClicked();
 	FReply OnMCPSettingsClicked();
 	FReply OnTasksSettingsClicked();
-	/** Opens the Setup page, where Asset Sourcing is edited. */
 
 	TSharedPtr<class SBox> DocsSection;
 	/** Setup > Asset Sourcing; refreshed with the docs section. */

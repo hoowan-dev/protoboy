@@ -16,7 +16,11 @@ namespace ProtoBoySourcingMCP
 
 		ProtoBoyFab::FSearch Search;
 		Search.Query = ProtoBoyMCPTools::GetString(Call, TEXT("query"));
-		Search.ListingType = ProtoBoyMCPTools::GetString(Call, TEXT("listing_type"));
+		const FString ListingType = ProtoBoyMCPTools::GetString(Call, TEXT("listing_type")).TrimStartAndEnd();
+		if (!ListingType.IsEmpty())
+		{
+			Search.ListingTypes.Add(ListingType);
+		}
 		Search.bFreeOnly = ProtoBoyMCPTools::GetBool(Call, TEXT("free_only"), false);
 
 		if (!ProtoBoyMCPTools::GetBool(Call, TEXT("open"), true))
