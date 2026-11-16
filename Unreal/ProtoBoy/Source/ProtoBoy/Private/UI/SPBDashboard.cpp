@@ -946,6 +946,18 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
 			[
 				MakeSection(LOCTEXT("TasksInProgressHeader", "In Progress"), SAssignNew(InProgressList, SBox))
 			]
+		]
+
+		// Done: the board's mapped Done list, most recent first (filled by RebuildTasksSection)
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 12.f, 0.f, 0.f)
+		[
+			SNew(SBox)
+			.Visibility_Lambda([this]() { return IsSetupDone() ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				MakeSection(LOCTEXT("TasksDoneHeader", "Done"), SAssignNew(DoneList, SBox))
+			]
 		];
 
 	return Body;
@@ -993,6 +1005,7 @@ void SProtoBoyDashboard::CheckTaskSync(bool bPromptIfOutOfSync)
 		// Each sync also refreshes the To Do tasks shown under the categories.
 		This->TaskLists = Result.Value.CategoryLists;
 		This->InProgressTasks = Result.Value.InProgressTasks;
+		This->DoneTasks = Result.Value.DoneTasks;
 		This->bTaskListsLoaded = true;
 
 		// The categories changed while Trello answered: the in-sync result is about the old ones.
@@ -1328,43 +1341,57 @@ void SProtoBoyDashboard::RebuildTasksSection()
 
 	TasksList->SetContent(Rows);
 
-	// In Progress
-	if (InProgressList.IsValid())
+	FillTaskSection(InProgressList, InProgressTasks,
+		LOCTEXT("InProgressNotLoaded", "Press Sync to load the tasks in progress."), LOCTEXT("NoInProgress", "Nothing in progress."));
+	FillTaskSection(DoneList, DoneTasks,
+		LOCTEXT("DoneNotLoaded", "Press Sync to load the finished tasks."), LOCTEXT("NoDone", "Nothing done yet."), /*MaxShown*/ 20);
+}
+
+void SProtoBoyDashboard::FillTaskSection(const TSharedPtr<SBox>& Box, const TArray<FProtoBoyTask>& Tasks, const FText& NotLoaded, const FText& Empty, int32 MaxShown)
+{
+	if (!Box.IsValid())
 	{
-		TSharedRef<SVerticalBox> Items = SNew(SVerticalBox);
-		auto AddNote = [&Items](const FText& Text)
+		return;
+	}
+	TSharedRef<SVerticalBox> Items = SNew(SVerticalBox);
+	auto AddNote = [&Items](const FText& Text)
+	{
+		Items->AddSlot()
+		.AutoHeight()
+		.Padding(0.f, 2.f)
+		[
+			SNew(STextBlock)
+			.Text(Text)
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true)
+		];
+	};
+	if (!bTaskListsLoaded)
+	{
+		AddNote(NotLoaded);
+	}
+	else if (Tasks.IsEmpty())
+	{
+		AddNote(Empty);
+	}
+	else
+	{
+		const int32 NumShown = MaxShown > 0 ? FMath::Min(MaxShown, Tasks.Num()) : Tasks.Num();
+		for (int32 Index = 0; Index < NumShown; ++Index)
 		{
 			Items->AddSlot()
 			.AutoHeight()
+			.Padding(0.f, 2.f)
 			[
-				SNew(STextBlock)
-				.Text(Text)
-				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-				.AutoWrapText(true)
+				MakeTaskItem(Tasks[Index], /*bShowCategory*/ true)
 			];
-		};
-		if (!bTaskListsLoaded)
-		{
-			AddNote(LOCTEXT("InProgressNotLoaded", "Press Sync to load the tasks in progress."));
 		}
-		else if (InProgressTasks.IsEmpty())
+		if (NumShown < Tasks.Num())
 		{
-			AddNote(LOCTEXT("NoInProgress", "Nothing in progress."));
+			AddNote(FText::Format(LOCTEXT("MoreTasks", "...and {0} more on the board."), FText::AsNumber(Tasks.Num() - NumShown)));
 		}
-		else
-		{
-			for (const FProtoBoyTask& Task : InProgressTasks)
-			{
-				Items->AddSlot()
-				.AutoHeight()
-				.Padding(0.f, 2.f)
-				[
-					MakeTaskItem(Task, /*bShowCategory*/ true)
-				];
-			}
-		}
-		InProgressList->SetContent(Items);
 	}
+	Box->SetContent(Items);
 }
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeSection(const FText& Title, const TSharedRef<SWidget>& Body)

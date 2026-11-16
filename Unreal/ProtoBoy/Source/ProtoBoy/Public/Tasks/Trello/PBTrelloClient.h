@@ -65,6 +65,8 @@ struct FProtoBoyTrelloCategorySync
 	TArray<FCategoryList> CategoryLists;
 	/** Open cards in the team's In Progress list (TrelloInProgressListId), in board order. */
 	TArray<FProtoBoyTask> InProgressTasks;
+	/** Open cards in the team's Done list (TrelloDoneListId), most recently active first. */
+	TArray<FProtoBoyTask> DoneTasks;
 	/** Names of the lists to create, in board order ("To Do - Uncategorized" first when it's missing). */
 	TArray<FString> ListsToCreate;
 	/** Lists whose cards move to "To Do - Uncategorized" before the list is archived (Trello can't delete lists). */

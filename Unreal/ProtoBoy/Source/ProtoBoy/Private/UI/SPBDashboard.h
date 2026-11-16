@@ -62,6 +62,13 @@ private:
 	TSharedRef<SWidget> MakeTaskItem(const FProtoBoyTask& Task, bool bShowCategory = false);
 	/** Open cards in the board's In Progress list (TrelloInProgressListId), as of the last sync. */
 	TArray<FProtoBoyTask> InProgressTasks;
+	/** Open cards in the board's Done list (TrelloDoneListId), most recent first, as of the last sync. */
+	TArray<FProtoBoyTask> DoneTasks;
+	/**
+	 * Fill an In Progress / Done section: a note before the first sync or when empty, else the tasks with category chips.
+	 * MaxShown > 0 lists only the first MaxShown, then says how many more there are.
+	 */
+	void FillTaskSection(const TSharedPtr<class SBox>& Box, const TArray<FProtoBoyTask>& Tasks, const FText& NotLoaded, const FText& Empty, int32 MaxShown = 0);
 	/** Each category list's open cards, as of the last sync (Sync fills them). */
 	TArray<FProtoBoyTrelloCategorySync::FCategoryList> TaskLists;
 	bool bTaskListsLoaded = false;
@@ -114,7 +121,7 @@ private:
 	/** Documentation: the doc map, disabled with a warning until setup is finished. */
 	TSharedRef<SWidget> MakeDocumentationSection();
 
-	/** Tasks: the Sync row, then To Do (the task categories) and In Progress sections; a warning until setup is finished. */
+	/** Tasks: the Sync row, then To Do (the task categories), In Progress and Done sections; a warning until setup is finished. */
 	TSharedRef<SWidget> MakeTasksSection();
 
 	/**
@@ -144,6 +151,7 @@ private:
 	/** Tasks page: the To Do section's category rows and the In Progress section's tasks. */
 	TSharedPtr<class SBox> TasksList;
 	TSharedPtr<class SBox> InProgressList;
+	TSharedPtr<class SBox> DoneList;
 	/** Setup > Asset Sourcing; refreshed with the docs section. */
 	TSharedPtr<class SProtoBoyAssetSourcingPanel> AssetSourcingPanel;
 	FDelegateHandle ConnectionChangedHandle;

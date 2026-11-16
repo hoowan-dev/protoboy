@@ -790,6 +790,15 @@ void FProtoBoyTrelloClient::PlanCategorySync(const TArray<FString>& Categories, 
 						Plan.InProgressTasks.Add(ParseCard(Card, ListNames));
 					}
 				}
+				if (List.Id == Settings->TrelloDoneListId)
+				{
+					for (const TSharedPtr<FJsonObject>& Card : List.Cards)
+					{
+						Plan.DoneTasks.Add(ParseCard(Card, ListNames));
+					}
+					// ISO 8601 strings sort by time.
+					Plan.DoneTasks.Sort([](const FProtoBoyTask& A, const FProtoBoyTask& B) { return A.LastActivityUtc > B.LastActivityUtc; });
+				}
 				FString Category;
 				if (!ParseCategoryListName(List.Name, Category))
 				{
