@@ -27,7 +27,9 @@
 #include "UI/MCP/SPBConnectLLMDialog.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Images/SThrobber.h"
+#include "HAL/PlatformProcess.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SHyperlink.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBorder.h"
@@ -836,13 +838,12 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeDocumentationSection()
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
 {
-	// TODO: The task board's tasks under each category.
 	const TSharedRef<SWidget> Body = SNew(SVerticalBox)
 
 		// Sync with the connected task service, and whether the board matches the task categories
 		+ SVerticalBox::Slot()
 		.AutoHeight()
-		.Padding(0.f, 0.f, 0.f, 8.f)
+		.Padding(0.f, 0.f, 0.f, 12.f)
 		[
 			SNew(SHorizontalBox)
 			.Visibility_Lambda([this]() { return IsSetupDone() ? EVisibility::Visible : EVisibility::Collapsed; })
@@ -896,6 +897,16 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
 			]
 
 			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(10.f, 0.f, 0.f, 0.f)
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this]() { return GetLastTaskSyncText(); })
+				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			]
+
+			+ SHorizontalBox::Slot()
 			.FillWidth(1.f)
 			.VAlign(VAlign_Center)
 			.Padding(8.f, 0.f, 0.f, 0.f)
@@ -914,15 +925,30 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
 			MakeSetupLock(LOCTEXT("TasksLocked", "Finish setup to use tasks: connect {0} on the Setup page."))
 		]
 
-		// Filled by RebuildTasksSection
+		// To Do: each task category's list (filled by RebuildTasksSection)
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 0.f, 0.f, 12.f)
+		[
+			SNew(SBox)
+			.Visibility_Lambda([this]() { return IsSetupDone() ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				MakeSection(LOCTEXT("TasksToDoHeader", "To Do"), SAssignNew(TasksList, SBox))
+			]
+		]
+
+		// In Progress: the board's mapped In Progress list (filled by RebuildTasksSection)
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		[
-			SAssignNew(TasksList, SBox)
+			SNew(SBox)
 			.Visibility_Lambda([this]() { return IsSetupDone() ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				MakeSection(LOCTEXT("TasksInProgressHeader", "In Progress"), SAssignNew(InProgressList, SBox))
+			]
 		];
 
-	return MakeSection(LOCTEXT("TasksPageHeader", "Task Categories"), Body);
+	return Body;
 }
 
 TArray<FString> SProtoBoyDashboard::GetTaskCategoryNames() const
@@ -957,36 +983,294 @@ void SProtoBoyDashboard::CheckTaskSync(bool bPromptIfOutOfSync)
 		{
 			return;
 		}
-		// The categories changed while Trello answered: the result is about the old ones.
-		if (This->GetTaskCategoryNames() != Categories)
-		{
-			This->TaskSyncState = ETaskSyncState::Unknown;
-			return;
-		}
 		if (!Result.bOk)
 		{
 			This->TaskSyncState = ETaskSyncState::Failed;
 			This->TaskSyncError = Result.Error;
 			return;
 		}
-		if (Result.Value.IsInSync())
+
+		// Each sync also refreshes the To Do tasks shown under the categories.
+		This->TaskLists = Result.Value.CategoryLists;
+		This->InProgressTasks = Result.Value.InProgressTasks;
+		This->bTaskListsLoaded = true;
+
+		// The categories changed while Trello answered: the in-sync result is about the old ones.
+		if (This->GetTaskCategoryNames() != Categories)
+		{
+			This->TaskSyncState = ETaskSyncState::Unknown;
+		}
+		else if (Result.Value.IsInSync())
 		{
 			This->TaskSyncState = ETaskSyncState::InSync;
-			return;
-		}
-		This->TaskSyncState = ETaskSyncState::OutOfSync;
-		if (bPromptIfOutOfSync)
-		{
-			// After a resync attempt, check again quietly so the icon shows what the board looks like now.
-			SProtoBoyTrelloSyncDialog::Open(This, Result.Value, [WeakThis](bool)
+			if (UProtoBoySubsystem* Sub = UProtoBoySubsystem::Get())
 			{
-				if (const TSharedPtr<SProtoBoyDashboard> Dashboard = WeakThis.Pin())
-				{
-					Dashboard->CheckTaskSync(/*bPromptIfOutOfSync*/ false);
-				}
-			});
+				Sub->GetTrelloConnector().SetLastTaskSync(FDateTime::UtcNow());
+			}
 		}
+		else
+		{
+			This->TaskSyncState = ETaskSyncState::OutOfSync;
+			if (bPromptIfOutOfSync)
+			{
+				// After a resync attempt, check again quietly: the icon, the last sync time and the tasks then show
+				// what the board looks like now (cards from deleted lists are under Uncategorized).
+				SProtoBoyTrelloSyncDialog::Open(This, Result.Value, [WeakThis](bool)
+				{
+					if (const TSharedPtr<SProtoBoyDashboard> Dashboard = WeakThis.Pin())
+					{
+						Dashboard->CheckTaskSync(/*bPromptIfOutOfSync*/ false);
+					}
+				});
+			}
+		}
+		This->RebuildTasksSection();
 	});
+}
+
+FText SProtoBoyDashboard::GetLastTaskSyncText() const
+{
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	FDateTime When;
+	if (!Subsystem || !FDateTime::ParseIso8601(*Subsystem->GetTrelloConnector().GetConnection().LastTaskSyncUtc, When))
+	{
+		return LOCTEXT("NeverSynced", "Never synced");
+	}
+	// AsDateTime takes UTC and shows it in the user's time zone.
+	return FText::Format(LOCTEXT("LastSynced", "Last synced {0}"), FText::AsDateTime(When, EDateTimeStyle::Medium, EDateTimeStyle::Short));
+}
+
+const FProtoBoyTrelloCategorySync::FCategoryList* SProtoBoyDashboard::FindTaskList(const FString& Category) const
+{
+	return TaskLists.FindByPredicate([&Category](const FProtoBoyTrelloCategorySync::FCategoryList& List)
+	{
+		return List.Category.Equals(Category.TrimStartAndEnd(), ESearchCase::IgnoreCase);
+	});
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakeTaskItem(const FProtoBoyTask& Task, bool bShowCategory)
+{
+	// Category chips: the task's labels that name a task category on the doc map.
+	TSharedRef<SHorizontalBox> Chips = SNew(SHorizontalBox);
+	if (bShowCategory)
+	{
+		const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+		const TArray<const FProtoBoyDocNode*> Categories = Subsystem ? Subsystem->GetDocMap().GetTaskCategories() : TArray<const FProtoBoyDocNode*>();
+		for (const FString& Label : Task.Labels)
+		{
+			const FProtoBoyDocNode* const* Doc = Categories.FindByPredicate([&Label](const FProtoBoyDocNode* D) { return D->Title.Equals(Label.TrimStartAndEnd(), ESearchCase::IgnoreCase); });
+			if (!Doc)
+			{
+				continue;
+			}
+			Chips->AddSlot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(6.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SBorder)
+				.BorderImage(FAppStyle::Get().GetBrush("WhiteBrush"))
+				.BorderBackgroundColor(SProtoBoyDocMapNode::GetLayerColor((*Doc)->Layer))
+				.Padding(FMargin(6.f, 1.f))
+				.ToolTipText(FText::Format(LOCTEXT("CategoryChipTip", "From the \"{0}\" task category."), FText::FromString((*Doc)->Title)))
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString((*Doc)->Title))
+					.TextStyle(FAppStyle::Get(), "SmallText")
+					.ColorAndOpacity(FLinearColor::White)
+				]
+			];
+		}
+	}
+
+	const FString Url = Task.Url;
+	return SNew(SHorizontalBox)
+
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Top)
+		.Padding(0.f, 0.f, 6.f, 0.f)
+		[
+			SNew(STextBlock).Text(FText::FromString(TEXT("•")))
+		]
+
+		+ SHorizontalBox::Slot()
+		.FillWidth(1.f)
+		.VAlign(VAlign_Top)
+		[
+			SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(Task.Title))
+				.ToolTipText(FText::FromString(Task.Description.Left(400)))
+				.AutoWrapText(true)
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				Chips
+			]
+		]
+
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Top)
+		.Padding(8.f, 0.f, 0.f, 0.f)
+		[
+			SNew(SHyperlink)
+			.Visibility(Url.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible)
+			.Text(LOCTEXT("OpenTask", "Open"))
+			.ToolTipText(FText::FromString(Url))
+			.OnNavigate_Lambda([Url]() { FPlatformProcess::LaunchURL(*Url, nullptr, nullptr); })
+		];
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakeTaskCategoryRow(const FString& Category, const FText& Detail, const FLinearColor& Color)
+{
+	const FProtoBoyTrelloCategorySync::FCategoryList* List = FindTaskList(Category);
+	const FString Key = Category.TrimStartAndEnd().ToLower();
+
+	// Count on the right of the header: the open cards in the category's To Do list.
+	FText Count;
+	FText CountTip;
+	if (!bTaskListsLoaded)
+	{
+		Count = FText::FromString(TEXT("-"));
+		CountTip = LOCTEXT("CountNotLoaded", "Press Sync to load the To Do tasks.");
+	}
+	else if (!List)
+	{
+		Count = LOCTEXT("CountNoList", "No list");
+		CountTip = FText::Format(LOCTEXT("CountNoListTip", "The board has no \"{0}\" list yet. Press Sync to add it."),
+			FText::FromString(FProtoBoyTrelloClient::GetCategoryListName(Category)));
+	}
+	else
+	{
+		Count = FText::Format(LOCTEXT("CountToDo", "{0} to do"), FText::AsNumber(List->Tasks.Num()));
+		CountTip = FText::Format(LOCTEXT("CountToDoTip", "Open cards in \"{0}\" at the last sync."),
+			FText::FromString(FProtoBoyTrelloClient::GetCategoryListName(Category)));
+	}
+
+	// The sublist, shown when the category is opened.
+	TSharedRef<SVerticalBox> Tasks = SNew(SVerticalBox);
+	auto AddNote = [&Tasks](const FText& Text)
+	{
+		Tasks->AddSlot()
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.Text(Text)
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true)
+		];
+	};
+	if (!bTaskListsLoaded || !List)
+	{
+		AddNote(CountTip);
+	}
+	else if (List->Tasks.IsEmpty())
+	{
+		AddNote(LOCTEXT("NoToDoTasks", "No To Do tasks in this category."));
+	}
+	else
+	{
+		for (const FProtoBoyTask& Task : List->Tasks)
+		{
+			Tasks->AddSlot()
+			.AutoHeight()
+			.Padding(0.f, 2.f)
+			[
+				MakeTaskItem(Task)
+			];
+		}
+	}
+
+	return SNew(SExpandableArea)
+		.InitiallyCollapsed(!ExpandedTaskCategories.Contains(Key))
+		.OnAreaExpansionChanged_Lambda([this, Key](bool bExpanded)
+		{
+			if (bExpanded)
+			{
+				ExpandedTaskCategories.Add(Key);
+			}
+			else
+			{
+				ExpandedTaskCategories.Remove(Key);
+			}
+		})
+		.BorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"))
+		.BodyBorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
+		.HeaderPadding(FMargin(4.f, 2.f, 10.f, 2.f))
+		.Padding(FMargin(30.f, 6.f, 10.f, 8.f))
+		.HeaderContent()
+		[
+			SNew(SHorizontalBox)
+
+			// Layer color, as on the doc map
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.Padding(4.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SBorder)
+				.BorderImage(FAppStyle::Get().GetBrush("WhiteBrush"))
+				.BorderBackgroundColor(Color)
+				.Padding(FMargin(2.f, 0.f))
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(10.f, 4.f, 8.f, 4.f)
+			[
+				SNew(SImage)
+				.Image(FAppStyle::Get().GetBrush("Icons.Clipboard"))
+			]
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			.VAlign(VAlign_Center)
+			.Padding(0.f, 4.f)
+			[
+				SNew(SVerticalBox)
+
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString(Category))
+					.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
+				]
+
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				[
+					SNew(STextBlock)
+					.Text(Detail)
+					.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+				]
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(8.f, 0.f, 0.f, 0.f)
+			[
+				SNew(STextBlock)
+				.Text(Count)
+				.ToolTipText(CountTip)
+				.ColorAndOpacity(List && !List->Tasks.IsEmpty() ? FSlateColor::UseForeground() : FSlateColor::UseSubduedForeground())
+			]
+		]
+		.BodyContent()
+		[
+			Tasks
+		];
 }
 
 void SProtoBoyDashboard::RebuildTasksSection()
@@ -1007,76 +1291,80 @@ void SProtoBoyDashboard::RebuildTasksSection()
 		TaskSyncState = ETaskSyncState::Unknown;
 	}
 
+	TSharedRef<SVerticalBox> Rows = SNew(SVerticalBox);
 	if (Categories.IsEmpty())
 	{
-		TasksList->SetContent(
+		Rows->AddSlot()
+		.AutoHeight()
+		.Padding(0.f, 0.f, 0.f, 8.f)
+		[
 			SNew(STextBlock)
 			.Text(LOCTEXT("NoTaskCategories", "No task categories yet. On the doc map, right-click a doc and pick Task Category, or tick Task category under the selected doc."))
 			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-			.AutoWrapText(true));
-		return;
+			.AutoWrapText(true)
+		];
 	}
-
-	TSharedRef<SVerticalBox> Rows = SNew(SVerticalBox);
 	for (const FProtoBoyDocNode* Doc : Categories)
 	{
 		Rows->AddSlot()
 		.AutoHeight()
 		.Padding(0.f, 0.f, 0.f, 4.f)
 		[
-			SNew(SBorder)
-			.BorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"))
-			.Padding(FMargin(0.f, 0.f, 10.f, 0.f))
-			[
-				SNew(SHorizontalBox)
-
-				// Layer color, as on the doc map
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				[
-					SNew(SBorder)
-					.BorderImage(FAppStyle::Get().GetBrush("WhiteBrush"))
-					.BorderBackgroundColor(SProtoBoyDocMapNode::GetLayerColor(Doc->Layer))
-					.Padding(FMargin(2.f, 0.f))
-				]
-
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.VAlign(VAlign_Center)
-				.Padding(10.f, 6.f, 8.f, 6.f)
-				[
-					SNew(SImage)
-					.Image(FAppStyle::Get().GetBrush("Icons.Clipboard"))
-				]
-
-				+ SHorizontalBox::Slot()
-				.FillWidth(1.f)
-				.VAlign(VAlign_Center)
-				.Padding(0.f, 6.f)
-				[
-					SNew(SVerticalBox)
-
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					[
-						SNew(STextBlock)
-						.Text(FText::FromString(Doc->Title))
-						.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
-					]
-
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					[
-						SNew(STextBlock)
-						.Text(FText::Format(LOCTEXT("TaskCategoryDetail", "{0} doc · {1}"),
-							ProtoBoyDocLayers::GetDisplayName(Doc->Layer), FText::FromString(Doc->Path)))
-						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-					]
-				]
-			]
+			MakeTaskCategoryRow(Doc->Title,
+				FText::Format(LOCTEXT("TaskCategoryDetail", "{0} doc · {1}"), ProtoBoyDocLayers::GetDisplayName(Doc->Layer), FText::FromString(Doc->Path)),
+				SProtoBoyDocMapNode::GetLayerColor(Doc->Layer))
 		];
 	}
+
+	// Tasks that belong to no doc, last.
+	Rows->AddSlot()
+	.AutoHeight()
+	.Padding(0.f, 0.f, 0.f, 4.f)
+	[
+		MakeTaskCategoryRow(ProtoBoyTasks::UncategorizedName,
+			LOCTEXT("UncategorizedDetail", "Tasks that belong to no doc"),
+			FLinearColor(0.25f, 0.25f, 0.25f))
+	];
+
 	TasksList->SetContent(Rows);
+
+	// In Progress
+	if (InProgressList.IsValid())
+	{
+		TSharedRef<SVerticalBox> Items = SNew(SVerticalBox);
+		auto AddNote = [&Items](const FText& Text)
+		{
+			Items->AddSlot()
+			.AutoHeight()
+			[
+				SNew(STextBlock)
+				.Text(Text)
+				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+				.AutoWrapText(true)
+			];
+		};
+		if (!bTaskListsLoaded)
+		{
+			AddNote(LOCTEXT("InProgressNotLoaded", "Press Sync to load the tasks in progress."));
+		}
+		else if (InProgressTasks.IsEmpty())
+		{
+			AddNote(LOCTEXT("NoInProgress", "Nothing in progress."));
+		}
+		else
+		{
+			for (const FProtoBoyTask& Task : InProgressTasks)
+			{
+				Items->AddSlot()
+				.AutoHeight()
+				.Padding(0.f, 2.f)
+				[
+					MakeTaskItem(Task, /*bShowCategory*/ true)
+				];
+			}
+		}
+		InProgressList->SetContent(Items);
+	}
 }
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeSection(const FText& Title, const TSharedRef<SWidget>& Body)

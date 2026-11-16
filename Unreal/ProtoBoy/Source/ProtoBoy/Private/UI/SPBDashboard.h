@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Tasks/Trello/PBTrelloClient.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Views/SListView.h"
 
@@ -48,6 +49,25 @@ private:
 	/** The categories TaskSyncState was checked against. */
 	TArray<FString> TaskSyncCategories;
 
+	/** "Last synced <date>" (from the user's Trello connection) or "Never synced". */
+	FText GetLastTaskSyncText() const;
+	/** The board's To Do list for a category (any case), from the last sync; null if it has none or there was no sync. */
+	const FProtoBoyTrelloCategorySync::FCategoryList* FindTaskList(const FString& Category) const;
+	/** A category with its To Do count; opening it shows the tasks. Color is the layer strip on the left. */
+	TSharedRef<SWidget> MakeTaskCategoryRow(const FString& Category, const FText& Detail, const FLinearColor& Color);
+	/**
+	 * One task: title (description as tooltip) and a link to the card. With bShowCategory, the task's category labels
+	 * (Trello labels named after a task category, added by Sync) show as chips in the category's layer color.
+	 */
+	TSharedRef<SWidget> MakeTaskItem(const FProtoBoyTask& Task, bool bShowCategory = false);
+	/** Open cards in the board's In Progress list (TrelloInProgressListId), as of the last sync. */
+	TArray<FProtoBoyTask> InProgressTasks;
+	/** Each category list's open cards, as of the last sync (Sync fills them). */
+	TArray<FProtoBoyTrelloCategorySync::FCategoryList> TaskLists;
+	bool bTaskListsLoaded = false;
+	/** Opened categories (lowercase), kept across rebuilds. */
+	TSet<FString> ExpandedTaskCategories;
+
 	/** A sidebar entry and the page it opens. */
 	struct FPage
 	{
@@ -94,7 +114,7 @@ private:
 	/** Documentation: the doc map, disabled with a warning until setup is finished. */
 	TSharedRef<SWidget> MakeDocumentationSection();
 
-	/** Tasks: a warning until setup is finished, then the doc map's task categories. */
+	/** Tasks: the Sync row, then To Do (the task categories) and In Progress sections; a warning until setup is finished. */
 	TSharedRef<SWidget> MakeTasksSection();
 
 	/**
@@ -121,7 +141,9 @@ private:
 	/** Opens the Setup page, where Asset Sourcing is edited. */
 
 	TSharedPtr<class SBox> DocsSection;
+	/** Tasks page: the To Do section's category rows and the In Progress section's tasks. */
 	TSharedPtr<class SBox> TasksList;
+	TSharedPtr<class SBox> InProgressList;
 	/** Setup > Asset Sourcing; refreshed with the docs section. */
 	TSharedPtr<class SProtoBoyAssetSourcingPanel> AssetSourcingPanel;
 	FDelegateHandle ConnectionChangedHandle;

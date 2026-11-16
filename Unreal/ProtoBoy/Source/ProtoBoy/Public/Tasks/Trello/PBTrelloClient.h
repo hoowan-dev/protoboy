@@ -39,6 +39,32 @@ struct FProtoBoyTrelloCategorySync
 		int32 NumCards = 0;
 	};
 
+	/** A "To Do - <Category>" list that matches a task category (or Uncategorized), with its open cards in board order. */
+	struct FCategoryList
+	{
+		/** The category as the list names it (e.g. "Combat"). */
+		FString Category;
+		FString ListId;
+		TArray<FProtoBoyTask> Tasks;
+	};
+
+	/** A category label to add to a card, or another category's label to take off it. */
+	struct FLabelChange
+	{
+		FString CardId;
+		/** The category the label is named after. */
+		FString LabelName;
+		/** Empty when the label is in LabelsToCreate (resolved when it's created). */
+		FString LabelId;
+		bool bAdd = true;
+		/** The list the card ends up in, for the window ("To Do - Combat"). */
+		FString ListName;
+	};
+
+	/** The lists that stay, with their tasks: what the Tasks page shows under each category. */
+	TArray<FCategoryList> CategoryLists;
+	/** Open cards in the team's In Progress list (TrelloInProgressListId), in board order. */
+	TArray<FProtoBoyTask> InProgressTasks;
 	/** Names of the lists to create, in board order ("To Do - Uncategorized" first when it's missing). */
 	TArray<FString> ListsToCreate;
 	/** Lists whose cards move to "To Do - Uncategorized" before the list is archived (Trello can't delete lists). */
@@ -47,11 +73,19 @@ struct FProtoBoyTrelloCategorySync
 	FString UncategorizedListId;
 	/** True when the team's mapped To Do list (TrelloToDoListId) is one of ListsToRemove: it moves to Uncategorized. */
 	bool bRemapsToDoList = false;
+	/** Categories with no board label of that name yet. Uncategorized gets none. */
+	TArray<FString> LabelsToCreate;
+	/**
+	 * Every card in a "To Do - <Category>" list carries that category's label and no other category's, so a card can be
+	 * traced to its category after it moves on (In Progress, Done). Cards in Uncategorized (and those moved there from
+	 * ListsToRemove) carry no category label.
+	 */
+	TArray<FLabelChange> LabelChanges;
 	/** New lists go between these positions (board order), after the existing To Do lists. Unset = board edge. */
 	TOptional<double> InsertAfterPos;
 	TOptional<double> InsertBeforePos;
 
-	bool IsInSync() const { return ListsToCreate.IsEmpty() && ListsToRemove.IsEmpty(); }
+	bool IsInSync() const { return ListsToCreate.IsEmpty() && ListsToRemove.IsEmpty() && LabelsToCreate.IsEmpty() && LabelChanges.IsEmpty(); }
 };
 
 /**
@@ -86,11 +120,15 @@ public:
 	/** The category in a "To Do - <Category>" list name (any case, "-" or an en dash). False for other lists. */
 	static bool ParseCategoryListName(const FString& ListName, FString& OutCategory);
 
-	/** Compare the configured board's lists with Categories (task category titles, in map order). Changes nothing. */
+	/**
+	 * Compare the configured board's lists with Categories (task category titles, in map order), and read the open cards
+	 * in each matching list (FProtoBoyTrelloCategorySync::CategoryLists). Changes nothing.
+	 */
 	void PlanCategorySync(const TArray<FString>& Categories, FCategorySyncCallback OnDone);
 	/**
-	 * Carry out a plan: create the missing lists, then for each extra list move its cards to "To Do - Uncategorized" and
-	 * archive it. Stops at the first error. If the mapped To Do list was archived, TrelloToDoListId moves to Uncategorized.
+	 * Carry out a plan: create the missing labels and lists, for each extra list move its cards to "To Do - Uncategorized"
+	 * and archive it, then add and remove the cards' category labels. Stops at the first error. If the mapped To Do list
+	 * was archived, TrelloToDoListId moves to Uncategorized.
 	 */
 	void ApplyCategorySync(const FProtoBoyTrelloCategorySync& Plan, FDoneCallback OnDone);
 

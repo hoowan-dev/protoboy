@@ -500,4 +500,14 @@ void FProtoBoyTrelloConnector::SetState(EState NewState)
 	OnConnectionChanged.Broadcast();
 }
 
+void FProtoBoyTrelloConnector::SetLastTaskSync(const FDateTime& Utc)
+{
+	if (!IsConnected())
+	{
+		return;
+	}
+	Connection.LastTaskSyncUtc = Utc.ToIso8601();
+	FProtoBoyTasksConnectionStore::Save(Connection);
+}
+
 #undef LOCTEXT_NAMESPACE

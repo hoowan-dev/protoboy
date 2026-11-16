@@ -44,6 +44,8 @@ public:
 	/** Why the last connect attempt failed; empty after success or a new attempt. */
 	const FText& GetLastError() const { return LastError; }
 	const FProtoBoyTasksConnection& GetConnection() const { return Connection; }
+	/** Record a successful task category sync (saved with the connection). No-op when not connected. */
+	void SetLastTaskSync(const FDateTime& Utc);
 
 	/** UProtoBoySettings::TrelloApiKey, falling back to ProtoBoy's built-in key. */
 	static FString GetApiKey();

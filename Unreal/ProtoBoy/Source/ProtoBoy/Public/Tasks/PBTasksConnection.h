@@ -50,6 +50,10 @@ struct PROTOBOY_API FProtoBoyTasksConnection
 	UPROPERTY()
 	FString ConnectedAtUtc;
 
+	/** When the board's To Do lists last matched the task categories (Sync), UTC, ISO 8601. Empty = never. */
+	UPROPERTY()
+	FString LastTaskSyncUtc;
+
 	bool IsSet() const { return Provider != EProtoBoyTaskProvider::None; }
 };
 

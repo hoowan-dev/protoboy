@@ -94,7 +94,7 @@ void SProtoBoyTrelloSyncDialog::Construct(const FArguments& InArgs)
 				.FillWidth(1.f)
 				[
 					SNew(STextBlock)
-					.Text(FText::Format(LOCTEXT("Explanation", "The Trello board's To Do lists don't match the doc map's task categories. The board needs one \"{0}\" list plus one \"To Do - <Category>\" list per task category. Resync will:"),
+					.Text(FText::Format(LOCTEXT("Explanation", "The Trello board's To Do lists or labels don't match the doc map's task categories. The board needs one \"{0}\" list plus one \"To Do - <Category>\" list per task category, and each card in a category's list carries that category's label. Resync will:"),
 						FText::FromString(FProtoBoyTrelloClient::GetCategoryListName(ProtoBoyTasks::UncategorizedName))))
 					.AutoWrapText(true)
 				]
@@ -178,6 +178,10 @@ TArray<FText> SProtoBoyTrelloSyncDialog::DescribeActions() const
 {
 	const FText Uncategorized = FText::FromString(FProtoBoyTrelloClient::GetCategoryListName(ProtoBoyTasks::UncategorizedName));
 	TArray<FText> Lines;
+	for (const FString& Name : Plan.LabelsToCreate)
+	{
+		Lines.Add(FText::Format(LOCTEXT("AddLabel", "Add the label \"{0}\" to the board."), FText::FromString(Name)));
+	}
 	for (const FString& Name : Plan.ListsToCreate)
 	{
 		Lines.Add(FText::Format(LOCTEXT("AddList", "Add the list \"{0}\"."), FText::FromString(Name)));
@@ -189,6 +193,34 @@ TArray<FText> SProtoBoyTrelloSyncDialog::DescribeActions() const
 				FText::FromString(List.Name), FText::AsNumber(List.NumCards), Uncategorized)
 			: FText::Format(LOCTEXT("RemoveEmptyList", "Delete the empty list \"{0}\" (no task category is called that). Trello archives deleted lists."),
 				FText::FromString(List.Name)));
+	}
+	// Label changes, grouped: "Add the label "Combat" to 4 cards in "To Do - Combat"."
+	struct FGroup
+	{
+		bool bAdd;
+		FString Label;
+		FString List;
+		int32 Count;
+	};
+	TArray<FGroup> Groups;
+	for (const FProtoBoyTrelloCategorySync::FLabelChange& Change : Plan.LabelChanges)
+	{
+		FGroup* Group = Groups.FindByPredicate([&Change](const FGroup& G) { return G.bAdd == Change.bAdd && G.Label == Change.LabelName && G.List == Change.ListName; });
+		if (Group)
+		{
+			++Group->Count;
+		}
+		else
+		{
+			Groups.Add({ Change.bAdd, Change.LabelName, Change.ListName, 1 });
+		}
+	}
+	for (const FGroup& Group : Groups)
+	{
+		Lines.Add(FText::Format(Group.bAdd
+				? LOCTEXT("AddCardLabel", "Add the label \"{0}\" to {1} {1}|plural(one=card,other=cards) in \"{2}\".")
+				: LOCTEXT("RemoveCardLabel", "Remove the label \"{0}\" from {1} {1}|plural(one=card,other=cards) in \"{2}\" (they're no longer in that category)."),
+			FText::FromString(Group.Label), FText::AsNumber(Group.Count), FText::FromString(Group.List)));
 	}
 	if (Plan.bRemapsToDoList)
 	{
