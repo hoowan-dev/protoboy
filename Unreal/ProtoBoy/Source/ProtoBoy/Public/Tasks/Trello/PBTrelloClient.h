@@ -26,6 +26,35 @@ struct FProtoBoyTrelloBoardSetup
 };
 
 /**
+ * What it takes to make the board's To Do lists match the doc map's task categories: one "To Do - Uncategorized" list
+ * plus one "To Do - <Category>" list per task category. Other lists are left alone.
+ */
+struct FProtoBoyTrelloCategorySync
+{
+	/** A "To Do - <Category>" list whose category no longer exists. */
+	struct FExtraList
+	{
+		FString Id;
+		FString Name;
+		int32 NumCards = 0;
+	};
+
+	/** Names of the lists to create, in board order ("To Do - Uncategorized" first when it's missing). */
+	TArray<FString> ListsToCreate;
+	/** Lists whose cards move to "To Do - Uncategorized" before the list is archived (Trello can't delete lists). */
+	TArray<FExtraList> ListsToRemove;
+	/** The existing "To Do - Uncategorized" list; empty when it has to be created. */
+	FString UncategorizedListId;
+	/** True when the team's mapped To Do list (TrelloToDoListId) is one of ListsToRemove: it moves to Uncategorized. */
+	bool bRemapsToDoList = false;
+	/** New lists go between these positions (board order), after the existing To Do lists. Unset = board edge. */
+	TOptional<double> InsertAfterPos;
+	TOptional<double> InsertBeforePos;
+
+	bool IsInSync() const { return ListsToCreate.IsEmpty() && ListsToRemove.IsEmpty(); }
+};
+
+/**
  * Trello REST client and task provider. Uses the user's token from FProtoBoyTrelloConnector and the team's board and
  * list mapping from UProtoBoySettings (TrelloBoardId, TrelloToDoListId, ...). Every task call is limited to that board.
  */
@@ -48,6 +77,22 @@ public:
 	 * Doesn't save settings; the caller stores the returned mapping.
 	 */
 	void ApplyBoardTemplate(const FString& ExistingBoardId, const FString& ExistingBoardName, const FString& NewBoardName, FSetupCallback OnDone);
+
+	// Task categories
+	using FCategorySyncCallback = TFunction<void(const TProtoBoyTaskResult<FProtoBoyTrelloCategorySync>&)>;
+
+	/** "To Do - <Category>". */
+	static FString GetCategoryListName(const FString& Category);
+	/** The category in a "To Do - <Category>" list name (any case, "-" or an en dash). False for other lists. */
+	static bool ParseCategoryListName(const FString& ListName, FString& OutCategory);
+
+	/** Compare the configured board's lists with Categories (task category titles, in map order). Changes nothing. */
+	void PlanCategorySync(const TArray<FString>& Categories, FCategorySyncCallback OnDone);
+	/**
+	 * Carry out a plan: create the missing lists, then for each extra list move its cards to "To Do - Uncategorized" and
+	 * archive it. Stops at the first error. If the mapped To Do list was archived, TrelloToDoListId moves to Uncategorized.
+	 */
+	void ApplyCategorySync(const FProtoBoyTrelloCategorySync& Plan, FDoneCallback OnDone);
 
 	/** The list for a status: by name ("To Do", "Doing", "Done", ...). Empty if none matches. */
 	static FString GuessListId(const TArray<FProtoBoyTrelloItem>& Lists, EProtoBoyTaskStatus Status);

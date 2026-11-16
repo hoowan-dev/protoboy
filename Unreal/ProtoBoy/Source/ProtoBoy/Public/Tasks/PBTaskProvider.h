@@ -78,6 +78,14 @@ public:
 
 namespace ProtoBoyTasks
 {
+	/**
+	 * The catch-all task category: tasks that belong to no doc. The board has a "To Do - Uncategorized" list for it, so
+	 * no doc may be titled this (FProtoBoyDocMap refuses it).
+	 */
+	PROTOBOY_API extern const TCHAR* UncategorizedName;
+	/** True for "Uncategorized" (any case, surrounding spaces ignored). */
+	PROTOBOY_API bool IsReservedCategoryName(const FString& Name);
+
 	/** "todo", "in_progress", "done", "other" (the names agents use). */
 	PROTOBOY_API FString StatusToString(EProtoBoyTaskStatus Status);
 	PROTOBOY_API TOptional<EProtoBoyTaskStatus> StatusFromString(const FString& Value);

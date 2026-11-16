@@ -22,6 +22,31 @@ public:
 private:
 	/** Rebuild the Documentation section from the current connection. Bound to OnConnectionChanged. */
 	void RebuildDocsSection();
+	/** Tasks: one row per task category on the doc map. Rebuilt on doc map changes. */
+	void RebuildTasksSection();
+	/** Task category titles, in doc map order. */
+	TArray<FString> GetTaskCategoryNames() const;
+	/**
+	 * Compare the Trello board's To Do lists with the task categories (Sync with Trello). With bPromptIfOutOfSync, opens
+	 * the out-of-sync window listing what a resync changes.
+	 */
+	void CheckTaskSync(bool bPromptIfOutOfSync);
+
+	/** Whether the board's To Do lists match the task categories, shown next to the Sync button. */
+	enum class ETaskSyncState : uint8
+	{
+		/** Not checked, or the categories changed since. */
+		Unknown,
+		Checking,
+		InSync,
+		OutOfSync,
+		/** Trello couldn't be asked (TaskSyncError says why). */
+		Failed,
+	};
+	ETaskSyncState TaskSyncState = ETaskSyncState::Unknown;
+	FText TaskSyncError;
+	/** The categories TaskSyncState was checked against. */
+	TArray<FString> TaskSyncCategories;
 
 	/** A sidebar entry and the page it opens. */
 	struct FPage
@@ -69,7 +94,7 @@ private:
 	/** Documentation: the doc map, disabled with a warning until setup is finished. */
 	TSharedRef<SWidget> MakeDocumentationSection();
 
-	/** Tasks: disabled with a warning until setup is finished; blank otherwise for now. */
+	/** Tasks: a warning until setup is finished, then the doc map's task categories. */
 	TSharedRef<SWidget> MakeTasksSection();
 
 	/**
@@ -96,6 +121,7 @@ private:
 	/** Opens the Setup page, where Asset Sourcing is edited. */
 
 	TSharedPtr<class SBox> DocsSection;
+	TSharedPtr<class SBox> TasksList;
 	/** Setup > Asset Sourcing; refreshed with the docs section. */
 	TSharedPtr<class SProtoBoyAssetSourcingPanel> AssetSourcingPanel;
 	FDelegateHandle ConnectionChangedHandle;

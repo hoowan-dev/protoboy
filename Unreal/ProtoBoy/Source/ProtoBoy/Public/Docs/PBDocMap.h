@@ -151,6 +151,14 @@ public:
 
 	/** Mark or unmark a doc as a task category, in its frontmatter ("protoboy-task-category: true", removed when false). */
 	bool SetTaskCategory(const FString& Id, bool bTaskCategory, FText& OutError);
+	/** Docs marked as task categories, in map order (depth first from the Game doc). */
+	TArray<const FProtoBoyDocNode*> GetTaskCategories() const;
+
+	/**
+	 * False with a reason for titles no doc may have: "Uncategorized" is the task board's catch-all category
+	 * (ProtoBoyTasks::UncategorizedName). Checked by CreateDoc, AddToMap and ApplyTemplate.
+	 */
+	static bool IsAllowedTitle(const FString& Title, FText& OutWhyNot);
 
 	/**
 	 * Put an existing doc on the map under ParentId (empty = the Game doc) by adding ProtoBoy's frontmatter; its text is

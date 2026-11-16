@@ -13,13 +13,20 @@
 #include "Styling/CoreStyle.h"
 #include "Styling/StyleColors.h"
 #include "UI/PBStyle.h"
+#include "Docs/PBDocMap.h"
 #include "UI/Docs/Map/SPBDocMapEditor.h"
+#include "UI/Docs/Map/SPBDocMapNode.h"
 #include "UI/Health/SPBDocHealthPanel.h"
 #include "UI/Sourcing/SPBAssetSourcingPanel.h"
+#include "Tasks/PBTasksConnection.h"
+#include "Tasks/Trello/PBTrelloClient.h"
+#include "Tasks/Trello/PBTrelloConnector.h"
 #include "UI/Tasks/SPBConnectTasksDialog.h"
+#include "UI/Tasks/Trello/SPBTrelloSyncDialog.h"
 #include "UI/Docs/SPBConnectDocsDialog.h"
 #include "UI/MCP/SPBConnectLLMDialog.h"
 #include "Widgets/Images/SImage.h"
+#include "Widgets/Images/SThrobber.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SEditableTextBox.h"
@@ -197,13 +204,19 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 	PageList->SetSelection(Pages[ActivePage]);
 
 	RebuildDocsSection();
+	RebuildTasksSection();
 
 	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
 	{
 		ConnectionChangedHandle = Subsystem->GetObsidianConnector().OnConnectionChanged.AddSP(
 			this, &SProtoBoyDashboard::RebuildDocsSection);
-		// Creating the Game doc (from the doc map or setup) completes the docs setup step.
-		DocMapChangedHandle = Subsystem->GetDocMap().OnChanged.AddSP(this, &SProtoBoyDashboard::RebuildDocsSection);
+		// Creating the Game doc (from the doc map or setup) completes the docs setup step; marking a doc a task
+		// category changes the Tasks page. Connection changes refresh the map, so they arrive here too.
+		DocMapChangedHandle = Subsystem->GetDocMap().OnChanged.AddSPLambda(this, [this]()
+		{
+			RebuildDocsSection();
+			RebuildTasksSection();
+		});
 	}
 }
 
@@ -823,10 +836,247 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeDocumentationSection()
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
 {
-	// TODO: The task board, grouped by the doc map's task categories (docs marked "protoboy-task-category"), shown
-	// only once IsSetupDone(). Until then the page is just the setup warning.
-	return MakeSection(LOCTEXT("TasksPageHeader", "Tasks"),
-		MakeSetupLock(LOCTEXT("TasksLocked", "Finish setup to use tasks: connect {0} on the Setup page.")));
+	// TODO: The task board's tasks under each category.
+	const TSharedRef<SWidget> Body = SNew(SVerticalBox)
+
+		// Sync with the connected task service, and whether the board matches the task categories
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 0.f, 0.f, 8.f)
+		[
+			SNew(SHorizontalBox)
+			.Visibility_Lambda([this]() { return IsSetupDone() ? EVisibility::Visible : EVisibility::Collapsed; })
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SButton)
+				.Text_Lambda([]()
+				{
+					const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+					const EProtoBoyTaskProvider Provider = Subsystem ? Subsystem->GetTrelloConnector().GetConnection().Provider : EProtoBoyTaskProvider::None;
+					return FText::Format(LOCTEXT("SyncTasks", "Sync with {0}"), ProtoBoyTasks::GetProviderName(Provider));
+				})
+				.ToolTipText(LOCTEXT("SyncTasksTip", "Check that the board has a \"To Do - Uncategorized\" list and a \"To Do - <Category>\" list for each task category, and offer to fix it if not."))
+				.IsEnabled_Lambda([this]() { return TaskSyncState != ETaskSyncState::Checking; })
+				.OnClicked_Lambda([this]() { CheckTaskSync(/*bPromptIfOutOfSync*/ true); return FReply::Handled(); })
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(8.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SCircularThrobber)
+				.Radius(8.f)
+				.Visibility_Lambda([this]() { return TaskSyncState == ETaskSyncState::Checking ? EVisibility::Visible : EVisibility::Collapsed; })
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(8.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SImage)
+				.Visibility_Lambda([this]()
+				{
+					return TaskSyncState == ETaskSyncState::InSync || TaskSyncState == ETaskSyncState::OutOfSync ? EVisibility::Visible : EVisibility::Collapsed;
+				})
+				.Image_Lambda([this]()
+				{
+					return FAppStyle::Get().GetBrush(TaskSyncState == ETaskSyncState::InSync ? "Icons.SuccessWithColor" : "Icons.XCircle");
+				})
+				.ToolTipText_Lambda([this]()
+				{
+					return TaskSyncState == ETaskSyncState::InSync
+						? LOCTEXT("TasksInSync", "The board's To Do lists match the task categories.")
+						: LOCTEXT("TasksOutOfSync", "Out of sync: the board's To Do lists don't match the task categories. Press Sync to see what's different and resync.");
+				})
+			]
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			.VAlign(VAlign_Center)
+			.Padding(8.f, 0.f, 0.f, 0.f)
+			[
+				SNew(STextBlock)
+				.Visibility_Lambda([this]() { return TaskSyncState == ETaskSyncState::Failed ? EVisibility::Visible : EVisibility::Collapsed; })
+				.Text_Lambda([this]() { return TaskSyncError; })
+				.ColorAndOpacity(FStyleColors::Error)
+				.AutoWrapText(true)
+			]
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			MakeSetupLock(LOCTEXT("TasksLocked", "Finish setup to use tasks: connect {0} on the Setup page."))
+		]
+
+		// Filled by RebuildTasksSection
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SAssignNew(TasksList, SBox)
+			.Visibility_Lambda([this]() { return IsSetupDone() ? EVisibility::Visible : EVisibility::Collapsed; })
+		];
+
+	return MakeSection(LOCTEXT("TasksPageHeader", "Task Categories"), Body);
+}
+
+TArray<FString> SProtoBoyDashboard::GetTaskCategoryNames() const
+{
+	TArray<FString> Names;
+	if (const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		for (const FProtoBoyDocNode* Doc : Subsystem->GetDocMap().GetTaskCategories())
+		{
+			Names.Add(Doc->Title);
+		}
+	}
+	return Names;
+}
+
+void SProtoBoyDashboard::CheckTaskSync(bool bPromptIfOutOfSync)
+{
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	if (!Subsystem)
+	{
+		return;
+	}
+	const TArray<FString> Categories = GetTaskCategoryNames();
+	TaskSyncState = ETaskSyncState::Checking;
+	TaskSyncCategories = Categories;
+
+	const TWeakPtr<SProtoBoyDashboard> WeakThis = SharedThis(this);
+	Subsystem->GetTrelloClient().PlanCategorySync(Categories, [WeakThis, Categories, bPromptIfOutOfSync](const TProtoBoyTaskResult<FProtoBoyTrelloCategorySync>& Result)
+	{
+		const TSharedPtr<SProtoBoyDashboard> This = WeakThis.Pin();
+		if (!This.IsValid())
+		{
+			return;
+		}
+		// The categories changed while Trello answered: the result is about the old ones.
+		if (This->GetTaskCategoryNames() != Categories)
+		{
+			This->TaskSyncState = ETaskSyncState::Unknown;
+			return;
+		}
+		if (!Result.bOk)
+		{
+			This->TaskSyncState = ETaskSyncState::Failed;
+			This->TaskSyncError = Result.Error;
+			return;
+		}
+		if (Result.Value.IsInSync())
+		{
+			This->TaskSyncState = ETaskSyncState::InSync;
+			return;
+		}
+		This->TaskSyncState = ETaskSyncState::OutOfSync;
+		if (bPromptIfOutOfSync)
+		{
+			// After a resync attempt, check again quietly so the icon shows what the board looks like now.
+			SProtoBoyTrelloSyncDialog::Open(This, Result.Value, [WeakThis](bool)
+			{
+				if (const TSharedPtr<SProtoBoyDashboard> Dashboard = WeakThis.Pin())
+				{
+					Dashboard->CheckTaskSync(/*bPromptIfOutOfSync*/ false);
+				}
+			});
+		}
+	});
+}
+
+void SProtoBoyDashboard::RebuildTasksSection()
+{
+	if (!TasksList.IsValid())
+	{
+		return;
+	}
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	const FProtoBoyDocMap* Map = Subsystem ? &Subsystem->GetDocMap() : nullptr;
+
+	// In doc map order, so categories read like the map does.
+	const TArray<const FProtoBoyDocNode*> Categories = Map ? Map->GetTaskCategories() : TArray<const FProtoBoyDocNode*>();
+
+	// A sync result is about the categories it was checked against; once they change it no longer says anything.
+	if (TaskSyncState != ETaskSyncState::Checking && GetTaskCategoryNames() != TaskSyncCategories)
+	{
+		TaskSyncState = ETaskSyncState::Unknown;
+	}
+
+	if (Categories.IsEmpty())
+	{
+		TasksList->SetContent(
+			SNew(STextBlock)
+			.Text(LOCTEXT("NoTaskCategories", "No task categories yet. On the doc map, right-click a doc and pick Task Category, or tick Task category under the selected doc."))
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true));
+		return;
+	}
+
+	TSharedRef<SVerticalBox> Rows = SNew(SVerticalBox);
+	for (const FProtoBoyDocNode* Doc : Categories)
+	{
+		Rows->AddSlot()
+		.AutoHeight()
+		.Padding(0.f, 0.f, 0.f, 4.f)
+		[
+			SNew(SBorder)
+			.BorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"))
+			.Padding(FMargin(0.f, 0.f, 10.f, 0.f))
+			[
+				SNew(SHorizontalBox)
+
+				// Layer color, as on the doc map
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				[
+					SNew(SBorder)
+					.BorderImage(FAppStyle::Get().GetBrush("WhiteBrush"))
+					.BorderBackgroundColor(SProtoBoyDocMapNode::GetLayerColor(Doc->Layer))
+					.Padding(FMargin(2.f, 0.f))
+				]
+
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(10.f, 6.f, 8.f, 6.f)
+				[
+					SNew(SImage)
+					.Image(FAppStyle::Get().GetBrush("Icons.Clipboard"))
+				]
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.f)
+				.VAlign(VAlign_Center)
+				.Padding(0.f, 6.f)
+				[
+					SNew(SVerticalBox)
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
+						SNew(STextBlock)
+						.Text(FText::FromString(Doc->Title))
+						.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
+						SNew(STextBlock)
+						.Text(FText::Format(LOCTEXT("TaskCategoryDetail", "{0} doc · {1}"),
+							ProtoBoyDocLayers::GetDisplayName(Doc->Layer), FText::FromString(Doc->Path)))
+						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+					]
+				]
+			]
+		];
+	}
+	TasksList->SetContent(Rows);
 }
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeSection(const FText& Title, const TSharedRef<SWidget>& Body)

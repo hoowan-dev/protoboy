@@ -53,6 +53,12 @@ struct PROTOBOY_API FProtoBoyTasksConnection
 	bool IsSet() const { return Provider != EProtoBoyTaskProvider::None; }
 };
 
+namespace ProtoBoyTasks
+{
+	/** The service's name, e.g. "Trello". Empty for None. */
+	PROTOBOY_API FText GetProviderName(EProtoBoyTaskProvider Provider);
+}
+
 /** Loads/saves FProtoBoyTasksConnection. */
 class PROTOBOY_API FProtoBoyTasksConnectionStore
 {

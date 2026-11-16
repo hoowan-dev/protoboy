@@ -8,6 +8,7 @@
 #include "Misc/DateTime.h"
 #include "Misc/Paths.h"
 #include "PBModule.h"
+#include "Tasks/PBTaskProvider.h"
 
 #define LOCTEXT_NAMESPACE "ProtoBoyDocMap"
 
@@ -873,6 +874,14 @@ bool FProtoBoyDocMap::ApplyTemplate(const FProtoBoyDocTemplate& Template, bool b
 	{
 		return false;
 	}
+	// Checked before anything is moved to the trash.
+	for (const FProtoBoyDocTemplateDoc& Doc : Template.Docs)
+	{
+		if (!IsAllowedTitle(Doc.Title, OutError))
+		{
+			return false;
+		}
+	}
 
 	// Clear first: everything on the map, and whatever sits where the template writes, goes to the trash.
 	const FProtoBoyDocTemplatePlan Plan = PlanTemplate(Template);
@@ -954,6 +963,10 @@ bool FProtoBoyDocMap::CreateDoc(EProtoBoyDocKind Kind, const FString& InTitle, c
 	if (Title.IsEmpty())
 	{
 		OutError = LOCTEXT("NoTitle", "Give the doc a title.");
+		return false;
+	}
+	if (!IsAllowedTitle(Title, OutError))
+	{
 		return false;
 	}
 	if (!ProtoBoyDocLayers::GetAddableKinds().Contains(Kind))
@@ -1038,6 +1051,42 @@ bool FProtoBoyDocMap::SetParent(const FString& Id, const FString& NewParentId, F
 	}, OutError);
 }
 
+TArray<const FProtoBoyDocNode*> FProtoBoyDocMap::GetTaskCategories() const
+{
+	TArray<const FProtoBoyDocNode*> Categories;
+	const FProtoBoyDocNode* Root = GetGame();
+	if (!Root)
+	{
+		return Categories;
+	}
+	TArray<const FProtoBoyDocNode*> Stack = { Root };
+	while (!Stack.IsEmpty())
+	{
+		const FProtoBoyDocNode* Doc = Stack.Pop();
+		if (Doc->bTaskCategory)
+		{
+			Categories.Add(Doc);
+		}
+		const TArray<const FProtoBoyDocNode*> Children = GetChildren(Doc->Id);
+		for (int32 Index = Children.Num() - 1; Index >= 0; --Index)
+		{
+			Stack.Push(Children[Index]);
+		}
+	}
+	return Categories;
+}
+
+bool FProtoBoyDocMap::IsAllowedTitle(const FString& Title, FText& OutWhyNot)
+{
+	if (ProtoBoyTasks::IsReservedCategoryName(Title))
+	{
+		OutWhyNot = FText::Format(LOCTEXT("ReservedTitle", "A doc can't be called \"{0}\": the task board uses that name for tasks that belong to no doc. Pick another title."),
+			FText::FromString(ProtoBoyTasks::UncategorizedName));
+		return false;
+	}
+	return true;
+}
+
 bool FProtoBoyDocMap::SetTaskCategory(const FString& Id, bool bTaskCategory, FText& OutError)
 {
 	const FProtoBoyDocNode* Node = Find(Id);
@@ -1069,6 +1118,11 @@ bool FProtoBoyDocMap::AddToMap(const FString& Path, EProtoBoyDocLayer Layer, con
 	if (Layer == EProtoBoyDocLayer::Game && GetGame())
 	{
 		OutError = LOCTEXT("OnlyOneGame", "The map already has a Game doc.");
+		return false;
+	}
+	// The title the map would show for it (see Load).
+	if (!IsAllowedTitle(Doc->Title.IsEmpty() ? FPaths::GetBaseFilename(Doc->Path) : Doc->Title, OutError))
+	{
 		return false;
 	}
 

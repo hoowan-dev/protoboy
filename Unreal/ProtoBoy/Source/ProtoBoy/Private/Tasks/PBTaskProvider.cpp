@@ -3,6 +3,12 @@
 namespace ProtoBoyTasks
 {
 	const TCHAR* DesignDocPrefix = TEXT("Design doc: ");
+	const TCHAR* UncategorizedName = TEXT("Uncategorized");
+
+	bool IsReservedCategoryName(const FString& Name)
+	{
+		return Name.TrimStartAndEnd().Equals(UncategorizedName, ESearchCase::IgnoreCase);
+	}
 
 	FString StatusToString(EProtoBoyTaskStatus Status)
 	{

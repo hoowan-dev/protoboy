@@ -666,4 +666,301 @@ void FProtoBoyTrelloClient::AddComment(const FString& Id, const FString& Text, F
 	});
 }
 
+// --- Task categories ----------------------------------------------------------------------------------------------
+
+FString FProtoBoyTrelloClient::GetCategoryListName(const FString& Category)
+{
+	return FString::Printf(TEXT("To Do - %s"), *Category.TrimStartAndEnd());
+}
+
+bool FProtoBoyTrelloClient::ParseCategoryListName(const FString& ListName, FString& OutCategory)
+{
+	FString Rest = ListName.TrimStartAndEnd();
+	if (!Rest.StartsWith(TEXT("To Do"), ESearchCase::IgnoreCase))
+	{
+		return false;
+	}
+	Rest = Rest.RightChop(5).TrimStart();
+	// "-" or an en dash (some apps turn one into the other).
+	if (!Rest.StartsWith(TEXT("-")) && !Rest.StartsWith(TEXT("–")))
+	{
+		return false;
+	}
+	OutCategory = Rest.RightChop(1).TrimStartAndEnd();
+	return !OutCategory.IsEmpty();
+}
+
+void FProtoBoyTrelloClient::PlanCategorySync(const TArray<FString>& Categories, FCategorySyncCallback OnDone)
+{
+	using FResult = TProtoBoyTaskResult<FProtoBoyTrelloCategorySync>;
+	FText WhyNot;
+	if (!IsReady(WhyNot))
+	{
+		OnDone(FResult::Failure(WhyNot));
+		return;
+	}
+	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
+	if (!IsSafeId(Settings->TrelloBoardId))
+	{
+		OnDone(FResult::Failure(LOCTEXT("SyncBadBoard", "Invalid board id.")));
+		return;
+	}
+
+	// Categories the board should have a list for: Uncategorized first, then each category once, in map order.
+	TArray<FString> Wanted = { ProtoBoyTasks::UncategorizedName };
+	for (const FString& Category : Categories)
+	{
+		const FString Name = Category.TrimStartAndEnd();
+		if (!Name.IsEmpty() && !Wanted.ContainsByPredicate([&Name](const FString& W) { return W.Equals(Name, ESearchCase::IgnoreCase); }))
+		{
+			Wanted.Add(Name);
+		}
+	}
+
+	const FString Path = FString::Printf(TEXT("boards/%s/lists?filter=open&fields=name,pos&cards=open&card_fields=id"), *Settings->TrelloBoardId);
+	Call(TEXT("GET"), Path, nullptr, [Wanted, OnDone = MoveTemp(OnDone)](bool bOk, const FText& Error, const TSharedPtr<FJsonValue>& Json)
+	{
+		const TArray<TSharedPtr<FJsonValue>>* Array = nullptr;
+		if (!bOk || !Json->TryGetArray(Array))
+		{
+			OnDone(FResult::Failure(bOk ? LOCTEXT("SyncBadLists", "Trello sent an unexpected list of lists.") : Error));
+			return;
+		}
+
+		struct FList
+		{
+			FString Id;
+			FString Name;
+			double Pos = 0.0;
+			int32 NumCards = 0;
+		};
+		TArray<FList> Lists;
+		for (const TSharedPtr<FJsonValue>& Value : *Array)
+		{
+			const TSharedPtr<FJsonObject>* Object = nullptr;
+			if (!Value->TryGetObject(Object))
+			{
+				continue;
+			}
+			FList& List = Lists.AddDefaulted_GetRef();
+			List.Id = ProtoBoyTrelloClient::GetString(*Object, TEXT("id"));
+			List.Name = ProtoBoyTrelloClient::GetString(*Object, TEXT("name"));
+			(*Object)->TryGetNumberField(TEXT("pos"), List.Pos);
+			const TArray<TSharedPtr<FJsonValue>>* Cards = nullptr;
+			if ((*Object)->TryGetArrayField(TEXT("cards"), Cards))
+			{
+				List.NumCards = Cards->Num();
+			}
+		}
+		Lists.Sort([](const FList& A, const FList& B) { return A.Pos < B.Pos; });
+
+		const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
+		FProtoBoyTrelloCategorySync Plan;
+		TArray<FString> Found;
+		int32 LastToDoIndex = INDEX_NONE;
+		for (int32 Index = 0; Index < Lists.Num(); ++Index)
+		{
+			const FList& List = Lists[Index];
+			FString Category;
+			if (!ParseCategoryListName(List.Name, Category))
+			{
+				// The team's plain "To Do" list counts as where the To Do lists are, for placing new ones.
+				if (List.Id == Settings->TrelloToDoListId)
+				{
+					LastToDoIndex = Index;
+				}
+				continue;
+			}
+			// Never archive the lists ProtoBoy maps In Progress and Done to, whatever they're called.
+			if (List.Id == Settings->TrelloInProgressListId || List.Id == Settings->TrelloDoneListId)
+			{
+				continue;
+			}
+			if (Wanted.ContainsByPredicate([&Category](const FString& W) { return W.Equals(Category, ESearchCase::IgnoreCase); }))
+			{
+				Found.Add(Category);
+				LastToDoIndex = Index;
+				if (ProtoBoyTasks::IsReservedCategoryName(Category) && Plan.UncategorizedListId.IsEmpty())
+				{
+					Plan.UncategorizedListId = List.Id;
+				}
+				continue;
+			}
+			Plan.ListsToRemove.Add({ List.Id, List.Name, List.NumCards });
+			Plan.bRemapsToDoList |= List.Id == Settings->TrelloToDoListId;
+		}
+
+		for (const FString& Category : Wanted)
+		{
+			if (!Found.ContainsByPredicate([&Category](const FString& F) { return F.Equals(Category, ESearchCase::IgnoreCase); }))
+			{
+				Plan.ListsToCreate.Add(GetCategoryListName(Category));
+			}
+		}
+
+		// New lists go right after the last To Do list that stays (else at the left edge of the board).
+		if (LastToDoIndex != INDEX_NONE)
+		{
+			Plan.InsertAfterPos = Lists[LastToDoIndex].Pos;
+			if (Lists.IsValidIndex(LastToDoIndex + 1))
+			{
+				Plan.InsertBeforePos = Lists[LastToDoIndex + 1].Pos;
+			}
+		}
+		else if (!Lists.IsEmpty())
+		{
+			Plan.InsertBeforePos = Lists[0].Pos;
+		}
+		OnDone(FResult::Success(MoveTemp(Plan)));
+	});
+}
+
+void FProtoBoyTrelloClient::ApplyCategorySync(const FProtoBoyTrelloCategorySync& Plan, FDoneCallback OnDone)
+{
+	using FResult = TProtoBoyTaskResult<bool>;
+	FText WhyNot;
+	if (!IsReady(WhyNot))
+	{
+		OnDone(FResult::Failure(WhyNot));
+		return;
+	}
+	const FString BoardId = GetDefault<UProtoBoySettings>()->TrelloBoardId;
+	if (!IsSafeId(BoardId))
+	{
+		OnDone(FResult::Failure(LOCTEXT("SyncBadBoard", "Invalid board id.")));
+		return;
+	}
+	for (const FProtoBoyTrelloCategorySync::FExtraList& List : Plan.ListsToRemove)
+	{
+		if (!IsSafeId(List.Id))
+		{
+			OnDone(FResult::Failure(LOCTEXT("SyncBadListId", "Invalid list id.")));
+			return;
+		}
+	}
+
+	// One request at a time, in order, sharing this state (same pattern as ApplyBoardTemplate).
+	using FStepDone = TFunction<void(bool, const FText&)>;
+	using FStep = TFunction<void(FStepDone)>;
+	struct FState
+	{
+		TArray<FStep> Steps;
+		int32 Next = 0;
+		FString UncategorizedListId;
+		FDoneCallback OnDone;
+		TFunction<void()> RunNext;
+	};
+	const TSharedRef<FState> State = MakeShared<FState>();
+	State->OnDone = MoveTemp(OnDone);
+	State->UncategorizedListId = Plan.UncategorizedListId;
+	const TWeakPtr<FState> WeakState = State;
+
+	// Create the missing lists, spaced evenly between the insert positions so they keep their order.
+	const int32 NumNew = Plan.ListsToCreate.Num();
+	for (int32 Index = 0; Index < NumNew; ++Index)
+	{
+		TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
+		const FString Name = Plan.ListsToCreate[Index];
+		Body->SetStringField(TEXT("name"), Name);
+		Body->SetStringField(TEXT("idBoard"), BoardId);
+		const double Fraction = double(Index + 1) / double(NumNew + 1);
+		if (Plan.InsertAfterPos.IsSet() && Plan.InsertBeforePos.IsSet())
+		{
+			Body->SetNumberField(TEXT("pos"), Plan.InsertAfterPos.GetValue() + (Plan.InsertBeforePos.GetValue() - Plan.InsertAfterPos.GetValue()) * Fraction);
+		}
+		else if (Plan.InsertAfterPos.IsSet())
+		{
+			Body->SetNumberField(TEXT("pos"), Plan.InsertAfterPos.GetValue() + 16384.0 * (Index + 1));
+		}
+		else if (Plan.InsertBeforePos.IsSet())
+		{
+			Body->SetNumberField(TEXT("pos"), Plan.InsertBeforePos.GetValue() * Fraction);
+		}
+		else
+		{
+			Body->SetStringField(TEXT("pos"), TEXT("bottom"));
+		}
+
+		State->Steps.Add([this, Body, Name, WeakState](FStepDone StepDone)
+		{
+			Call(TEXT("POST"), TEXT("lists"), Body, [Name, WeakState, StepDone = MoveTemp(StepDone)](bool bOk, const FText& Error, const TSharedPtr<FJsonValue>& Json)
+			{
+				const TSharedPtr<FJsonObject>* List = nullptr;
+				if (!bOk || !Json->TryGetObject(List))
+				{
+					StepDone(false, bOk ? LOCTEXT("SyncBadNewList", "Trello sent an unexpected list.") : Error);
+					return;
+				}
+				FString Category;
+				const TSharedPtr<FState> Pinned = WeakState.Pin();
+				if (Pinned.IsValid() && ParseCategoryListName(Name, Category) && ProtoBoyTasks::IsReservedCategoryName(Category))
+				{
+					Pinned->UncategorizedListId = ProtoBoyTrelloClient::GetString(*List, TEXT("id"));
+				}
+				StepDone(true, FText::GetEmpty());
+			});
+		});
+	}
+
+	// Move each extra list's cards to Uncategorized, then archive it.
+	for (const FProtoBoyTrelloCategorySync::FExtraList& List : Plan.ListsToRemove)
+	{
+		const FString ListId = List.Id;
+		if (List.NumCards > 0)
+		{
+			State->Steps.Add([this, ListId, BoardId, WeakState](FStepDone StepDone)
+			{
+				const TSharedPtr<FState> Pinned = WeakState.Pin();
+				if (!Pinned.IsValid() || !IsSafeId(Pinned->UncategorizedListId))
+				{
+					StepDone(false, LOCTEXT("SyncNoUncategorized", "The To Do - Uncategorized list is missing, so the cards had nowhere to go."));
+					return;
+				}
+				Call(TEXT("POST"), FString::Printf(TEXT("lists/%s/moveAllCards?idBoard=%s&idList=%s"), *ListId, *BoardId, *Pinned->UncategorizedListId), nullptr,
+					[StepDone = MoveTemp(StepDone)](bool bOk, const FText& Error, const TSharedPtr<FJsonValue>&) { StepDone(bOk, Error); });
+			});
+		}
+		State->Steps.Add([this, ListId](FStepDone StepDone)
+		{
+			Call(TEXT("PUT"), FString::Printf(TEXT("lists/%s/closed?value=true"), *ListId), nullptr,
+				[StepDone = MoveTemp(StepDone)](bool bOk, const FText& Error, const TSharedPtr<FJsonValue>&) { StepDone(bOk, Error); });
+		});
+	}
+
+	// Holds State weakly (State owns this function); each step's callback holds it strongly while a request is in flight.
+	const bool bRemapsToDoList = Plan.bRemapsToDoList;
+	State->RunNext = [WeakState, bRemapsToDoList]()
+	{
+		const TSharedPtr<FState> Pinned = WeakState.Pin();
+		if (!Pinned.IsValid())
+		{
+			return;
+		}
+		if (!Pinned->Steps.IsValidIndex(Pinned->Next))
+		{
+			if (bRemapsToDoList && !Pinned->UncategorizedListId.IsEmpty())
+			{
+				UProtoBoySettings* Settings = GetMutableDefault<UProtoBoySettings>();
+				Settings->TrelloToDoListId = Pinned->UncategorizedListId;
+				Settings->TryUpdateDefaultConfigFile();
+			}
+			FDoneCallback Callback = MoveTemp(Pinned->OnDone);
+			Callback(FResult::Success(true));
+			return;
+		}
+		const TSharedRef<FState> Strong = Pinned.ToSharedRef();
+		Pinned->Steps[Pinned->Next++]([Strong](bool bOk, const FText& Error)
+		{
+			if (!bOk)
+			{
+				FDoneCallback Callback = MoveTemp(Strong->OnDone);
+				Callback(FResult::Failure(Error));
+				return;
+			}
+			Strong->RunNext();
+		});
+	};
+	State->RunNext();
+}
+
 #undef LOCTEXT_NAMESPACE

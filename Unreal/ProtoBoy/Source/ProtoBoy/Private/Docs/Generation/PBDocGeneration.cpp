@@ -203,6 +203,8 @@ When you're done, reply with only this JSON object inside a ```json fence, and n
 }
 ```
 
+No doc may be titled "Uncategorized" (the task board uses that name).
+
 "pillars" are 2-5 design pillars the project seems to be built around. Each doc's "examples" use the exact headings
 listed for its kind above; leave out headings you have nothing for.
 )MD"), *Project, *DescribeContent(), *DescribeHeadings());

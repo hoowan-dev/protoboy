@@ -6,6 +6,20 @@
 #include "Misc/Paths.h"
 #include "PBModule.h"
 
+#define LOCTEXT_NAMESPACE "ProtoBoyTasksConnection"
+
+FText ProtoBoyTasks::GetProviderName(EProtoBoyTaskProvider Provider)
+{
+	switch (Provider)
+	{
+	case EProtoBoyTaskProvider::Trello: return LOCTEXT("Trello", "Trello");
+	case EProtoBoyTaskProvider::None: break;
+	}
+	return FText::GetEmpty();
+}
+
+#undef LOCTEXT_NAMESPACE
+
 FString FProtoBoyTasksConnectionStore::GetFilePath()
 {
 	return FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("ProtoBoy/TasksConnection.json"));
