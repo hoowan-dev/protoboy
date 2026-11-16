@@ -22,6 +22,7 @@
 #include "Tasks/Trello/PBTrelloClient.h"
 #include "Tasks/Trello/PBTrelloConnector.h"
 #include "UI/Tasks/SPBConnectTasksDialog.h"
+#include "UI/Tasks/SPBGenerateTasksDialog.h"
 #include "UI/Tasks/Trello/SPBTrelloSyncDialog.h"
 #include "UI/Docs/SPBConnectDocsDialog.h"
 #include "UI/MCP/SPBConnectLLMDialog.h"
@@ -906,16 +907,54 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
 				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 			]
 
+			// The box always takes the free space, so Generate Tasks stays on the right.
 			+ SHorizontalBox::Slot()
 			.FillWidth(1.f)
 			.VAlign(VAlign_Center)
 			.Padding(8.f, 0.f, 0.f, 0.f)
 			[
-				SNew(STextBlock)
-				.Visibility_Lambda([this]() { return TaskSyncState == ETaskSyncState::Failed ? EVisibility::Visible : EVisibility::Collapsed; })
-				.Text_Lambda([this]() { return TaskSyncError; })
-				.ColorAndOpacity(FStyleColors::Error)
-				.AutoWrapText(true)
+				SNew(SBox)
+				[
+					SNew(STextBlock)
+					.Visibility_Lambda([this]() { return TaskSyncState == ETaskSyncState::Failed ? EVisibility::Visible : EVisibility::Collapsed; })
+					.Text_Lambda([this]() { return TaskSyncError; })
+					.ColorAndOpacity(FStyleColors::Error)
+					.AutoWrapText(true)
+				]
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(8.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("GenerateTasks", "Generate Tasks"))
+				.ToolTipText(LOCTEXT("GenerateTasksTip", "Draft tasks for the task categories from their docs with an LLM."))
+				.OnClicked_Lambda([this]()
+				{
+					// What's already in each category's To Do list (last Sync), so the agent doesn't repeat it.
+					SProtoBoyGenerateTasksDialog::FExistingTasks Existing;
+					for (const FProtoBoyTrelloCategorySync::FCategoryList& List : TaskLists)
+					{
+						TArray<FString>& Titles = Existing.FindOrAdd(List.Category.TrimStartAndEnd().ToLower());
+						for (const FProtoBoyTask& Task : List.Tasks)
+						{
+							Titles.Add(Task.Title);
+						}
+					}
+					const TWeakPtr<SProtoBoyDashboard> WeakThis = SharedThis(this);
+					SProtoBoyGenerateTasksDialog::Open(AsShared(), Existing, [WeakThis](bool bAddedTasks)
+					{
+						// Show the new tasks (and label them, if the board needs it).
+						const TSharedPtr<SProtoBoyDashboard> This = WeakThis.Pin();
+						if (bAddedTasks && This.IsValid())
+						{
+							This->CheckTaskSync(/*bPromptIfOutOfSync*/ false);
+						}
+					});
+					return FReply::Handled();
+				})
 			]
 		]
 

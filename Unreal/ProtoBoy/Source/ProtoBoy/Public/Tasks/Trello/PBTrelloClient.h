@@ -147,6 +147,8 @@ public:
 	virtual void CreateTask(const FString& Title, const FString& Description, EProtoBoyTaskStatus Status, FTaskCallback OnDone) override;
 	virtual void SetTaskStatus(const FString& Id, EProtoBoyTaskStatus Status, FTaskCallback OnDone) override;
 	virtual void AddComment(const FString& Id, const FString& Text, FDoneCallback OnDone) override;
+	/** Into "To Do - <Category>" with the category's board label (if the board has one yet; Sync adds it otherwise). */
+	virtual void CreateTasks(const TArray<FProtoBoyNewTask>& Tasks, FEachTaskCallback OnEach, FDoneCallback OnDone) override;
 
 private:
 	using FJsonCallback = TFunction<void(bool bOk, const FText& Error, const TSharedPtr<class FJsonValue>& Json)>;

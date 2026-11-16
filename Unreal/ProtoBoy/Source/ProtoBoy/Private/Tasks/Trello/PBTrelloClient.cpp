@@ -666,6 +666,166 @@ void FProtoBoyTrelloClient::AddComment(const FString& Id, const FString& Text, F
 	});
 }
 
+void FProtoBoyTrelloClient::CreateTasks(const TArray<FProtoBoyNewTask>& Tasks, FEachTaskCallback OnEach, FDoneCallback OnDone)
+{
+	using FResult = TProtoBoyTaskResult<bool>;
+	FText WhyNot;
+	if (!IsReady(WhyNot))
+	{
+		OnDone(FResult::Failure(WhyNot));
+		return;
+	}
+	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
+	const FString BoardId = Settings->TrelloBoardId;
+	if (!IsSafeId(BoardId))
+	{
+		OnDone(FResult::Failure(LOCTEXT("CreateBadBoard", "Invalid board id.")));
+		return;
+	}
+
+	struct FState
+	{
+		TArray<FProtoBoyNewTask> Tasks;
+		int32 Next = 0;
+		int32 NumCreated = 0;
+		FText LastError;
+		/** List name -> id, and label name (lowercase) -> id, for the board. */
+		TArray<FProtoBoyTrelloItem> Lists;
+		TMap<FString, FString> Labels;
+		FEachTaskCallback OnEach;
+		FDoneCallback OnDone;
+		TFunction<void()> CreateNext;
+	};
+	const TSharedRef<FState> State = MakeShared<FState>();
+	State->Tasks = Tasks;
+	State->OnEach = MoveTemp(OnEach);
+	State->OnDone = MoveTemp(OnDone);
+	const TWeakPtr<FState> WeakState = State;
+
+	// Step 3: one card at a time, in order.
+	State->CreateNext = [this, WeakState]()
+	{
+		const TSharedPtr<FState> Pinned = WeakState.Pin();
+		if (!Pinned.IsValid())
+		{
+			return;
+		}
+		if (!Pinned->Tasks.IsValidIndex(Pinned->Next))
+		{
+			FDoneCallback Callback = MoveTemp(Pinned->OnDone);
+			Callback(Pinned->NumCreated > 0 || Pinned->Tasks.IsEmpty() ? FResult::Success(true) : FResult::Failure(Pinned->LastError));
+			return;
+		}
+		const int32 Index = Pinned->Next++;
+		const FProtoBoyNewTask& Task = Pinned->Tasks[Index];
+
+		// The category's own list, else Uncategorized, else the plain To Do list.
+		FString Category = Task.Category.TrimStartAndEnd();
+		auto FindList = [&Pinned](const FString& Wanted) -> FString
+		{
+			for (const FProtoBoyTrelloItem& List : Pinned->Lists)
+			{
+				FString ListCategory;
+				if (ParseCategoryListName(List.Name, ListCategory) && ListCategory.Equals(Wanted, ESearchCase::IgnoreCase))
+				{
+					return List.Id;
+				}
+			}
+			return FString();
+		};
+		FString ListId = Category.IsEmpty() || ProtoBoyTasks::IsReservedCategoryName(Category) ? FString() : FindList(Category);
+		if (ListId.IsEmpty())
+		{
+			Category.Reset();
+			ListId = FindList(ProtoBoyTasks::UncategorizedName);
+		}
+		if (ListId.IsEmpty())
+		{
+			ListId = GetDefault<UProtoBoySettings>()->TrelloToDoListId;
+		}
+
+		TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
+		Body->SetStringField(TEXT("name"), Task.Title.Left(16384));
+		Body->SetStringField(TEXT("desc"), Task.Description.Left(16384));
+		Body->SetStringField(TEXT("idList"), ListId);
+		Body->SetStringField(TEXT("pos"), TEXT("bottom"));
+		if (const FString* LabelId = Category.IsEmpty() ? nullptr : Pinned->Labels.Find(Category.ToLower()))
+		{
+			Body->SetStringField(TEXT("idLabels"), *LabelId);
+		}
+
+		const TSharedRef<FState> Strong = Pinned.ToSharedRef();
+		Call(TEXT("POST"), FString::Printf(TEXT("cards?%s"), ProtoBoyTrelloClient::CardFields), Body, [this, Strong, Index](bool bOk, const FText& Error, const TSharedPtr<FJsonValue>& Json)
+		{
+			const TSharedPtr<FJsonObject>* Card = nullptr;
+			bool bContinue = true;
+			if (bOk && Json->TryGetObject(Card))
+			{
+				TMap<FString, FString> ListNames;
+				for (const FProtoBoyTrelloItem& List : Strong->Lists)
+				{
+					ListNames.Add(List.Id, List.Name);
+				}
+				++Strong->NumCreated;
+				bContinue = Strong->OnEach(Index, TProtoBoyTaskResult<FProtoBoyTask>::Success(ParseCard(*Card, ListNames)));
+			}
+			else
+			{
+				Strong->LastError = bOk ? LOCTEXT("CreateBadCard", "Trello sent an unexpected card.") : Error;
+				bContinue = Strong->OnEach(Index, TProtoBoyTaskResult<FProtoBoyTask>::Failure(Strong->LastError));
+			}
+			if (!bContinue)
+			{
+				// Stopped by the caller: the rest aren't created.
+				Strong->Tasks.SetNum(Strong->Next);
+			}
+			Strong->CreateNext();
+		});
+	};
+
+	// Step 2: the board's labels.
+	auto FetchLabels = [this, BoardId, State]()
+	{
+		Call(TEXT("GET"), FString::Printf(TEXT("boards/%s/labels?fields=name&limit=1000"), *BoardId), nullptr,
+			[State](bool bOk, const FText& Error, const TSharedPtr<FJsonValue>& Json)
+			{
+				const TArray<TSharedPtr<FJsonValue>>* Array = nullptr;
+				if (!bOk || !Json->TryGetArray(Array))
+				{
+					FDoneCallback Callback = MoveTemp(State->OnDone);
+					Callback(FResult::Failure(bOk ? LOCTEXT("CreateBadLabels", "Trello sent an unexpected list of labels.") : Error));
+					return;
+				}
+				for (const TSharedPtr<FJsonValue>& Value : *Array)
+				{
+					const TSharedPtr<FJsonObject>* Label = nullptr;
+					if (Value->TryGetObject(Label))
+					{
+						const FString Name = ProtoBoyTrelloClient::GetString(*Label, TEXT("name")).TrimStartAndEnd().ToLower();
+						if (!Name.IsEmpty() && !State->Labels.Contains(Name))
+						{
+							State->Labels.Add(Name, ProtoBoyTrelloClient::GetString(*Label, TEXT("id")));
+						}
+					}
+				}
+				State->CreateNext();
+			});
+	};
+
+	// Step 1: the board's lists.
+	FetchLists(BoardId, [State, FetchLabels](const TProtoBoyTaskResult<TArray<FProtoBoyTrelloItem>>& Result)
+	{
+		if (!Result.bOk)
+		{
+			FDoneCallback Callback = MoveTemp(State->OnDone);
+			Callback(FResult::Failure(Result.Error));
+			return;
+		}
+		State->Lists = Result.Value;
+		FetchLabels();
+	});
+}
+
 // --- Task categories ----------------------------------------------------------------------------------------------
 
 FString FProtoBoyTrelloClient::GetCategoryListName(const FString& Category)

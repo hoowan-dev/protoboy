@@ -37,6 +37,15 @@ struct FProtoBoyTask
 	TArray<FProtoBoyTaskComment> Comments;
 };
 
+/** A task to create in a task category's To Do list (IProtoBoyTaskProvider::CreateTasks). */
+struct FProtoBoyNewTask
+{
+	/** A task category's title; empty or unknown = Uncategorized. */
+	FString Category;
+	FString Title;
+	FString Description;
+};
+
 /** Result of an async task call. Error is set when bOk is false. */
 template <typename T>
 struct TProtoBoyTaskResult
@@ -59,6 +68,8 @@ public:
 	using FTasksCallback = TFunction<void(const TProtoBoyTaskResult<TArray<FProtoBoyTask>>&)>;
 	using FTaskCallback = TFunction<void(const TProtoBoyTaskResult<FProtoBoyTask>&)>;
 	using FDoneCallback = TFunction<void(const TProtoBoyTaskResult<bool>&)>;
+	/** One created task (or why it failed), by its index in the list passed to CreateTasks. Return false to stop there. */
+	using FEachTaskCallback = TFunction<bool(int32 Index, const TProtoBoyTaskResult<FProtoBoyTask>&)>;
 
 	virtual ~IProtoBoyTaskProvider() = default;
 
@@ -74,6 +85,12 @@ public:
 	virtual void CreateTask(const FString& Title, const FString& Description, EProtoBoyTaskStatus Status, FTaskCallback OnDone) = 0;
 	virtual void SetTaskStatus(const FString& Id, EProtoBoyTaskStatus Status, FTaskCallback OnDone) = 0;
 	virtual void AddComment(const FString& Id, const FString& Text, FDoneCallback OnDone) = 0;
+	/**
+	 * Create tasks in their categories' To Do lists, one at a time, tagged with the category. A category with no list of
+	 * its own goes to Uncategorized (else the plain To Do list). OnEach runs per task, OnDone once at the end; one failed
+	 * task doesn't stop the rest (OnDone fails only if none could be created).
+	 */
+	virtual void CreateTasks(const TArray<FProtoBoyNewTask>& Tasks, FEachTaskCallback OnEach, FDoneCallback OnDone) = 0;
 };
 
 namespace ProtoBoyTasks

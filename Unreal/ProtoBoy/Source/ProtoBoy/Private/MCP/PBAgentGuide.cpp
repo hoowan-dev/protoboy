@@ -44,7 +44,7 @@ the `protoboy` MCP tools are available:
   finish, `task_comment` to report what changed. Split out-of-scope work into new tasks with `task_create`.
 - **Keep docs current**: record how things work in Tech docs, the assets used in Content docs, and append to Design
   docs with `docs_update_section`. Humans own the Game doc and all existing text; never rewrite them.
-{ASSET_POLICY}- **Prompts**: `plan-feature`, `implement-task`, `record-decision`, `source-assets`.
+{ASSET_POLICY}- **Prompts**: `plan-feature`, `generate-tasks`, `implement-task`, `record-decision`, `source-assets`.
 
 ProtoBoy's tools are only available while the Unreal Editor is open with its MCP server running. Some changes need the
 user's approval in the editor; if one is denied, don't retry it, ask the user.

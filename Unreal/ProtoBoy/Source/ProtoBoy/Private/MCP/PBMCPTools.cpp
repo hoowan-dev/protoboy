@@ -216,6 +216,18 @@ namespace ProtoBoyMCPTools
 			Out += FString::Printf(TEXT("\n%d other docs aren't on the map (no layer); find them with docs_list or docs_search.\n"), Map.GetUnmappedDocs().Num());
 		}
 
+		// Task categories: where new tasks go (task_create's category).
+		Out += TEXT("\n## Task categories\n\nEach has a \"To Do - <Category>\" list on the board and a label of its name. Pass the category to task_create; tasks that fit none go to Uncategorized.\n\n");
+		const TArray<const FProtoBoyDocNode*> Categories = Map.GetTaskCategories();
+		for (const FProtoBoyDocNode* Category : Categories)
+		{
+			Out += FString::Printf(TEXT("- **%s** (%s)\n"), *Category->Title, *Category->Path);
+		}
+		if (Categories.IsEmpty())
+		{
+			Out += TEXT("_None yet: the team marks docs as task categories on ProtoBoy's doc map._\n");
+		}
+
 		// Tasks are optional: report why they're missing instead of failing.
 		IProtoBoyTaskProvider* Tasks = Subsystem->GetTaskProvider();
 		FText WhyNot = LOCTEXT("ContextNoBoard", "No task board is connected.");
@@ -616,6 +628,34 @@ namespace ProtoBoyMCPTools
 		}
 		Description += FString::Printf(TEXT("\n\n_Created by %s via ProtoBoy._"), *Call.ClientName);
 
+		// In a task category: its To Do list, tagged with its label.
+		const FString Category = GetString(Call, TEXT("category"));
+		if (!Category.IsEmpty())
+		{
+			if (Status.GetValue() != EProtoBoyTaskStatus::ToDo)
+			{
+				Done(FProtoBoyMCPToolResult::Error(TEXT("A task with a category starts in its To Do list: leave status out (or \"todo\").")));
+				return;
+			}
+			const TSharedRef<FProtoBoyTask> Created = MakeShared<FProtoBoyTask>();
+			Tasks->CreateTasks({ { Category, GetString(Call, TEXT("title")), Description.TrimStart() } },
+				[Created](int32, const TProtoBoyTaskResult<FProtoBoyTask>& Result)
+				{
+					if (Result.bOk)
+					{
+						*Created = Result.Value;
+					}
+					return true;
+				},
+				[Created, Done = MoveTemp(Done)](const TProtoBoyTaskResult<bool>& Result)
+				{
+					Done(Result.bOk
+						? FProtoBoyMCPToolResult::Ok(FString::Printf(TEXT("Created task [%s] %s in \"%s\" (%s)."), *Created->Id, *Created->Title, *Created->StatusName, *Created->Url))
+						: FProtoBoyMCPToolResult::Error(Result.Error));
+				});
+			return;
+		}
+
 		Tasks->CreateTask(GetString(Call, TEXT("title")), Description.TrimStart(), Status.GetValue(),
 			[Done = MoveTemp(Done)](const TProtoBoyTaskResult<FProtoBoyTask>& Result)
 			{
@@ -748,6 +788,7 @@ namespace ProtoBoyMCPTools
 				{ TEXT("description"), TEXT("string"), TEXT("What to do and the acceptance criteria.") },
 				{ TEXT("status"), TEXT("string"), TEXT("Initial status (default todo)."), false, StatusValues },
 				{ TEXT("design_doc"), TEXT("string"), TEXT("Design doc path this task implements, e.g. \"Design/Inventory.md\".") },
+				{ TEXT("category"), TEXT("string"), TEXT("Task category (a doc marked as one on the doc map; get_project_context lists them). The task goes in its \"To Do - <Category>\" list with its label. Unknown categories go to Uncategorized.") },
 			}, &TaskCreate);
 
 		Add(TEXT("task_update_status"), LOCTEXT("TaskStatusTitle", "Update task status"),

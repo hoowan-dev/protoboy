@@ -43,6 +43,34 @@ Feature: %s
 		});
 
 		OutPrompts.Add({
+			TEXT("generate-tasks"),
+			TEXT("Generate tasks"),
+			TEXT("Draft task ideas for a task category from its docs (and the docs below it), talk them through, then add the approved ones to its To Do list."),
+			{
+				{ TEXT("category"), TEXT("The task category (a doc marked as one on the doc map). Leave empty to pick together."), false },
+				{ TEXT("context"), TEXT("Anything extra to take into account (optional)."), false },
+			},
+			[](const TMap<FString, FString>& Args)
+			{
+				return FString::Printf(TEXT(R"MD(Draft tasks for a task category using ProtoBoy. Don't write code.
+
+Category: %s
+Extra context: %s
+
+1. Call `get_project_context`. Its "Task categories" section lists the categories; if none is given above, or it isn't
+   one of them, ask me which to use.
+2. `docs_read` the category's doc and the docs below it on the doc map.
+3. Call `tasks_list` (status "todo") so you don't repeat tasks already on the board.
+4. Look at the code to see what's already built, so you suggest what's missing.
+5. Suggest tasks small enough for one session each, each with what to do and acceptance criteria, all serving what the
+   docs describe. Don't invent features the docs don't mention. Show them to me and wait.
+6. After I approve, create each with `task_create`, passing the category (it goes in "To Do - <Category>" with the
+   category's label) and the category's doc as `design_doc`.
+7. Summarize what you created.)MD"), *ArgOr(Args, TEXT("category"), TEXT("(not given)")), *ArgOr(Args, TEXT("context"), TEXT("(none)")));
+			}
+		});
+
+		OutPrompts.Add({
 			TEXT("implement-task"),
 			TEXT("Implement a task"),
 			TEXT("Implement a task from the board as its Design and Tech docs describe, then update the task and docs."),
