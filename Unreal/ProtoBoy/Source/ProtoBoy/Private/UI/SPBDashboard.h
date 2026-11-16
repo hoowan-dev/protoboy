@@ -69,8 +69,17 @@ private:
 	/** Documentation: the doc map, disabled with a warning until setup is finished. */
 	TSharedRef<SWidget> MakeDocumentationSection();
 
-	/** Tasks: blank for now. */
+	/** Tasks: disabled with a warning until setup is finished; blank otherwise for now. */
 	TSharedRef<SWidget> MakeTasksSection();
+
+	/**
+	 * What the Documentation and Tasks pages wait on: the agent (MCP), the docs connection and the task board. Empty
+	 * when setup is done. A missing Game doc doesn't count, since the doc map is where it gets created.
+	 */
+	TArray<FText> GetMissingSetup() const;
+	bool IsSetupDone() const { return GetMissingSetup().IsEmpty(); }
+	/** Warning row shown while setup isn't done: LockedFormat with {0} = what's missing, plus a Go to Setup button. */
+	TSharedRef<SWidget> MakeSetupLock(const FText& LockedFormat);
 
 	
 	/** The checklist's steps, in order (also used for the "N of M" count). */

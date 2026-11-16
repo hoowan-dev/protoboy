@@ -286,6 +286,7 @@ void FProtoBoyDocMap::Load() const
 			Node.ParentId = Frontmatter.Get(ProtoBoyDocLayers::LegacyImplementsKey);
 		}
 		Node.Summary = ProtoBoyDocMap::FindSummary(Text, Frontmatter.BodyStart);
+		Node.bTaskCategory = FCString::ToBool(*Frontmatter.Get(ProtoBoyDocLayers::TaskCategoryKey).TrimStartAndEnd());
 		Nodes.Add(MoveTemp(Node));
 	}
 
@@ -1035,6 +1036,21 @@ bool FProtoBoyDocMap::SetParent(const FString& Id, const FString& NewParentId, F
 		{ ProtoBoyDocLayers::ParentKey, Value },
 		{ ProtoBoyDocLayers::LegacyImplementsKey, FString() },
 	}, OutError);
+}
+
+bool FProtoBoyDocMap::SetTaskCategory(const FString& Id, bool bTaskCategory, FText& OutError)
+{
+	const FProtoBoyDocNode* Node = Find(Id);
+	if (!Node)
+	{
+		OutError = LOCTEXT("NoDoc", "That doc is no longer on the map. Refresh and try again.");
+		return false;
+	}
+	if (Node->bTaskCategory == bTaskCategory)
+	{
+		return true;
+	}
+	return WriteFrontmatter(Node->Path, { { ProtoBoyDocLayers::TaskCategoryKey, bTaskCategory ? TEXT("true") : FString() } }, OutError);
 }
 
 bool FProtoBoyDocMap::AddToMap(const FString& Path, EProtoBoyDocLayer Layer, const FString& ParentId, FText& OutError)

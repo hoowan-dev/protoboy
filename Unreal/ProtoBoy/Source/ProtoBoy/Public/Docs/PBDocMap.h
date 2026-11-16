@@ -27,6 +27,8 @@ struct FProtoBoyDocNode
 	FString ParentId;
 	/** The first line someone actually wrote below the title (hints and quotes skipped), for previews. */
 	FString Summary;
+	/** Marked as a task category ("protoboy-task-category: true"), so tasks can be grouped under it. */
+	bool bTaskCategory = false;
 };
 
 /** One "### Pillar" under the Game doc's "## Design Pillars". */
@@ -146,6 +148,9 @@ public:
 
 	/** Move a doc under another (its frontmatter changes; the file stays where it is). Refuses loops and moving the Game doc. */
 	bool SetParent(const FString& Id, const FString& NewParentId, FText& OutError);
+
+	/** Mark or unmark a doc as a task category, in its frontmatter ("protoboy-task-category: true", removed when false). */
+	bool SetTaskCategory(const FString& Id, bool bTaskCategory, FText& OutError);
 
 	/**
 	 * Put an existing doc on the map under ParentId (empty = the Game doc) by adding ProtoBoy's frontmatter; its text is

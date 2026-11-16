@@ -19,6 +19,7 @@
 #include "UObject/Package.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Input/SHyperlink.h"
 #include "Widgets/Input/SSearchBox.h"
@@ -563,6 +564,29 @@ FActionMenuContent SProtoBoyDocMapEditor::OnCreateNodeOrPinMenu(UEdGraph* InGrap
 		FText::FromString(Doc->Path),
 		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.OpenInExternalEditor"),
 		FUIAction(FExecuteAction::CreateSPLambda(this, [this, Id]() { OpenDoc(Id); })));
+	Menu->AddMenuEntry(
+		LOCTEXT("CtxTaskCategory", "Task Category"),
+		LOCTEXT("CtxTaskCategoryTip", "Group tasks under this doc. Saved in the doc's frontmatter (protoboy-task-category)."),
+		FSlateIcon(),
+		FUIAction(
+			FExecuteAction::CreateSPLambda(this, [this, Id]()
+			{
+				const FProtoBoyDocMap* M = GetMap();
+				const FProtoBoyDocNode* D = M ? M->Find(Id) : nullptr;
+				if (D)
+				{
+					SetTaskCategory(Id, !D->bTaskCategory);
+				}
+			}),
+			FCanExecuteAction(),
+			FGetActionCheckState::CreateLambda([Id]()
+			{
+				const FProtoBoyDocMap* M = GetMap();
+				const FProtoBoyDocNode* D = M ? M->Find(Id) : nullptr;
+				return D && D->bTaskCategory ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+			})),
+		NAME_None,
+		EUserInterfaceActionType::ToggleButton);
 	const FProtoBoyDocNode* Parent = Map->GetParent(Id);
 	const FProtoBoyDocNode* Default = Map->GetDefaultParent(*Doc);
 	if (Parent && Default && Parent != Default)
@@ -827,6 +851,17 @@ TSharedRef<SWidget> SProtoBoyDocMapEditor::MakeDetails(const FProtoBoyDocNode& D
 			]);
 	}
 
+	AddRow(LOCTEXT("TaskCategoryLabel", "Task category"),
+		SNew(SCheckBox)
+		.ToolTipText(LOCTEXT("TaskCategoryTip", "Group tasks under this doc. Saved in the doc's frontmatter (protoboy-task-category)."))
+		.IsChecked_Lambda([Id]()
+		{
+			const FProtoBoyDocMap* M = GetMap();
+			const FProtoBoyDocNode* D = M ? M->Find(Id) : nullptr;
+			return D && D->bTaskCategory ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+		})
+		.OnCheckStateChanged_Lambda([this, Id](ECheckBoxState State) { SetTaskCategory(Id, State == ECheckBoxState::Checked); }));
+
 	if (Doc.Layer == EProtoBoyDocLayer::Content)
 	{
 		AddRow(LOCTEXT("StyleUseLabel", "Style"), Text(LOCTEXT("StyleUse", "Agents read this doc's Style, What to Look For and What to Avoid sections (and those of the Content docs above it) before searching asset stores (Fab) or choosing assets."), true));
@@ -906,6 +941,20 @@ void SProtoBoyDocMapEditor::LinkExistingDoc(const FString& Path, EProtoBoyDocLay
 	{
 		Select(Doc->Id);
 	}
+}
+
+void SProtoBoyDocMapEditor::SetTaskCategory(const FString& Id, bool bTaskCategory)
+{
+	// Writes the .md file's frontmatter right away, then refreshes the map (FProtoBoyDocMap::OnChanged), which redraws
+	// the graph and the details pane.
+	FProtoBoyDocMap* Map = GetMap();
+	FText Error;
+	if (Map && !Map->SetTaskCategory(Id, bTaskCategory, Error))
+	{
+		SetStatus(Error, true);
+		return;
+	}
+	SetStatus(FText::GetEmpty(), false);
 }
 
 bool SProtoBoyDocMapEditor::CanDeleteSelected() const

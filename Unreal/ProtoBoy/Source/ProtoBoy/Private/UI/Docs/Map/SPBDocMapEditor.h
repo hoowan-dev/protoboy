@@ -75,6 +75,11 @@ private:
 	/** Create a doc of Kind titled Title under ParentId. */
 	void AddDoc(EProtoBoyDocKind Kind, const FString& ParentId, const FString& Title);
 	void LinkExistingDoc(const FString& Path, EProtoBoyDocLayer Layer, const FString& ParentId);
+	/**
+	 * Mark or unmark a doc as a task category (written to its frontmatter), from the context menu and the details pane.
+	 * The .md file is written immediately and the map refreshes.
+	 */
+	void SetTaskCategory(const FString& Id, bool bTaskCategory);
 	/** Asks, then deletes the doc (the provider moves it to its trash). */
 	void DeleteDocWithConfirm(const FString& Id);
 	bool CanDeleteSelected() const;

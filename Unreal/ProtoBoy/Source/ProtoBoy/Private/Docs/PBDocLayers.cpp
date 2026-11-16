@@ -7,6 +7,7 @@ namespace ProtoBoyDocLayers
 	const TCHAR* IdKey = TEXT("protoboy-id");
 	const TCHAR* LayerKey = TEXT("protoboy-layer");
 	const TCHAR* ParentKey = TEXT("protoboy-parent");
+	const TCHAR* TaskCategoryKey = TEXT("protoboy-task-category");
 	const TCHAR* LegacyImplementsKey = TEXT("protoboy-implements");
 
 	TArray<EProtoBoyDocLayer> GetAllLayers()

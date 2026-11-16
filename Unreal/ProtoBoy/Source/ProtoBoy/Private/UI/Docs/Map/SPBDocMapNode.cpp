@@ -114,6 +114,19 @@ void SProtoBoyDocMapNode::UpdateGraphNode()
 									.TextStyle(FAppStyle::Get(), "Graph.StateNode.NodeTitle")
 									.OverflowPolicy(ETextOverflowPolicy::Ellipsis)
 								]
+
+								// Task category marker (polled, so it follows the doc's frontmatter after each refresh)
+								+ SHorizontalBox::Slot()
+								.AutoWidth()
+								.VAlign(VAlign_Center)
+								.Padding(6.f, 0.f, 0.f, 0.f)
+								[
+									SNew(SImage)
+									.Image(FAppStyle::GetBrush("Icons.Clipboard"))
+									.DesiredSizeOverride(FVector2D(14.f))
+									.ToolTipText(NSLOCTEXT("ProtoBoyDocMapNode", "TaskCategoryTip", "Task category: tasks are grouped under this doc."))
+									.Visibility_Lambda([this]() { return IsTaskCategory() ? EVisibility::Visible : EVisibility::Collapsed; })
+								]
 							]
 
 							// Layer
@@ -206,6 +219,13 @@ FText SProtoBoyDocMapNode::GetLayerText() const
 		return FText::GetEmpty();
 	}
 	return ProtoBoyDocLayers::GetDisplayName(Doc->Layer);
+}
+
+bool SProtoBoyDocMapNode::IsTaskCategory() const
+{
+	const UProtoBoyDocMapGraphNode* Node = GetDocNode();
+	const FProtoBoyDocNode* Doc = Node ? Node->GetDoc() : nullptr;
+	return Doc && Doc->bTaskCategory;
 }
 
 FText SProtoBoyDocMapNode::GetSummary() const

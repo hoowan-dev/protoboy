@@ -7,7 +7,7 @@ class UProtoBoyDocMapGraphNode;
 
 /**
  * A doc on the map, drawn like a Behavior Tree node: input bar on top, a body colored by layer (title, layer, the
- * doc's first written line), output bar below. Nodes that don't match the editor's search are dimmed.
+ * doc's first written line, a clipboard icon for task categories), output bar below. Nodes that don't match the editor's search are dimmed.
  */
 class SProtoBoyDocMapNode : public SGraphNode
 {
@@ -33,4 +33,5 @@ private:
 	FLinearColor GetOpacity() const;
 	FText GetLayerText() const;
 	FText GetSummary() const;
+	bool IsTaskCategory() const;
 };

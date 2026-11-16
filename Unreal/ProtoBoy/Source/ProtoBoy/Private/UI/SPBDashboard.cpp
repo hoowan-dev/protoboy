@@ -726,31 +726,78 @@ void SProtoBoyDashboard::BuildSetupSteps()
 	SetupSteps = { AgentStep, DocsStep, TasksStep, SourcingStep, DocHealthStep };
 }
 
+TArray<FText> SProtoBoyDashboard::GetMissingSetup() const
+{
+	FText Ignored;
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	TArray<FText> Missing;
+	if (!AgentStep(Ignored))
+	{
+		Missing.Add(LOCTEXT("MissingAgent", "an agent (MCP)"));
+	}
+	if (!Subsystem || !Subsystem->GetObsidianConnector().IsConnected())
+	{
+		Missing.Add(LOCTEXT("MissingDocs", "documentation"));
+	}
+	if (!TasksStep(Ignored))
+	{
+		Missing.Add(LOCTEXT("MissingTasks", "a task board"));
+	}
+	return Missing;
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakeSetupLock(const FText& LockedFormat)
+{
+	return SNew(SBorder)
+		.Visibility_Lambda([this]() { return IsSetupDone() ? EVisibility::Collapsed : EVisibility::Visible; })
+		.BorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
+		.Padding(10.f)
+		[
+			SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(0.f, 0.f, 8.f, 0.f)
+			[
+				SNew(SImage)
+				.Image(FAppStyle::Get().GetBrush("Icons.WarningWithColor"))
+			]
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this, LockedFormat]()
+				{
+					return FText::Format(LockedFormat, FText::Join(LOCTEXT("MissingSeparator", ", "), GetMissingSetup()));
+				})
+				.ColorAndOpacity(FStyleColors::Warning)
+				.AutoWrapText(true)
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(8.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("GoToSetup", "Go to Setup"))
+				.OnClicked_Lambda([this]()
+				{
+					if (PageList.IsValid() && Pages.IsValidIndex(0))
+					{
+						PageList->SetSelection(Pages[0]);
+					}
+					return FReply::Handled();
+				})
+			]
+		];
+}
+
 TSharedRef<SWidget> SProtoBoyDashboard::MakeDocumentationSection()
 {
-	// The doc map is where the Game doc gets created, so it only waits on the agent, the docs connection and the task
-	// board (set up on the Setup page); a missing Game doc doesn't lock it.
-	auto MissingSetup = [this]()
-	{
-		FText Ignored;
-		const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-		TArray<FText> Missing;
-		if (!AgentStep(Ignored))
-		{
-			Missing.Add(LOCTEXT("MissingAgent", "an agent (MCP)"));
-		}
-		if (!Subsystem || !Subsystem->GetObsidianConnector().IsConnected())
-		{
-			Missing.Add(LOCTEXT("MissingDocs", "documentation"));
-		}
-		if (!TasksStep(Ignored))
-		{
-			Missing.Add(LOCTEXT("MissingTasks", "a task board"));
-		}
-		return Missing;
-	};
-	auto IsSetupDone = [MissingSetup]() { return MissingSetup().IsEmpty(); };
-
 	const TSharedRef<SWidget> DocMap = SNew(SVerticalBox)
 
 		// Why it's disabled, and where to fix it
@@ -758,60 +805,14 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeDocumentationSection()
 		.AutoHeight()
 		.Padding(0.f, 0.f, 0.f, 8.f)
 		[
-			SNew(SBorder)
-			.Visibility_Lambda([IsSetupDone]() { return IsSetupDone() ? EVisibility::Collapsed : EVisibility::Visible; })
-			.BorderImage(FAppStyle::Get().GetBrush("Brushes.Recessed"))
-			.Padding(10.f)
-			[
-				SNew(SHorizontalBox)
-
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.VAlign(VAlign_Center)
-				.Padding(0.f, 0.f, 8.f, 0.f)
-				[
-					SNew(SImage)
-					.Image(FAppStyle::Get().GetBrush("Icons.WarningWithColor"))
-				]
-
-				+ SHorizontalBox::Slot()
-				.FillWidth(1.f)
-				.VAlign(VAlign_Center)
-				[
-					SNew(STextBlock)
-					.Text_Lambda([MissingSetup]()
-					{
-						return FText::Format(LOCTEXT("DocMapLocked", "Finish setup to use the doc map: connect {0} on the Setup page. Agents plan against the docs and task board, so those need to be connected first."),
-							FText::Join(LOCTEXT("MissingSeparator", ", "), MissingSetup()));
-					})
-					.ColorAndOpacity(FStyleColors::Warning)
-					.AutoWrapText(true)
-				]
-
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.VAlign(VAlign_Center)
-				.Padding(8.f, 0.f, 0.f, 0.f)
-				[
-					SNew(SButton)
-					.Text(LOCTEXT("GoToSetup", "Go to Setup"))
-					.OnClicked_Lambda([this]()
-					{
-						if (PageList.IsValid() && Pages.IsValidIndex(0))
-						{
-							PageList->SetSelection(Pages[0]);
-						}
-						return FReply::Handled();
-					})
-				]
-			]
+			MakeSetupLock(LOCTEXT("DocMapLocked", "Finish setup to use the doc map: connect {0} on the Setup page. Agents plan against the docs and task board, so those need to be connected first."))
 		]
 
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		[
 			SNew(SBox)
-			.IsEnabled_Lambda(IsSetupDone)
+			.IsEnabled_Lambda([this]() { return IsSetupDone(); })
 			[
 				SNew(SProtoBoyDocMapEditor)
 			]
@@ -822,8 +823,10 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeDocumentationSection()
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeTasksSection()
 {
-	// TODO: Show the task board's lists and the tasks linked to design docs.
-	return SNullWidget::NullWidget;
+	// TODO: The task board, grouped by the doc map's task categories (docs marked "protoboy-task-category"), shown
+	// only once IsSetupDone(). Until then the page is just the setup warning.
+	return MakeSection(LOCTEXT("TasksPageHeader", "Tasks"),
+		MakeSetupLock(LOCTEXT("TasksLocked", "Finish setup to use tasks: connect {0} on the Setup page.")));
 }
 
 TSharedRef<SWidget> SProtoBoyDashboard::MakeSection(const FText& Title, const TSharedRef<SWidget>& Body)

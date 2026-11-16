@@ -40,6 +40,8 @@ namespace ProtoBoyDocLayers
 	PROTOBOY_API extern const TCHAR* IdKey;
 	PROTOBOY_API extern const TCHAR* LayerKey;
 	PROTOBOY_API extern const TCHAR* ParentKey;
+	/** "true" when the doc is a task category (tasks are grouped under it). Removed when it isn't one. */
+	PROTOBOY_API extern const TCHAR* TaskCategoryKey;
 	/** Older versions linked a feature's Tech doc to its Design doc with this. Read as the parent when there's no parent key. */
 	PROTOBOY_API extern const TCHAR* LegacyImplementsKey;
 
