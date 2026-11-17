@@ -28,6 +28,8 @@ public:
 		FText AnswerMessage;
 		/** Runs after the prompt is written and before the agent starts; false stops the start with its error. */
 		TFunction<bool(FText& OutError)> BeforeLaunch;
+		/** Let the agent search the web (Claude Code's WebSearch; never WebFetch). Off for every run that only needs the project. */
+		bool bAllowWebSearch = false;
 	};
 
 	~FProtoBoyAgentRun();

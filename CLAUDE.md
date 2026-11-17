@@ -48,7 +48,7 @@ There are no tests or lint setup yet.
 | Tasks | `IProtoBoyTaskProvider`, `FProtoBoyTrelloClient` / `FProtoBoyTrelloConnector`, `FProtoBoyTaskBoard` (sync state and loaded tasks), `FProtoBoyTaskGenerationRun` |
 | Agents | `FProtoBoyAgentRun` (runs an agent's CLI unattended) |
 | MCP | `FProtoBoyMCPServer`, `FProtoBoyMCPClientConfig`, tool and prompt registries |
-| Sourcing | `ProtoBoyAssetSourcing`, `ProtoBoyFab` |
+| Sourcing | `ProtoBoyAssetSourcing`, `ProtoBoyFab`, `FProtoBoyAssetSearchRun` (agent-suggested assets) |
 | Health | `ProtoBoyDocHealth` (stub) |
 | Net | `ProtoBoyHttp` (outgoing HTTP, game-thread callbacks, `RunAfter`) |
 | UI | `SProtoBoyDashboard`, `SProtoBoyDocMapEditor`, `SProtoBoyTasksPage`, the feature windows |

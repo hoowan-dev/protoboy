@@ -17,6 +17,8 @@ namespace ProtoBoyHttp
 		bool bReachedServer = false;
 		int32 Code = 0;
 		FString Body;
+		/** The body as bytes (images and other binary responses). */
+		TArray<uint8> Content;
 		/** The Retry-After header in seconds (rate limits), or 0 when there's none. */
 		float RetryAfterSeconds = 0.f;
 

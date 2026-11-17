@@ -225,7 +225,10 @@ and `PBDocMapMigration.cpp` (merging old Game docs), with shared helpers in Priv
   stream-json` or `gemini -p` in the project folder, read-only tools, prompt file on stdin), turns its output into a
   progress log and extracts its JSON answer. Polled from the window's active timer (the windows are modal). Shared by
   doc generation and task generation; each keeps its prompt and raw output in `Saved/ProtoBoy/<Kind>Generation/`.
-- `SProtoBoyAgentPicker` (UI/Agents/) is the agent radio list both generation windows use.
+- `SProtoBoyAgentPicker` (UI/Agents/) is the agent radio list both generation windows (and Search For Assets) use.
+- `ProtoBoyAgentPrompt` (Private/Agents/PBAgentPromptContext.h) is the prompt context several runs share:
+  `DescribeProjectAssets()` (an asset registry summary of /Game; agents can't read .uasset files) and `ReadDoc()` (a doc's
+  text without frontmatter and hints; docs may live outside the project folder, where the agent can't read).
 
 ## MCP (MCP/)
 
@@ -273,8 +276,28 @@ and `PBDocMapMigration.cpp` (merging old Game docs), with shared helpers in Priv
 - UI: `SProtoBoyAssetSourcingPanel` (Setup > Asset Sourcing: the policy and source checkboxes) and
   `SProtoBoyAssetSourcingPage` (the dashboard's Asset Sourcing page: **Sources**, every supported source and whether
   it's enabled, and **Search For Assets**, the query and filters; listing asset needs from Content docs is a TODO).
-- Fab has no public search API, so `fab_search` only builds a fab.com search URL and opens it in the user's browser;
-  never fetch or scrape Fab listings.
+- **Agent search:** with a search context ticked (docs, project assets), Search runs the picked agent through
+  `FProtoBoyAssetSearchRun` (Sourcing/PBAssetSearchRun.h) instead of opening the query as typed. The prompt carries the
+  request and filters, the Game doc and every Content doc, and/or the /Game summary. The agent gets web search
+  (`FProtoBoyAgentRun::FParams::bAllowWebSearch`, Claude Code's WebSearch; still no WebFetch) to find specific Fab
+  listings, and answers with JSON suggestions (name, description, Content doc, a 2-6 keyword query, type keys from
+  `GetAssetTypeKey`, and 1-3 listings each: url, title, note). Only real listing URLs are kept
+  (`ProtoBoyFab::ParseListingUrl`), each once.
+- **Listing previews:** once the agent is done, the run reads each listing's page once, like a link preview
+  (`ProtoBoyFab::FetchListingPreview`: og:title, og:image; the price from the page's schema.org Product offer, and the
+  price before a sale from its `startingPrice`), drops listings that 404 (URLs the agent got wrong) and listings whose
+  price is outside the user's filters, and downloads the preview image. Tiles show "Free" or "From $X" (the cheapest
+  license; Professional costs more), with "was $Y" during a sale. The page decodes images on a worker thread into small `FSlateDynamicImageBrush`
+  thumbnails cached by listing URL; the tiles read the run's data through lambdas, so they fill in without rebuilds.
+- UI: an **Agent Log** section (scrollable, fixed height) while it runs, then **Suggested Assets**: per suggestion,
+  listing tiles (preview, title, the agent's note; click opens the listing) and More Like This (the suggestion's search
+  on every enabled source). While the agent runs or previews load, the search inputs are locked and Search
+  becomes Cancel. The page polls the run from the core ticker, not an active timer, since hidden dashboard
+  pages don't tick. Prompt and raw output are in `Saved/ProtoBoy/AssetSearch/`. Images in the docs aren't passed to
+  the agent yet (TODO).
+- Fab has no public search API, so `fab_search` only builds a fab.com search URL and opens it in the user's browser.
+  The only Fab pages ProtoBoy fetches are individual listing pages, once each, for their preview tags (see Listing
+  previews). Never call Fab's internal endpoints (`/i/listings/...`) or crawl its search pages.
 - Asset lifecycle tagging / Greybox Replacement Matrix and the Prototype-to-Production Viability Index are **removed for
   now**. Don't re-add them unless asked; the old stubs (`FProtoBoyAssetLifecycle`, `FProtoBoyHealthChecker`) are in git
   history.

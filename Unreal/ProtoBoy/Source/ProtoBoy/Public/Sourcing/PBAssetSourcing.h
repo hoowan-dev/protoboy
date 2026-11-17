@@ -70,6 +70,11 @@ namespace ProtoBoyAssetSourcing
 	/** Display name of an asset type ("3D Models", ...). */
 	PROTOBOY_API FText GetAssetTypeName(EProtoBoyAssetType Type);
 
+	/** Stable lowercase key of an asset type ("model-3d", "audio", ...), for agent prompts and answers. */
+	PROTOBOY_API FString GetAssetTypeKey(EProtoBoyAssetType Type);
+	/** The asset type for a key from GetAssetTypeKey (any case). False for anything else. */
+	PROTOBOY_API bool FromAssetTypeKey(const FString& Key, EProtoBoyAssetType& OutType);
+
 	/**
 	 * Open Search on every enabled source. Returns how many opened; OutErrors gets one line per source that failed
 	 * ("Fab: ...").

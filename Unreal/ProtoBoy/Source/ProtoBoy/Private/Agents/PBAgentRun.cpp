@@ -12,14 +12,16 @@
 namespace ProtoBoyAgentRun
 {
 	/** The command line for the agent's CLI, run through the shell with the prompt file on stdin. */
-	bool BuildCommand(EProtoBoyMCPClient Client, const FString& PromptFile, FString& OutShell, FString& OutArgs)
+	bool BuildCommand(EProtoBoyMCPClient Client, const FString& PromptFile, bool bAllowWebSearch, FString& OutShell, FString& OutArgs)
 	{
 		FString Command;
 		switch (Client)
 		{
 		case EProtoBoyMCPClient::ClaudeCode:
-			// Read-only tools only; stream-json reports each step as it happens.
-			Command = TEXT("claude -p --output-format stream-json --verbose --allowedTools \"Read Glob Grep LS\" --disallowedTools \"Edit Write MultiEdit NotebookEdit Bash WebFetch WebSearch\"");
+			// Read-only tools only (plus web search when the run asks for it); stream-json reports each step as it happens.
+			Command = bAllowWebSearch
+				? TEXT("claude -p --output-format stream-json --verbose --allowedTools \"Read Glob Grep LS WebSearch\" --disallowedTools \"Edit Write MultiEdit NotebookEdit Bash WebFetch\"")
+				: TEXT("claude -p --output-format stream-json --verbose --allowedTools \"Read Glob Grep LS\" --disallowedTools \"Edit Write MultiEdit NotebookEdit Bash WebFetch WebSearch\"");
 			break;
 		case EProtoBoyMCPClient::GeminiCLI:
 			Command = TEXT("gemini -p \"Follow the instructions above.\"");
@@ -51,6 +53,7 @@ namespace ProtoBoyAgentRun
 		if (Name == TEXT("Glob")) { return FString::Printf(TEXT("Looking for files: %s"), *Field(TEXT("pattern"))); }
 		if (Name == TEXT("Grep")) { return FString::Printf(TEXT("Searching for \"%s\""), *Field(TEXT("pattern"))); }
 		if (Name == TEXT("LS")) { return FString::Printf(TEXT("Listing %s"), *Relative(Field(TEXT("path")))); }
+		if (Name == TEXT("WebSearch")) { return FString::Printf(TEXT("Searching the web: %s"), *Field(TEXT("query"))); }
 		return FString::Printf(TEXT("Using %s"), *Name);
 	}
 }
@@ -115,7 +118,7 @@ bool FProtoBoyAgentRun::Start(const FParams& Params, FText& OutError)
 		return false;
 	}
 	FString Shell, Args;
-	if (!ProtoBoyAgentRun::BuildCommand(Client, PromptFile, Shell, Args))
+	if (!ProtoBoyAgentRun::BuildCommand(Client, PromptFile, Params.bAllowWebSearch, Shell, Args))
 	{
 		OutError = LOCTEXT("UnknownAgent", "This agent can't run on its own.");
 		return false;

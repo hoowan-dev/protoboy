@@ -1,7 +1,7 @@
 #include "Tasks/Generation/PBTaskGeneration.h"
 
+#include "Agents/PBAgentPromptContext.h"
 #include "Docs/PBDocMap.h"
-#include "Docs/PBMarkdown.h"
 #include "Dom/JsonObject.h"
 #include "MCP/PBMCPClientConfig.h"
 #include "Misc/App.h"
@@ -20,25 +20,6 @@ namespace ProtoBoyTaskGeneration
 	constexpr int32 MaxDocChars = 12000;
 	/** More than this is ignored: the agent is asked for far fewer. */
 	constexpr int32 MaxTasks = 60;
-
-	/** A doc's text for the prompt, without ProtoBoy's hints and frontmatter. */
-	FString ReadDocForPrompt(const FProtoBoyDocNode& Doc)
-	{
-		const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
-		FString Text;
-		FText Error;
-		if (!Subsystem || !Subsystem->GetDocsProvider().ReadDoc(Doc.Path, Text, Error))
-		{
-			return FString::Printf(TEXT("_Couldn't read this doc: %s_\n"), *Error.ToString());
-		}
-		const ProtoBoyMarkdown::FFrontmatter Frontmatter = ProtoBoyMarkdown::ParseFrontmatter(Text);
-		Text = ProtoBoyMarkdown::StripComments(Text.Mid(Frontmatter.BodyStart)).TrimStartAndEnd();
-		if (Text.Len() > MaxDocChars)
-		{
-			Text = Text.Left(MaxDocChars) + TEXT("\n\n_(cut off here)_");
-		}
-		return Text + TEXT("\n");
-	}
 
 	/** The category's doc and every doc below it on the map, depth first. */
 	FString DescribeCategory(const FProtoBoyDocMap& Map, const FProtoBoyDocNode& Root, const TArray<FString>& ExistingTasks)
@@ -61,7 +42,7 @@ namespace ProtoBoyTaskGeneration
 			const FProtoBoyDocNode& Doc = *Entry.Key;
 			Out += FString::Printf(TEXT("\n### %s doc \"%s\" (%s)%s\n\n"), *ProtoBoyDocLayers::GetDisplayName(Doc.Layer).ToString(), *Doc.Title, *Doc.Path,
 				Entry.Value == 0 ? TEXT("") : TEXT(", below the category's doc"));
-			Out += ReadDocForPrompt(Doc);
+			Out += ProtoBoyAgentPrompt::ReadDoc(Doc, MaxDocChars);
 			const TArray<const FProtoBoyDocNode*> Children = Map.GetChildren(Doc.Id);
 			for (int32 Index = Children.Num() - 1; Index >= 0; --Index)
 			{

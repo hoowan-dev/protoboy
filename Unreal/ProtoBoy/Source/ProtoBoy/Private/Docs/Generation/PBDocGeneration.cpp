@@ -1,7 +1,6 @@
 #include "Docs/Generation/PBDocGeneration.h"
 
-#include "AssetRegistry/AssetData.h"
-#include "AssetRegistry/IAssetRegistry.h"
+#include "Agents/PBAgentPromptContext.h"
 #include "Docs/PBDocLayers.h"
 #include "Docs/PBDocMap.h"
 #include "Docs/PBDocTemplates.h"
@@ -10,7 +9,6 @@
 #include "Misc/App.h"
 #include "Misc/DateTime.h"
 #include "Misc/FileHelper.h"
-#include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "PBModule.h"
 
@@ -18,91 +16,6 @@
 
 namespace ProtoBoyDocGeneration
 {
-	constexpr int32 MaxListed = 150;
-
-	/** A Markdown summary of the Content folder from the asset registry: the agent can't read .uasset files itself. */
-	FString DescribeContent()
-	{
-		TArray<FAssetData> Assets;
-		IAssetRegistry::GetChecked().GetAssetsByPath(TEXT("/Game"), Assets, /*bRecursive*/ true);
-		if (Assets.IsEmpty())
-		{
-			return TEXT("_The Content folder is empty._\n");
-		}
-		Assets.Sort([](const FAssetData& A, const FAssetData& B) { return A.PackageName.LexicalLess(B.PackageName); });
-
-		TMap<FString, int32> ByClass;
-		TMap<FString, int32> ByFolder;
-		TArray<FString> Maps;
-		TArray<FString> Blueprints;
-		TArray<FString> Data;
-		for (const FAssetData& Asset : Assets)
-		{
-			const FString Class = Asset.AssetClassPath.GetAssetName().ToString();
-			const FString Path = Asset.PackageName.ToString();
-			++ByClass.FindOrAdd(Class);
-
-			// Top two folder levels below /Game, e.g. /Game/Characters/Hero.
-			TArray<FString> Parts;
-			Path.ParseIntoArray(Parts, TEXT("/"));
-			if (Parts.Num() > 2)
-			{
-				++ByFolder.FindOrAdd(TEXT("/") + Parts[0] + TEXT("/") + Parts[1] + (Parts.Num() > 3 ? TEXT("/") + Parts[2] : FString()));
-			}
-
-			if (Class == TEXT("World"))
-			{
-				Maps.Add(Path);
-			}
-			else if (Class.EndsWith(TEXT("Blueprint")) || Class == TEXT("Blueprint"))
-			{
-				FString Parent = Asset.GetTagValueRef<FString>(FName(TEXT("ParentClass")));
-				Parent = FPackageName::ObjectPathToObjectName(Parent);
-				Parent.RemoveFromEnd(TEXT("'"));
-				Blueprints.Add(Parent.IsEmpty() ? Path : FString::Printf(TEXT("%s (%s, parent %s)"), *Path, *Class, *Parent));
-			}
-			else if (Class == TEXT("DataTable") || Class.Contains(TEXT("DataAsset")) || Class == TEXT("CurveTable") || Class.EndsWith(TEXT("Data")))
-			{
-				Data.Add(FString::Printf(TEXT("%s (%s)"), *Path, *Class));
-			}
-		}
-
-		auto List = [](const TArray<FString>& Items) -> FString
-		{
-			FString Out;
-			for (int32 Index = 0; Index < Items.Num() && Index < MaxListed; ++Index)
-			{
-				Out += FString::Printf(TEXT("- %s\n"), *Items[Index]);
-			}
-			if (Items.Num() > MaxListed)
-			{
-				Out += FString::Printf(TEXT("- ...and %d more\n"), Items.Num() - MaxListed);
-			}
-			return Out.IsEmpty() ? FString(TEXT("_None._\n")) : Out;
-		};
-		auto Counts = [](const TMap<FString, int32>& Map) -> FString
-		{
-			TArray<TPair<FString, int32>> Sorted;
-			for (const TPair<FString, int32>& Pair : Map)
-			{
-				Sorted.Add(Pair);
-			}
-			Sorted.Sort([](const TPair<FString, int32>& A, const TPair<FString, int32>& B) { return A.Value > B.Value; });
-			FString Out;
-			for (int32 Index = 0; Index < Sorted.Num() && Index < 60; ++Index)
-			{
-				Out += FString::Printf(TEXT("- %s: %d\n"), *Sorted[Index].Key, Sorted[Index].Value);
-			}
-			return Out;
-		};
-
-		FString Out = FString::Printf(TEXT("%d assets.\n\n### By type\n\n%s\n### By folder\n\n%s\n"), Assets.Num(), *Counts(ByClass), *Counts(ByFolder));
-		Out += TEXT("### Maps\n\n") + List(Maps);
-		Out += TEXT("\n### Blueprints\n\n") + List(Blueprints);
-		Out += TEXT("\n### Data assets and tables\n\n") + List(Data);
-		return Out;
-	}
-
 	/** "- design: The Player Can, The Player Sees, ..." for every kind a generated doc can have. */
 	FString DescribeHeadings()
 	{
@@ -196,7 +109,7 @@ No doc may be titled "Uncategorized" (the task board uses that name).
 
 "pillars" are 2-5 design pillars the project seems to be built around. Each doc's "examples" use the exact headings
 listed for its kind above; leave out headings you have nothing for.
-)MD"), *Project, *DescribeContent(), *DescribeHeadings());
+)MD"), *Project, *ProtoBoyAgentPrompt::DescribeProjectAssets(), *DescribeHeadings());
 	}
 }
 

@@ -51,6 +51,43 @@ namespace ProtoBoyAssetSourcing
 		}
 	}
 
+	FString GetAssetTypeKey(EProtoBoyAssetType Type)
+	{
+		switch (Type)
+		{
+		case EProtoBoyAssetType::Model3D:         return TEXT("model-3d");
+		case EProtoBoyAssetType::MaterialTexture: return TEXT("material-texture");
+		case EProtoBoyAssetType::SpriteFlipbook:  return TEXT("sprite-flipbook");
+		case EProtoBoyAssetType::Decal:           return TEXT("decal");
+		case EProtoBoyAssetType::Brush:           return TEXT("brush");
+		case EProtoBoyAssetType::HDRI:            return TEXT("hdri");
+		case EProtoBoyAssetType::Animation:       return TEXT("animation");
+		case EProtoBoyAssetType::Audio:           return TEXT("audio");
+		case EProtoBoyAssetType::VFX:             return TEXT("vfx");
+		case EProtoBoyAssetType::UI:              return TEXT("ui");
+		case EProtoBoyAssetType::GameSystem:      return TEXT("game-system");
+		case EProtoBoyAssetType::GameTemplate:    return TEXT("game-template");
+		case EProtoBoyAssetType::ToolPlugin:      return TEXT("tool-plugin");
+		case EProtoBoyAssetType::Tutorial:        return TEXT("tutorial");
+		default:                                  return FString();
+		}
+	}
+
+	bool FromAssetTypeKey(const FString& Key, EProtoBoyAssetType& OutType)
+	{
+		const FString Trimmed = Key.TrimStartAndEnd();
+		for (int32 Index = 0; Index < static_cast<int32>(EProtoBoyAssetType::Count); ++Index)
+		{
+			const EProtoBoyAssetType Type = static_cast<EProtoBoyAssetType>(Index);
+			if (Trimmed.Equals(GetAssetTypeKey(Type), ESearchCase::IgnoreCase))
+			{
+				OutType = Type;
+				return true;
+			}
+		}
+		return false;
+	}
+
 	int32 OpenSearch(const FProtoBoyAssetSearch& Search, TArray<FText>& OutErrors)
 	{
 		int32 Opened = 0;

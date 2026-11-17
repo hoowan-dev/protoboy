@@ -61,6 +61,10 @@ namespace ProtoBoyHttp
 				Result.Body = HttpResponse.IsValid() ? HttpResponse->GetContentAsString() : FString();
 				if (HttpResponse.IsValid())
 				{
+					Result.Content = HttpResponse->GetContent();
+				}
+				if (HttpResponse.IsValid())
+				{
 					// Seconds only; an HTTP date falls back to the caller's own backoff.
 					const FString RetryAfter = HttpResponse->GetHeader(TEXT("Retry-After"));
 					Result.RetryAfterSeconds = RetryAfter.IsNumeric() ? FMath::Max(0.f, FCString::Atof(*RetryAfter)) : 0.f;

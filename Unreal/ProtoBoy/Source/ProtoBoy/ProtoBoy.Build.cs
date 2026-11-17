@@ -32,6 +32,8 @@ public class ProtoBoy : ModuleRules
 			"Settings",
 			"HTTPServer",
 			"HTTP",
+			"ImageWrapper",
+			"ImageCore",
 			"GraphEditor",
 			"AIGraph",
 		});

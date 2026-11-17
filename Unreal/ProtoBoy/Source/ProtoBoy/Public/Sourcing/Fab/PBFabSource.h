@@ -6,8 +6,9 @@
 /**
  * Fab (fab.com) as an asset source.
  *
- * Fab has no public search API, and its site's internal endpoints aren't for third parties, so ProtoBoy only builds
- * fab.com search URLs and opens them in the user's browser. The user browses and picks; ProtoBoy never reads listings.
+ * Fab has no public search API, and its site's internal endpoints aren't for third parties, so ProtoBoy builds fab.com
+ * search URLs and opens them in the user's browser. Specific listings come from an agent's web search; ProtoBoy reads
+ * each one's page once for its preview (PBFabListings.h) and never calls the internal endpoints or crawls search pages.
  */
 namespace ProtoBoyFab
 {
