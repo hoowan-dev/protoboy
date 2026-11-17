@@ -64,7 +64,7 @@ TSharedRef<SWidget> SProtoBoyAssetSourcingPanel::MakeContent()
 			.AutoWrapText(true)
 		]
 
-		// Sources
+		// Sources: only used while agents suggest existing assets, so disabled otherwise.
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(0.f, 10.f, 0.f, 4.f)
@@ -72,12 +72,20 @@ TSharedRef<SWidget> SProtoBoyAssetSourcingPanel::MakeContent()
 			SNew(STextBlock)
 			.Text(LOCTEXT("SourcesLabel", "Sources"))
 			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
+			.IsEnabled_Lambda([]() { return GetDefault<UProtoBoySettings>()->bPreferSourcedAssets; })
 		]
 
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		[
 			SNew(SBorder)
+			.IsEnabled_Lambda([]() { return GetDefault<UProtoBoySettings>()->bPreferSourcedAssets; })
+			.ToolTipText_Lambda([]()
+			{
+				return GetDefault<UProtoBoySettings>()->bPreferSourcedAssets
+					? FText::GetEmpty()
+					: LOCTEXT("SourcesDisabledTip", "Check \"Suggest existing assets instead of generating them with AI\" to choose sources.");
+			})
 			.BorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"))
 			.Padding(8.f)
 			[

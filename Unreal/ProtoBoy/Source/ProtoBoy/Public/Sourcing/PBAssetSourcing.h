@@ -10,13 +10,23 @@
 enum class EProtoBoyAssetType : uint8
 {
 	Model3D,
-	Material,
+
+	MaterialTexture,
+	SpriteFlipbook,
+	Decal,
+	Brush,
+	HDRI,
+
 	Animation,
 	Audio,
 	VFX,
-	Environment,
 	UI,
-	HDRI,
+
+	GameSystem,
+	GameTemplate,
+	ToolPlugin,
+	Tutorial,
+
 	Count
 };
 
@@ -30,6 +40,10 @@ struct FProtoBoyAssetSearch
 	/** Price range in USD; unset is no limit. Ignored with bFreeOnly. */
 	TOptional<float> MinPrice;
 	TOptional<float> MaxPrice;
+	/** Refine the query from the ProtoBoy docs (Content docs' style sections, and the images in the docs). */
+	bool bUseDocsContext = true;
+	/** Refine the query from the assets already in the project (/Game), to match them and avoid duplicates. */
+	bool bUseProjectAssetsContext = true;
 };
 
 /** An asset source ProtoBoy knows about (Fab, ...), whether or not the team enabled it. */

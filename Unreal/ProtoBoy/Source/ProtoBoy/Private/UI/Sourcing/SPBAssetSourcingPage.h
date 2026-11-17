@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MCP/PBMCPConnection.h"
 #include "Sourcing/PBAssetSourcing.h"
 #include "Widgets/SCompoundWidget.h"
 
@@ -40,6 +41,8 @@ private:
 	TAttribute<bool> IsUnlocked;
 	/** The search being edited; Types empty means every type. */
 	FProtoBoyAssetSearch Search;
+	/** The agent that turns the query and the search context into search terms (SProtoBoyAgentPicker). */
+	TOptional<EProtoBoyMCPClient> SelectedAgent;
 	/** The last search's result: errors, or how many sources opened. */
 	FText SearchStatus;
 	bool bSearchFailed = false;

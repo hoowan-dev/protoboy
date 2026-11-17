@@ -15,18 +15,24 @@ namespace ProtoBoyFab
 
 	FString GetListingType(EProtoBoyAssetType Type)
 	{
-		// "3d-model" is confirmed in fab.com search URLs; TODO: check the other slugs against Fab's Product types filter.
+		// Checked against fab.com search pages (each slug shows as "Results in <type>"). Unknown slugs are ignored by Fab.
 		switch (Type)
 		{
-		case EProtoBoyAssetType::Model3D:     return TEXT("3d-model");
-		case EProtoBoyAssetType::Material:    return TEXT("material");
-		case EProtoBoyAssetType::Animation:   return TEXT("animation");
-		case EProtoBoyAssetType::Audio:       return TEXT("audio");
-		case EProtoBoyAssetType::VFX:         return TEXT("vfx");
-		case EProtoBoyAssetType::Environment: return TEXT("environment");
-		case EProtoBoyAssetType::UI:          return TEXT("ui");
-		case EProtoBoyAssetType::HDRI:        return TEXT("hdri");
-		default:                              return FString();
+		case EProtoBoyAssetType::Model3D:         return TEXT("3d-model");
+		case EProtoBoyAssetType::MaterialTexture: return TEXT("material");
+		case EProtoBoyAssetType::SpriteFlipbook:  return TEXT("sprites-and-flipbooks");
+		case EProtoBoyAssetType::Decal:           return TEXT("decal");
+		case EProtoBoyAssetType::Brush:           return TEXT("brush");
+		case EProtoBoyAssetType::HDRI:            return TEXT("hdri");
+		case EProtoBoyAssetType::Animation:       return TEXT("animation");
+		case EProtoBoyAssetType::Audio:           return TEXT("audio");
+		case EProtoBoyAssetType::VFX:             return TEXT("vfx");
+		case EProtoBoyAssetType::UI:              return TEXT("ui");
+		case EProtoBoyAssetType::GameSystem:      return TEXT("game-system");
+		case EProtoBoyAssetType::GameTemplate:    return TEXT("game-template");
+		case EProtoBoyAssetType::ToolPlugin:      return TEXT("tool-and-plugin");
+		case EProtoBoyAssetType::Tutorial:        return TEXT("tutorials-examples");
+		default:                                  return FString();
 		}
 	}
 
@@ -58,7 +64,7 @@ namespace ProtoBoyFab
 				Url += FString::Printf(TEXT("&listing_types=%s"), *FGenericPlatformHttp::UrlEncode(ListingType.TrimStartAndEnd()));
 			}
 		}
-		// TODO: check Fab's price range parameter names; q, listing_types and is_free are the only ones confirmed so far.
+		// min_price / max_price checked on fab.com ("From $10.00 to $20.00"). Free only replaces the price range.
 		if (!Search.bFreeOnly && Search.MinPrice.IsSet())
 		{
 			Url += FString::Printf(TEXT("&min_price=%s"), *FString::SanitizeFloat(Search.MinPrice.GetValue(), 0));

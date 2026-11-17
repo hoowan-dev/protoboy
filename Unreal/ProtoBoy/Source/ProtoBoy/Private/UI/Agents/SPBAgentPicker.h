@@ -6,7 +6,7 @@
 /**
  * Picks one of the user's agents to run unattended (FProtoBoyAgentRun): a radio button per agent set up in MCP
  * settings, with the agents that can't run (Claude Desktop) disabled and saying why, or a warning when none is set up.
- * Used by the generation windows (docs from the project, tasks from the docs).
+ * Used by the generation windows (docs from the project, tasks from the docs) and the Asset Sourcing page's search.
  */
 class SProtoBoyAgentPicker : public SCompoundWidget
 {

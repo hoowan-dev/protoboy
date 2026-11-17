@@ -82,16 +82,17 @@ void SProtoBoyDocHealthPanel::Construct(const FArguments& InArgs)
 				.Text_Lambda([]() { FText Status; ProtoBoyDocHealth::IsRevisionControlConnected(Status); return Status; })
 				.AutoWrapText(true)
 			]
+		]
 
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			.Padding(8.f, 0.f, 0.f, 0.f)
-			[
-				SNew(SButton)
-				.Text_Lambda([IsConnected]() { return IsConnected() ? LOCTEXT("ChangeRC", "Revision Control Settings...") : LOCTEXT("ConnectRC", "Connect to Revision Control..."); })
-				.OnClicked_Lambda([]() { ProtoBoyDocHealth::OpenRevisionControlLogin(); return FReply::Handled(); })
-			]
+		// Left-aligned on its own row, like the other settings buttons.
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.HAlign(HAlign_Left)
+		.Padding(0.f, 8.f, 0.f, 0.f)
+		[
+			SNew(SButton)
+			.Text_Lambda([IsConnected]() { return IsConnected() ? LOCTEXT("ChangeRC", "Revision Control Settings...") : LOCTEXT("ConnectRC", "Connect to Revision Control..."); })
+			.OnClicked_Lambda([]() { ProtoBoyDocHealth::OpenRevisionControlLogin(); return FReply::Handled(); })
 		]
 
 		// How to connect, until connected

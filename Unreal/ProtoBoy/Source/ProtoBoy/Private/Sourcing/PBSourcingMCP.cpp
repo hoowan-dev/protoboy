@@ -51,7 +51,7 @@ namespace ProtoBoySourcingMCP
 			LOCTEXT("FabDesc", "Opens a Fab (fab.com) asset search in the user's browser, for assets that fit the design and the style in its Content doc. You get the URL, not results: the user browses and picks. Use instead of generating assets."),
 			false, {
 				{ TEXT("query"), TEXT("string"), TEXT("Search terms derived from the design need and the Content doc's What to Look For section, e.g. \"stylized low poly medieval crates\"."), true },
-				{ TEXT("listing_type"), TEXT("string"), TEXT("Optional Fab listing type filter, e.g. \"3d-model\", \"material\", \"audio\".") },
+				{ TEXT("listing_type"), TEXT("string"), TEXT("Optional Fab listing type filter, one of: 3d-model, material, sprites-and-flipbooks, decal, brush, hdri, animation, audio, vfx, ui, game-system, game-template, tool-and-plugin, tutorials-examples.") },
 				{ TEXT("free_only"), TEXT("boolean"), TEXT("Only free listings.") },
 				{ TEXT("open"), TEXT("boolean"), TEXT("Open it in the user's browser (default true). False returns the URL only.") },
 			}, &FabSearch, &ProtoBoyFab::IsEnabled));

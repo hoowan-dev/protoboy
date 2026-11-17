@@ -33,15 +33,21 @@ namespace ProtoBoyAssetSourcing
 	{
 		switch (Type)
 		{
-		case EProtoBoyAssetType::Model3D:     return LOCTEXT("Type3D", "3D Models");
-		case EProtoBoyAssetType::Material:    return LOCTEXT("TypeMaterial", "Materials");
-		case EProtoBoyAssetType::Animation:   return LOCTEXT("TypeAnimation", "Animations");
-		case EProtoBoyAssetType::Audio:       return LOCTEXT("TypeAudio", "Audio");
-		case EProtoBoyAssetType::VFX:         return LOCTEXT("TypeVFX", "VFX");
-		case EProtoBoyAssetType::Environment: return LOCTEXT("TypeEnvironment", "Environments");
-		case EProtoBoyAssetType::UI:          return LOCTEXT("TypeUI", "UI");
-		case EProtoBoyAssetType::HDRI:        return LOCTEXT("TypeHDRI", "HDRIs");
-		default:                              return FText::GetEmpty();
+		case EProtoBoyAssetType::Model3D:         return LOCTEXT("Type3D", "3D");
+		case EProtoBoyAssetType::MaterialTexture: return LOCTEXT("TypeMaterial", "Materials and Textures");
+		case EProtoBoyAssetType::SpriteFlipbook:  return LOCTEXT("TypeSprite", "Sprites and Flipbooks");
+		case EProtoBoyAssetType::Decal:           return LOCTEXT("TypeDecal", "Decals");
+		case EProtoBoyAssetType::Brush:           return LOCTEXT("TypeBrush", "Brushes");
+		case EProtoBoyAssetType::HDRI:            return LOCTEXT("TypeHDRI", "HDRI");
+		case EProtoBoyAssetType::Animation:       return LOCTEXT("TypeAnimation", "Animations");
+		case EProtoBoyAssetType::Audio:           return LOCTEXT("TypeAudio", "Audio");
+		case EProtoBoyAssetType::VFX:             return LOCTEXT("TypeVFX", "VFX");
+		case EProtoBoyAssetType::UI:              return LOCTEXT("TypeUI", "UI");
+		case EProtoBoyAssetType::GameSystem:      return LOCTEXT("TypeGameSystem", "Game Systems");
+		case EProtoBoyAssetType::GameTemplate:    return LOCTEXT("TypeGameTemplate", "Game Templates");
+		case EProtoBoyAssetType::ToolPlugin:      return LOCTEXT("TypeToolPlugin", "Tools and Plugins");
+		case EProtoBoyAssetType::Tutorial:        return LOCTEXT("TypeTutorial", "Tutorials and Examples");
+		default:                                  return FText::GetEmpty();
 		}
 	}
 
