@@ -21,16 +21,25 @@ public:
 	void Construct(const FArguments& InArgs);
 	virtual ~SProtoBoyDashboard() override;
 
-private:
-	/** Rebuild the Documentation section from the current connection. Bound to OnConnectionChanged. */
-	void RebuildDocsSection();
 	/** A sidebar entry and the page it opens. */
 	struct FPage
 	{
 		FText Label;
 		FText Description;
+		/** In the editor's app style. */
 		FName Icon;
 	};
+
+	/** The pages in sidebar order. A page's index here is what ShowPage and Open take (also used by the status bar hub). */
+	static TArray<FPage> GetPageDefinitions();
+	/** Switch to a page, as if it was picked in the sidebar. */
+	void ShowPage(int32 PageIndex);
+	/** Open (or bring forward) the dashboard tab, on PageIndex unless it's INDEX_NONE (then the page it was last on). */
+	static void Open(int32 PageIndex = INDEX_NONE);
+
+private:
+	/** Rebuild the Documentation section from the current connection. Bound to OnConnectionChanged. */
+	void RebuildDocsSection();
 
 	TSharedRef<ITableRow> OnGeneratePageRow(TSharedPtr<FPage> Page, const TSharedRef<STableViewBase>& OwnerTable);
 	void OnPageSelected(TSharedPtr<FPage> Page, ESelectInfo::Type SelectInfo);

@@ -31,7 +31,7 @@ There are no tests or lint setup yet.
 
 - Source files use a `PB` prefix (`PBSubsystem.h`, `SPBDashboard.cpp`); class names keep the full `ProtoBoy` prefix. `ProtoBoy.Build.cs` must match the module name and is not renamed.
 - **Code goes in its feature's folder**, in `Public/` and `Private/` alike: `Docs/`, `Tasks/`, `Agents/`, `MCP/`, `Sourcing/`, `Health/`, `Net/`, `Daemon/`. A provider or platform gets a subfolder of its feature (`Docs/Obsidian/`, `Tasks/Trello/`, `Sourcing/Fab/`). A feature's MCP tools and prompts live with it (`Docs/PBDocsMCP`, `Tasks/PBTasksMCP`), not in `MCP/`.
-- **UI mirrors the feature folders:** each feature's windows, panels and dashboard page go under `UI/<Feature>/` (`UI/Docs/Map/`, `UI/Tasks/Trello/`, ...). Only the dashboard shell, `PBStyle` and the shared widget builders (`PBWidgets`) sit directly in `UI/`.
+- **UI mirrors the feature folders:** each feature's windows, panels and dashboard page go under `UI/<Feature>/` (`UI/Docs/Map/`, `UI/Tasks/Trello/`, ...). Only the dashboard shell, the status bar hub (`PBStatusBarHub`), `PBStyle` and the shared widget builders (`PBWidgets`) sit directly in `UI/`.
 - Split a file when it holds more than one job (e.g. the Trello client is one class in three .cpp files by concern). Keep each file's helpers in its own named namespace.
 - `UProtoBoySubsystem` owns one service per area; include their headers directly in `PBSubsystem.h` (forward declarations fail with C4150 on the `TUniquePtr` members).
 - Team tunables go in `UProtoBoySettings` (saved to the committed `DefaultProtoBoy.ini`); per-user and machine-specific state goes in a JSON store under `Saved/ProtoBoy/`, never in settings.
@@ -51,4 +51,4 @@ There are no tests or lint setup yet.
 | Sourcing | `ProtoBoyAssetSourcing`, `ProtoBoyFab`, `FProtoBoyAssetSearchRun` (agent-suggested assets) |
 | Health | `ProtoBoyDocHealth` (setting, revision control check), `ProtoBoyDocHealthChanges` (files changed since each doc was edited, Git only), `FProtoBoyDocHealthRun` (agent flags stale docs), `ProtoBoyDocHealthReport` (last result) |
 | Net | `ProtoBoyHttp` (outgoing HTTP, game-thread callbacks, `RunAfter`) |
-| UI | `SProtoBoyDashboard`, `SProtoBoyDocMapEditor`, `SProtoBoyTasksPage`, the feature windows |
+| UI | `SProtoBoyDashboard`, `ProtoBoyStatusBarHub` (the status bar button), `SProtoBoyDocMapEditor`, `SProtoBoyTasksPage`, the feature windows |

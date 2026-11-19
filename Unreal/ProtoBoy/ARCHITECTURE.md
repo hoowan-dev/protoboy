@@ -10,6 +10,8 @@ Paths are relative to `Source/ProtoBoy/` (`Public/` or `Private/`).
 - Single module `ProtoBoy` (Type `Editor`, `PostEngineInit`).
 - `FProtoBoyModule` handles only editor UI registration: the `ProtoBoyDashboard` nomad tab and the
   **Tools > ProtoBoy Dashboard** menu entry (via a `UToolMenus` startup callback, owner-scoped so shutdown unregisters it).
+  The same callback adds the status bar hub (`ProtoBoyStatusBarHub::Register`, removed by `Unregister` on shutdown; see
+  Dashboard and UI).
 - `UProtoBoySubsystem` (a `UEditorSubsystem`) is the central hub. It owns one plain C++ service per area as
   `TUniquePtr` and is where editor events (asset registry, package save, live coding) should be bound and routed
   (`BindEditorEvents`, currently a TODO). Access it with `UProtoBoySubsystem::Get()`.
@@ -349,7 +351,19 @@ docs.
   keeps the feature pages disabled until setup is done (`GetMissingSetup`, `MakeSetupLock`, which takes the list of
   what's missing). Asset Sourcing also waits on the sourcing setup (`GetMissingSourcingSetup`); Health waits only on
   health checks being enabled. Feature pages are
-  their own widgets in their feature's folder.
+  their own widgets in their feature's folder. The pages' labels and icons come from `GetPageDefinitions`;
+  `SProtoBoyDashboard::Open(PageIndex)` opens the tab (on a page, or the last one) and `ShowPage` switches it.
+- `ProtoBoyStatusBarHub` (UI/PBStatusBarHub.h): the **ProtoBoy** button in the bottom status bar of every editor
+  window that has one (level editor, asset editors, ...). Its menu (`ProtoBoy.StatusBar.Hub`, extendable) has Open
+  Dashboard and one entry per dashboard page. Status on the button (setup progress, stale docs) is a TODO.
+  - Each editor app has its own status bar toolbar menu (`<StatusBarName>.ToolBar`, e.g.
+    `LevelEditor.StatusBar.ToolBar`, `MaterialEditorApp.ToolBar`) with no shared parent to extend. So the hub listens
+    to `UToolMenus::OnPreGenerateWidget` and, the first time a menu with the `StatusBarToolBar` style (set only by
+    `SStatusBar`) is generated, adds a `ProtoBoy` section to it, before `SourceControl` (at the end on bars that hide
+    Revision Control). The level editor's is added up front, followed by a `RefreshAllWidgets`, since its bar may
+    already exist.
+  - The button is a widget entry styled like the Revision Control button, added as a dynamic entry so each status bar
+    gets its own. Everything is owned by the name `ProtoBoyStatusBarHub`; `Unregister` (module shutdown) removes it.
 - Shared widget builders are in `UI/PBWidgets.h` (`ProtoBoyWidgets::MakeSection`, the collapsible section card);
   `UI/PBStyle` has the plugin's brushes, including `ProtoBoy.Logo` (Resources/Icons/ProtoBoy.svg, a 16px white icon
   in the editor's style) used by the dashboard tab and the Tools menu entry, and `ProtoBoy.Logo.Large` beside the

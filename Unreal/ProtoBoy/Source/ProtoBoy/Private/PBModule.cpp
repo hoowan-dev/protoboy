@@ -3,6 +3,7 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Docking/TabManager.h"
 #include "ToolMenus.h"
+#include "UI/PBStatusBarHub.h"
 #include "UI/PBStyle.h"
 #include "UI/SPBDashboard.h"
 #include "Widgets/Docking/SDockTab.h"
@@ -38,6 +39,7 @@ void FProtoBoyModule::ShutdownModule()
 {
 	UToolMenus::UnRegisterStartupCallback(this);
 	UToolMenus::UnregisterOwner(this);
+	ProtoBoyStatusBarHub::Unregister();
 
 	if (FSlateApplication::IsInitialized())
 	{
@@ -58,10 +60,9 @@ void FProtoBoyModule::RegisterMenus()
 		LOCTEXT("OpenDashboard", "ProtoBoy Dashboard"),
 		LOCTEXT("OpenDashboardTooltip", "Open the ProtoBoy dashboard."),
 		FSlateIcon(FProtoBoyStyle::Get().GetStyleSetName(), "ProtoBoy.Logo"),
-		FUIAction(FExecuteAction::CreateLambda([]()
-		{
-			FGlobalTabmanager::Get()->TryInvokeTab(DashboardTabName);
-		})));
+		FUIAction(FExecuteAction::CreateLambda([]() { SProtoBoyDashboard::Open(); })));
+
+	ProtoBoyStatusBarHub::Register();
 }
 
 #undef LOCTEXT_NAMESPACE

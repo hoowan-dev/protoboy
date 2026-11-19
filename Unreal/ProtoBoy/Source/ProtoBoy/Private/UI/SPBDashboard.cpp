@@ -1,7 +1,10 @@
 #include "UI/SPBDashboard.h"
 
+#include "Framework/Docking/TabManager.h"
 #include "ISettingsModule.h"
 #include "Misc/ConfigCacheIni.h"
+#include "PBModule.h"
+#include "Widgets/Docking/SDockTab.h"
 #include "Docs/PBDocsService.h"
 #include "MCP/PBMCPClientConfig.h"
 #include "Modules/ModuleManager.h"
@@ -66,16 +69,44 @@ namespace ProtoBoyDashboard
 	}
 }
 
+TArray<SProtoBoyDashboard::FPage> SProtoBoyDashboard::GetPageDefinitions()
+{
+	// The open page is remembered by index, and Construct builds the pages in this order: add new ones at the end.
+	return {
+		FPage{ LOCTEXT("SetupPage", "Setup"), LOCTEXT("SetupPageTip", "Plugin settings and connections to agents, docs, task boards and asset sources."), "Icons.Settings" },
+		FPage{ LOCTEXT("DocumentationPage", "Documentation"), LOCTEXT("DocumentationPageTip", "Setup checklist and the map of the project's docs."), "Icons.Documentation" },
+		FPage{ LOCTEXT("TasksPage", "Tasks"), LOCTEXT("TasksPageTip", "The team's task board."), "Icons.Clipboard" },
+		FPage{ LOCTEXT("AssetSourcingPage", "Asset Sourcing"), LOCTEXT("AssetSourcingPageTip", "Find art, audio and other assets on the enabled sources instead of generating them with AI."), "MainFrame.OpenMarketplace" },
+		FPage{ LOCTEXT("HealthPage", "Health"), LOCTEXT("HealthPageTip", "Check which docs may need updating after changes in revision control."), "Icons.Heart" },
+	};
+}
+
+void SProtoBoyDashboard::ShowPage(int32 PageIndex)
+{
+	// Selecting the row switches the page and remembers it (OnPageSelected).
+	if (PageList.IsValid() && Pages.IsValidIndex(PageIndex))
+	{
+		PageList->SetSelection(Pages[PageIndex]);
+	}
+}
+
+void SProtoBoyDashboard::Open(int32 PageIndex)
+{
+	const TSharedPtr<SDockTab> Tab = FGlobalTabmanager::Get()->TryInvokeTab(FProtoBoyModule::DashboardTabName);
+	if (Tab.IsValid() && PageIndex != INDEX_NONE)
+	{
+		// The tab's content is the dashboard itself (FProtoBoyModule's tab spawner).
+		StaticCastSharedRef<SProtoBoyDashboard>(Tab->GetContent())->ShowPage(PageIndex);
+	}
+}
+
 void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 {
 	// TODO: Status header.
-	Pages = {
-		MakeShared<FPage>(FPage{ LOCTEXT("SetupPage", "Setup"), LOCTEXT("SetupPageTip", "Plugin settings and connections to agents, docs, task boards and asset sources."), "Icons.Settings" }),
-		MakeShared<FPage>(FPage{ LOCTEXT("DocumentationPage", "Documentation"), LOCTEXT("DocumentationPageTip", "Setup checklist and the map of the project's docs."), "Icons.Documentation" }),
-		MakeShared<FPage>(FPage{ LOCTEXT("TasksPage", "Tasks"), LOCTEXT("TasksPageTip", "The team's task board."), "Icons.Clipboard" }),
-		MakeShared<FPage>(FPage{ LOCTEXT("AssetSourcingPage", "Asset Sourcing"), LOCTEXT("AssetSourcingPageTip", "Find art, audio and other assets on the enabled sources instead of generating them with AI."), "MainFrame.OpenMarketplace" }),
-		MakeShared<FPage>(FPage{ LOCTEXT("HealthPage", "Health"), LOCTEXT("HealthPageTip", "Check which docs may need updating after changes in revision control."), "Icons.Heart" }),
-	};
+	for (const FPage& Page : GetPageDefinitions())
+	{
+		Pages.Add(MakeShared<FPage>(Page));
+	}
 	BuildSetupSteps();
 
 	ActivePage = 0;
