@@ -32,6 +32,8 @@ public:
 
 	/** The pages in sidebar order. A page's index here is what ShowPage and Open take (also used by the status bar hub). */
 	static TArray<FPage> GetPageDefinitions();
+	/** The Health page's index in GetPageDefinitions, for the status bar hub's shortcut to it. */
+	static constexpr int32 HealthPageIndex = 4;
 	/** Switch to a page, as if it was picked in the sidebar. */
 	void ShowPage(int32 PageIndex);
 	/** Open (or bring forward) the dashboard tab, on PageIndex unless it's INDEX_NONE (then the page it was last on). */

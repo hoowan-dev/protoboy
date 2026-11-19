@@ -6,6 +6,7 @@
 #include "Docs/PBDocMap.h"
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "EditorSubsystem.h"
+#include "Health/PBDocHealthService.h"
 #include "MCP/PBMCPServer.h"
 #include "Tasks/PBTaskBoard.h"
 #include "Tasks/Trello/PBTrelloClient.h"
@@ -43,6 +44,8 @@ public:
 	IProtoBoyTaskProvider* GetTaskProvider() const;
 	/** The board as ProtoBoy last saw it: category sync state and the loaded tasks (filled by Sync). */
 	FProtoBoyTaskBoard& GetTaskBoard() const { return *TaskBoard; }
+	/** The documentation health checks: the running check, the last report and the structure issues. */
+	FProtoBoyDocHealthService& GetDocHealth() const { return *DocHealth; }
 
 private:
 	// TODO: Bind asset registry / package save / live coding events and route them to the services.
@@ -68,6 +71,7 @@ private:
 	TUniquePtr<FProtoBoyTrelloClient> TrelloClient;
 	TUniquePtr<FProtoBoyDocMap> DocMap;
 	TUniquePtr<FProtoBoyTaskBoard> TaskBoard;
+	TUniquePtr<FProtoBoyDocHealthService> DocHealth;
 	/** Re-read the doc map when the docs folder changes (Obsidian connect / disconnect). */
 	FDelegateHandle DocsConnectionChangedHandle;
 };

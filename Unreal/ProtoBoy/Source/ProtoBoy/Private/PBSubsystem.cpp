@@ -18,6 +18,7 @@ void UProtoBoySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	TrelloClient = MakeUnique<FProtoBoyTrelloClient>(*TrelloConnector);
 	DocMap = MakeUnique<FProtoBoyDocMap>(*DocsService);
 	TaskBoard = MakeUnique<FProtoBoyTaskBoard>(*TrelloClient, *TrelloConnector, *DocMap);
+	DocHealth = MakeUnique<FProtoBoyDocHealthService>(*DocMap);
 	DocsConnectionChangedHandle = ObsidianConnector->OnConnectionChanged.AddLambda([this]() { DocMap->Refresh(); });
 
 	const UProtoBoySettings* Settings = GetDefault<UProtoBoySettings>();
@@ -42,6 +43,8 @@ void UProtoBoySubsystem::Deinitialize()
 	DaemonClient->Disconnect();
 
 	ObsidianConnector->OnConnectionChanged.Remove(DocsConnectionChangedHandle);
+	// Before the doc map it listens to. Stops a running check's agent.
+	DocHealth.Reset();
 	TaskBoard.Reset();
 	DocMap.Reset();
 	TrelloClient.Reset();
@@ -96,12 +99,15 @@ void UProtoBoySubsystem::UnbindEditorEvents()
 bool UProtoBoySubsystem::OnCoreTick(float DeltaTime)
 {
 	ProtoBoyHttp::PumpGameThreadQueue();
+	DocHealth->Tick();
 	return true;
 }
 
 void UProtoBoySubsystem::OnModalLoopTick(float DeltaTime)
 {
 	ProtoBoyHttp::PumpGameThreadQueue();
+	// A health check started from the status bar keeps going while a modal window is open.
+	DocHealth->Tick();
 	MCPServer->TickWhileModal(DeltaTime);
 	TrelloConnector->TickWhileModal(DeltaTime);
 }

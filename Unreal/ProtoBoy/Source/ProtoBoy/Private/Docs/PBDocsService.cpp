@@ -2,6 +2,7 @@
 
 #include "Docs/Obsidian/PBObsidianConnector.h"
 #include "Docs/PBMarkdown.h"
+#include "HAL/PlatformProcess.h"
 #include "Misc/DateTime.h"
 #include "Misc/Paths.h"
 #include "PBModule.h"
@@ -106,6 +107,21 @@ IProtoBoyDocsProvider& FProtoBoyDocsService::GetProvider() const
 FString FProtoBoyDocsService::GetDocsRoot() const
 {
 	return Obsidian.IsConnected() ? ObsidianDocs.GetDocsRoot() : LocalDocs.GetDocsRoot();
+}
+
+bool FProtoBoyDocsService::OpenDoc(const FString& RelativePath, FText& OutError) const
+{
+	if (Obsidian.IsConnected())
+	{
+		return Obsidian.OpenInObsidian(RelativePath, OutError);
+	}
+	const FString File = FPaths::ConvertRelativePathToFull(GetDocsRoot() / RelativePath);
+	if (!FPaths::FileExists(File) || !FPlatformProcess::LaunchFileInDefaultExternalApplication(*File))
+	{
+		OutError = FText::Format(LOCTEXT("OpenDocFailed", "Couldn't open {0}."), FText::FromString(File));
+		return false;
+	}
+	return true;
 }
 
 TArray<FProtoBoyDocSearchHit> FProtoBoyDocsService::Search(const FString& Query, int32 MaxResults) const

@@ -350,16 +350,29 @@ structure checks that need neither an agent nor revision control. The only thing
   - Coverage: Design docs with no Design doc below them and no Tech or Content doc anywhere below; `Source/<Module>`
     and top-level `Content/` folders whose name appears in no doc.
   - Class and asset names that no longer exist are a TODO (needs an index of the project's types).
+- `FProtoBoyDocHealthService` (Health/PBDocHealthService.h), owned by the subsystem (`GetDocHealth()`), is the health
+  checks as the editor last saw them. It, not any widget, owns the state, so a check keeps running with the dashboard
+  closed and the Health page and the status bar hub always agree.
+  - The check against revision control: `StartCheck` / `CancelCheck` / `IsChecking`, the current or last run (its log
+    through `GetLog`, `GetRunSerial` goes up per check), how it ended (`GetRunStatus`, `DidRunFail`), and the last
+    report (`HasReport`, `GetReport`, `DescribeReport`; the saved one is loaded at startup). The subsystem calls
+    `Tick` from the core ticker and the modal tick.
+  - The agent is `GetAgent`: the one picked this session (`SetAgent`, from the Health page's picker), else the first
+    set-up agent that can run unattended.
+  - `MarkUpToDate` calls `MarkReviewed`, takes the doc off the report and saves it.
+  - The structure checks: `CheckStructure` runs `ProtoBoyDocStructure::Check` and keeps the result (`GetIssues`,
+    `CountProblems`). `IsStructureStale` is set by every `FProtoBoyDocMap::OnChanged`; nothing re-checks on its own,
+    because a check reads every doc.
+  - `OnChanged` fires when any of this changes, except for new log lines.
 - UI (UI/Health/): `SProtoBoyDocHealthPanel`, the Setup page's optional Documentation Health Checks section;
-  `SProtoBoyHealthPage`, the dashboard's Health page.
-  - Agent picker and Run Health Checks (Cancel while running), the Agent Log, and Docs That May Need Updating (the
-    last report, also after a restart). Each doc's card has Open Doc and **Mark as Up to Date**, which calls
-    `MarkReviewed` and takes the doc off the saved report. The page owns the run and polls it from the core ticker,
-    like the Asset Sourcing page. These three sections are locked until `ProtoBoyDocHealth::IsEnabled` (the setting is
-    ticked and revision control is connected), not by the general setup.
+  `SProtoBoyHealthPage`, the dashboard's Health page, a view of the service (it rebuilds its cards on `OnChanged`).
+  - Agent picker and Run Health Checks (Cancel while running), the Agent Log (new lines are read in `Tick`), and Docs
+    That May Need Updating. Each doc's card has Open Doc (`FProtoBoyDocsService::OpenDoc`) and **Mark as Up to Date**.
+    These three sections are locked until `ProtoBoyDocHealth::IsEnabled` (the setting is ticked and revision control
+    is connected), not by the general setup.
   - Documentation Structure: one card per issue, with Check Again (refreshes the doc map first). It's outside the
-    lock. A check is requested at construction and on every `FProtoBoyDocMap::OnChanged`, and runs from the page's
-    `Tick`, so only while the page is on screen.
+    lock. The page's `Tick` runs the structure check when it's stale, so only while the page is on screen.
+  - The status bar hub is the other view: see Dashboard and UI.
 
 ## Daemon (Daemon/)
 
@@ -375,9 +388,19 @@ structure checks that need neither an agent nor revision control. The only thing
   health checks being enabled. Feature pages are
   their own widgets in their feature's folder. The pages' labels and icons come from `GetPageDefinitions`;
   `SProtoBoyDashboard::Open(PageIndex)` opens the tab (on a page, or the last one) and `ShowPage` switches it.
-- `ProtoBoyStatusBarHub` (UI/PBStatusBarHub.h): the **ProtoBoy** button in the bottom status bar of every editor
-  window that has one (level editor, asset editors, ...). Its menu (`ProtoBoy.StatusBar.Hub`, extendable) has Open
-  Dashboard and one entry per dashboard page. Status on the button (setup progress, stale docs) is a TODO.
+- `ProtoBoyStatusBarHub` (UI/PBStatusBarHub.h): the ProtoBoy button in the bottom status bar of every editor window
+  that has one (level editor, asset editors, ...). Its main job is the documentation health checks, read from
+  `FProtoBoyDocHealthService`.
+  - The button always reads "ProtoBoy". The icon after the name is the status (`GetStatusIcon`): a throbber while
+    checking, a warning when docs may need updating or the structure has problems, a green check when checked and
+    clean, a question mark when not checked yet. The tooltip spells it out: a headline with the counts
+    (`GetHeadline`), then the last report's summary and the structure counts (`GetStatusText`). Structure problems
+    only count once the structure was checked this session.
+  - Clicking it opens two tool menus side by side (`MakeMenuContent`, rebuilt each time; both extendable). Left,
+    `ProtoBoy.StatusBar.Hub`: Open Dashboard and one entry per page. Right, `ProtoBoy.StatusBar.Hub.Health`: the
+    status text, **Run Health Checks** (`RunOrCancelChecks`: the structure checks, then `StartCheck` when
+    `ProtoBoyDocHealth::IsEnabled`; Cancel while one runs) and the flagged docs (up to 8, click to open). Failures
+    show as toasts (`Notify`), since the status bar has no room for messages.
   - Each editor app has its own status bar toolbar menu (`<StatusBarName>.ToolBar`, e.g.
     `LevelEditor.StatusBar.ToolBar`, `MaterialEditorApp.ToolBar`) with no shared parent to extend. So the hub listens
     to `UToolMenus::OnPreGenerateWidget` and, the first time a menu with the `StatusBarToolBar` style (set only by

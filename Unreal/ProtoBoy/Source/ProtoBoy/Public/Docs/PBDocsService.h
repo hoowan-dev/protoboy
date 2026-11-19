@@ -39,6 +39,9 @@ public:
 	/** Absolute docs root: the Obsidian docs folder when connected, otherwise DocsDirectory from settings. */
 	FString GetDocsRoot() const;
 
+	/** Open a doc for the user to read or edit: in Obsidian when connected, else in the system's default app for .md files. */
+	bool OpenDoc(const FString& RelativePath, FText& OutError) const;
+
 	/** Keyword search over titles and text. Empty query returns nothing. */
 	TArray<FProtoBoyDocSearchHit> Search(const FString& Query, int32 MaxResults = 10) const;
 

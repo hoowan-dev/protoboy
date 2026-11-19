@@ -49,6 +49,6 @@ There are no tests or lint setup yet.
 | Agents | `FProtoBoyAgentRun` (runs an agent's CLI unattended) |
 | MCP | `FProtoBoyMCPServer`, `FProtoBoyMCPClientConfig`, tool and prompt registries |
 | Sourcing | `ProtoBoyAssetSourcing`, `ProtoBoyFab`, `FProtoBoyAssetSearchRun` (agent-suggested assets) |
-| Health | `ProtoBoyDocHealth` (setting, revision control check), `ProtoBoyDocHealthChanges` (files changed since each doc was edited, Git only), `FProtoBoyDocHealthRun` (agent flags stale docs), `ProtoBoyDocHealthReport` (last result), `ProtoBoyDocStructure` (agent-free checks: broken links, missing paths, unwritten sections, coverage) |
+| Health | `FProtoBoyDocHealthService` (owns the running check, last report and structure issues; the Health page and status bar hub are views of it), `ProtoBoyDocHealth` (setting, revision control check), `ProtoBoyDocHealthChanges` (files changed since each doc was edited, Git only), `FProtoBoyDocHealthRun` (agent flags stale docs), `ProtoBoyDocHealthReport` (last result), `ProtoBoyDocStructure` (agent-free checks: broken links, missing paths, unwritten sections, coverage) |
 | Net | `ProtoBoyHttp` (outgoing HTTP, game-thread callbacks, `RunAfter`) |
-| UI | `SProtoBoyDashboard`, `ProtoBoyStatusBarHub` (the status bar button), `SProtoBoyDocMapEditor`, `SProtoBoyTasksPage`, the feature windows |
+| UI | `SProtoBoyDashboard`, `ProtoBoyStatusBarHub` (the status bar button: health status and Run Health Checks), `SProtoBoyDocMapEditor`, `SProtoBoyTasksPage`, the feature windows |
