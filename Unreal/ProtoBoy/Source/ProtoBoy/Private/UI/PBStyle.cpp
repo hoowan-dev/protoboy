@@ -19,6 +19,12 @@ void FProtoBoyStyle::Initialize()
 	check(Plugin.IsValid());
 	StyleSet->SetContentRoot(Plugin->GetBaseDir() / TEXT("Resources"));
 
+	// ProtoBoy's logo (the dashboard tab and the Tools menu entry). White like the editor's own icons, so Slate tints it.
+	const FString Logo = StyleSet->RootToContentDir(TEXT("Icons/ProtoBoy"), TEXT(".svg"));
+	StyleSet->Set("ProtoBoy.Logo", new FSlateVectorImageBrush(Logo, FVector2D(16.f, 16.f)));
+	// The dashboard sidebar's title.
+	StyleSet->Set("ProtoBoy.Logo.Large", new FSlateVectorImageBrush(Logo, FVector2D(36.f, 36.f)));
+
 	const FString ObsidianIcon = StyleSet->RootToContentDir(TEXT("Icons/Obsidian"), TEXT(".svg"));
 	StyleSet->Set("ProtoBoy.Icon.Obsidian", new FSlateVectorImageBrush(ObsidianIcon, FVector2D(20.f, 20.f)));
 	StyleSet->Set("ProtoBoy.Icon.Obsidian.Large", new FSlateVectorImageBrush(ObsidianIcon, FVector2D(40.f, 40.f)));

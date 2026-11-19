@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/images/logo-white.svg">
+    <img src=".github/images/logo-black.svg" alt="ProtoBoy logo" width="96" height="96">
+  </picture>
+</p>
+
 # ProtoBoy
 
 **Build games, not slop.** ProtoBoy is a game-dev prototyping companion that keeps AI-assisted work aligned with your

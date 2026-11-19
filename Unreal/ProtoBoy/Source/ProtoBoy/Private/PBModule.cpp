@@ -27,6 +27,7 @@ void FProtoBoyModule::StartupModule()
 				];
 		}))
 		.SetDisplayName(LOCTEXT("DashboardTabTitle", "ProtoBoy"))
+		.SetIcon(FSlateIcon(FProtoBoyStyle::Get().GetStyleSetName(), "ProtoBoy.Logo"))
 		.SetMenuType(ETabSpawnerMenuType::Hidden);
 
 	UToolMenus::RegisterStartupCallback(
@@ -56,7 +57,7 @@ void FProtoBoyModule::RegisterMenus()
 		"OpenProtoBoyDashboard",
 		LOCTEXT("OpenDashboard", "ProtoBoy Dashboard"),
 		LOCTEXT("OpenDashboardTooltip", "Open the ProtoBoy dashboard."),
-		FSlateIcon(),
+		FSlateIcon(FProtoBoyStyle::Get().GetStyleSetName(), "ProtoBoy.Logo"),
 		FUIAction(FExecuteAction::CreateLambda([]()
 		{
 			FGlobalTabmanager::Get()->TryInvokeTab(DashboardTabName);

@@ -7,9 +7,10 @@ class SWidgetSwitcher;
 
 /**
  * ProtoBoy dashboard: a sidebar listing the pages, and the selected page beside it. Pages: Setup (plugin settings, MCP,
- * Documentation, Tasks, Asset Sourcing), Documentation (the doc map), Tasks (SProtoBoyTasksPage) and Asset Sourcing
- * (SProtoBoyAssetSourcingPage). The open page is remembered per user. Documentation, Tasks and Asset Sourcing stay
- * locked until setup is done; Asset Sourcing also needs its own setup (ProtoBoyAssetSourcing::GetMissingSetup).
+ * Documentation, Tasks, Asset Sourcing), Documentation (the doc map), Tasks (SProtoBoyTasksPage), Asset Sourcing
+ * (SProtoBoyAssetSourcingPage) and Health (SProtoBoyHealthPage). The open page is remembered per user. Documentation,
+ * Tasks and Asset Sourcing stay locked until setup is done; Asset Sourcing also needs its own setup
+ * (ProtoBoyAssetSourcing::GetMissingSetup). Health is locked only until documentation health checks are enabled.
  */
 class SProtoBoyDashboard : public SCompoundWidget
 {
@@ -74,6 +75,9 @@ private:
 
 	/** Asset Sourcing: SProtoBoyAssetSourcingPage, locked until setup and the sourcing setup are finished. */
 	TSharedRef<SWidget> MakeAssetSourcingSection();
+
+	/** Health: SProtoBoyHealthPage, locked until documentation health checks are enabled (ProtoBoyDocHealth::IsEnabled). */
+	TSharedRef<SWidget> MakeHealthSection();
 
 	/**
 	 * What the Documentation and Tasks pages wait on: the agent (MCP), the docs connection and the task board. Empty

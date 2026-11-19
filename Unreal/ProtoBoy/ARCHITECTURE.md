@@ -308,7 +308,9 @@ and `PBDocMapMigration.cpp` (merging old Game docs), with shared helpers in Priv
   `bEnableDocHealthChecks` only takes effect while the editor is connected to revision control (`ISourceControlModule`;
   `IsRevisionControlConnected`, `OpenRevisionControlLogin` keeps the current provider). `RunHealthChecks` is a TODO:
   list files changed in revision control since each doc was last edited and have an agent flag the docs that may need
-  updating. UI: `SProtoBoyDocHealthPanel` (UI/Health/), the Setup page's optional Documentation Health Checks section.
+  updating. UI (UI/Health/): `SProtoBoyDocHealthPanel`, the Setup page's optional Documentation Health Checks section;
+  `SProtoBoyHealthPage`, the dashboard's Health page (Run Health Checks, results still a TODO), locked until
+  `ProtoBoyDocHealth::IsEnabled` (the setting is ticked and revision control is connected), not by the general setup.
 
 ## Daemon (Daemon/)
 
@@ -317,10 +319,14 @@ and `PBDocMapMigration.cpp` (merging old Game docs), with shared helpers in Priv
 
 ## Dashboard and UI (UI/)
 
-- `SProtoBoyDashboard`: a sidebar of pages (Setup, Documentation, Tasks, Asset Sourcing) and the selected page; the
+- `SProtoBoyDashboard`: a sidebar of pages (Setup, Documentation, Tasks, Asset Sourcing, Health) and the selected page; the
   open page is remembered per user (by index, so add new pages at the end). It owns the setup checks and the lock that
   keeps the feature pages disabled until setup is done (`GetMissingSetup`, `MakeSetupLock`, which takes the list of
-  what's missing). Asset Sourcing also waits on the sourcing setup (`GetMissingSourcingSetup`). Feature pages are
+  what's missing). Asset Sourcing also waits on the sourcing setup (`GetMissingSourcingSetup`); Health waits only on
+  health checks being enabled. Feature pages are
   their own widgets in their feature's folder.
 - Shared widget builders are in `UI/PBWidgets.h` (`ProtoBoyWidgets::MakeSection`, the collapsible section card);
-  `UI/PBStyle` has the plugin's brushes.
+  `UI/PBStyle` has the plugin's brushes, including `ProtoBoy.Logo` (Resources/Icons/ProtoBoy.svg, a 16px white icon
+  in the editor's style) used by the dashboard tab and the Tools menu entry, and `ProtoBoy.Logo.Large` beside the
+  sidebar title. The README's copies (white and black, picked by GitHub theme) are in `.github/images/`; regenerate
+  them if the logo changes.

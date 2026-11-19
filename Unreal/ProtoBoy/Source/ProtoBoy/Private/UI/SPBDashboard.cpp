@@ -16,6 +16,7 @@
 #include "Docs/PBDocMap.h"
 #include "UI/Docs/Map/SPBDocMapEditor.h"
 #include "UI/Health/SPBDocHealthPanel.h"
+#include "UI/Health/SPBHealthPage.h"
 #include "UI/Sourcing/SPBAssetSourcingPage.h"
 #include "UI/Sourcing/SPBAssetSourcingPanel.h"
 #include "Tasks/PBTasksConnection.h"
@@ -73,6 +74,7 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 		MakeShared<FPage>(FPage{ LOCTEXT("DocumentationPage", "Documentation"), LOCTEXT("DocumentationPageTip", "Setup checklist and the map of the project's docs."), "Icons.Documentation" }),
 		MakeShared<FPage>(FPage{ LOCTEXT("TasksPage", "Tasks"), LOCTEXT("TasksPageTip", "The team's task board."), "Icons.Clipboard" }),
 		MakeShared<FPage>(FPage{ LOCTEXT("AssetSourcingPage", "Asset Sourcing"), LOCTEXT("AssetSourcingPageTip", "Find art, audio and other assets on the enabled sources instead of generating them with AI."), "MainFrame.OpenMarketplace" }),
+		MakeShared<FPage>(FPage{ LOCTEXT("HealthPage", "Health"), LOCTEXT("HealthPageTip", "Check which docs may need updating after changes in revision control."), "Icons.Heart" }),
 	};
 	BuildSetupSteps();
 
@@ -132,28 +134,52 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 			.Padding(FMargin(0.f, 12.f))
 			[
 				SNew(SBox)
-				.WidthOverride(190.f)
+				.WidthOverride(210.f)
 				[
 					SNew(SVerticalBox)
 
+					// Logo beside the title and tagline.
 					+ SVerticalBox::Slot()
 					.AutoHeight()
 					.Padding(14.f, 0.f)
 					[
-						SNew(STextBlock)
-						.Text(LOCTEXT("Title", "ProtoBoy"))
-						.Font(FCoreStyle::GetDefaultFontStyle("Bold", 22))
-					]
+						SNew(SHorizontalBox)
 
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.Padding(14.f, 2.f, 14.f, 0.f)
-					[
-						SNew(STextBlock)
-						.Text(LOCTEXT("Tagline", "Build games, not slop"))
-						.Font(FCoreStyle::GetDefaultFontStyle("Italic", 10))
-						.ColorAndOpacity(FSlateColor::UseSubduedForeground())
-						.AutoWrapText(true)
+						+ SHorizontalBox::Slot()
+						.AutoWidth()
+						.VAlign(VAlign_Center)
+						.Padding(0.f, 0.f, 8.f, 0.f)
+						[
+							SNew(SImage)
+							.Image(FProtoBoyStyle::Get().GetBrush("ProtoBoy.Logo.Large"))
+							.ColorAndOpacity(FSlateColor::UseForeground())
+						]
+
+						+ SHorizontalBox::Slot()
+						.FillWidth(1.f)
+						.VAlign(VAlign_Center)
+						[
+							SNew(SVerticalBox)
+
+							+ SVerticalBox::Slot()
+							.AutoHeight()
+							[
+								SNew(STextBlock)
+								.Text(LOCTEXT("Title", "ProtoBoy"))
+								.Font(FCoreStyle::GetDefaultFontStyle("Bold", 22))
+							]
+
+							+ SVerticalBox::Slot()
+							.AutoHeight()
+							.Padding(0.f, 2.f, 0.f, 0.f)
+							[
+								SNew(STextBlock)
+								.Text(LOCTEXT("Tagline", "Build games, not slop"))
+								.Font(FCoreStyle::GetDefaultFontStyle("Italic", 10))
+								.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+								.AutoWrapText(true)
+							]
+						]
 					]
 
 					+ SVerticalBox::Slot()
@@ -203,6 +229,11 @@ void SProtoBoyDashboard::Construct(const FArguments& InArgs)
 			+ SWidgetSwitcher::Slot()
 			[
 				MakePage(3, MakeAssetSourcingSection())
+			]
+
+			+ SWidgetSwitcher::Slot()
+			[
+				MakePage(4, MakeHealthSection())
 			]
 		]
 	];
@@ -872,6 +903,26 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeAssetSourcingSection()
 		[
 			MakeSetupLock(LOCTEXT("AssetSourcingLocked", "Finish setup to use asset sourcing. Still needed on the Setup page: {0}."),
 				[this]() { return GetMissingSourcingSetup(); })
+		];
+}
+
+TSharedRef<SWidget> SProtoBoyDashboard::MakeHealthSection()
+{
+	auto GetMissing = []()
+	{
+		TArray<FText> Missing;
+		if (!ProtoBoyDocHealth::IsEnabled())
+		{
+			Missing.Add(LOCTEXT("MissingDocHealth", "Enable documentation health checks (Setup > Documentation Health Checks, needs revision control)"));
+		}
+		return Missing;
+	};
+
+	return SNew(SProtoBoyHealthPage)
+		.IsUnlocked_Lambda([]() { return ProtoBoyDocHealth::IsEnabled(); })
+		.LockMessage()
+		[
+			MakeSetupLock(LOCTEXT("HealthLocked", "Health checks are off. Turn on {0} on the Setup page."), GetMissing)
 		];
 }
 
