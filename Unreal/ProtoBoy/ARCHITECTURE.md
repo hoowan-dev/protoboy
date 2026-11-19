@@ -225,7 +225,9 @@ and `PBDocMapMigration.cpp` (merging old Game docs), with shared helpers in Priv
   stream-json` or `gemini -p` in the project folder, read-only tools, prompt file on stdin), turns its output into a
   progress log and extracts its JSON answer. Polled from the window's active timer (the windows are modal). Shared by
   doc generation and task generation; each keeps its prompt and raw output in `Saved/ProtoBoy/<Kind>Generation/`.
-- `SProtoBoyAgentPicker` (UI/Agents/) is the agent radio list both generation windows (and Search For Assets) use.
+  Asset search and the doc health checks use it too, polled from their pages.
+- `SProtoBoyAgentPicker` (UI/Agents/) is the agent radio list both generation windows, Search For Assets and the Health
+  page use.
 - `ProtoBoyAgentPrompt` (Private/Agents/PBAgentPromptContext.h) is the prompt context several runs share:
   `DescribeProjectAssets()` (an asset registry summary of /Game; agents can't read .uasset files) and `ReadDoc()` (a doc's
   text without frontmatter and hints; docs may live outside the project folder, where the agent can't read).
@@ -304,12 +306,35 @@ and `PBDocMapMigration.cpp` (merging old Game docs), with shared helpers in Priv
 
 ## Health (Health/)
 
-- `ProtoBoyDocHealth` (Health/PBDocHealth.h): documentation health checks, a stub. The team setting
+Documentation health checks: which docs may need updating after changes in revision control. Nothing is written to the
+docs.
+
+- `ProtoBoyDocHealth` (Health/PBDocHealth.h): the setting and the connection check. The team setting
   `bEnableDocHealthChecks` only takes effect while the editor is connected to revision control (`ISourceControlModule`;
-  `IsRevisionControlConnected`, `OpenRevisionControlLogin` keeps the current provider). `RunHealthChecks` is a TODO:
-  list files changed in revision control since each doc was last edited and have an agent flag the docs that may need
-  updating. UI (UI/Health/): `SProtoBoyDocHealthPanel`, the Setup page's optional Documentation Health Checks section;
-  `SProtoBoyHealthPage`, the dashboard's Health page (Run Health Checks, results still a TODO), locked until
+  `IsRevisionControlConnected`, `OpenRevisionControlLogin` keeps the current provider).
+- `ProtoBoyDocHealthChanges::Collect` (Health/PBDocHealthChanges.h) is the deterministic half: the project files
+  changed since each doc on the map was last edited, and which of them each doc names.
+  - A doc's "last edited" is its file's modified date (`FProtoBoyDocInfo::ModifiedUtc`), not its history: docs often
+    live outside the repository (an Obsidian vault).
+  - **Git only** for now (`IsProviderSupported`): `git` from the PATH, run blocking in the project folder. One
+    `git log --since=<oldest doc>` for commits, `git diff HEAD` and `git ls-files --others` for uncommitted and
+    untracked files (dated by the file on disk), all limited to Source, Content, Plugins and Config. Other providers
+    are a TODO.
+  - Files are kept newest first, so each doc's changes are the first `NumChanged` files. `Named` are the ones whose
+    file name (also as a class name without its prefix) or folder path appears in the doc's text: a hint for the agent
+    and the fallback result, not a verdict.
+- `FProtoBoyDocHealthRun` (Health/PBDocHealthRun.h) is one check: `Collect`, then an `FProtoBoyAgentRun` whose prompt
+  carries the changed files and each affected doc's text (at most 60 docs, the ones naming the most changed files
+  first). The agent may read the files and answers `{"docs": [{id, confidence, reason, files}]}`; only docs it was
+  given and files that really changed after that doc are kept. If nothing changed, no agent runs. If the agent gives
+  no usable answer, the report lists the docs that name changed files, unjudged (`bAgentAnswered` false). Prompt and
+  raw output are in `Saved/ProtoBoy/DocHealth/`.
+- `ProtoBoyDocHealthReport` (Health/PBDocHealthReport.h): the last report, per user, in
+  `Saved/ProtoBoy/DocHealth/LastReport.json`. A cancelled run saves nothing.
+- UI (UI/Health/): `SProtoBoyDocHealthPanel`, the Setup page's optional Documentation Health Checks section;
+  `SProtoBoyHealthPage`, the dashboard's Health page: agent picker and Run Health Checks (Cancel while running), the
+  Agent Log, and Docs That May Need Updating (the last report, also after a restart; one card per doc with Open Doc).
+  It owns the run and polls it from the core ticker, like the Asset Sourcing page. Locked until
   `ProtoBoyDocHealth::IsEnabled` (the setting is ticked and revision control is connected), not by the general setup.
 
 ## Daemon (Daemon/)

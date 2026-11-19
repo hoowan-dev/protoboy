@@ -7,7 +7,9 @@
  * revision control that may be related to existing notes, so the team can see which docs may need updating. Needs the
  * editor to be connected to revision control (Perforce, Git, Unity Version Control, ...).
  *
- * Stub: the setting and the connection check exist; running the checks does nothing yet.
+ * This is the setting and the connection check. A check itself is an FProtoBoyDocHealthRun (Health/PBDocHealthRun.h),
+ * started from the dashboard's Health page: ProtoBoyDocHealthChanges lists what changed since each doc was edited, an
+ * agent judges which docs that outdates, and the result is kept as a ProtoBoyDocHealthReport.
  */
 namespace ProtoBoyDocHealth
 {
@@ -19,11 +21,4 @@ namespace ProtoBoyDocHealth
 
 	/** Open the editor's Revision Control login window, keeping the current provider. */
 	PROTOBOY_API void OpenRevisionControlLogin();
-
-	/**
-	 * TODO: Ask an agent which docs may need updating: list files changed in revision control since each doc on the map
-	 * was last edited (history from the connected provider), match them to the docs whose Tech and Content sections name
-	 * them (paths, classes, folders), and report the likely-stale docs with the changes behind each. Does nothing yet.
-	 */
-	PROTOBOY_API void RunHealthChecks();
 }

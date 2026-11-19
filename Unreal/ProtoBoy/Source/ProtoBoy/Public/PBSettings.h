@@ -111,7 +111,7 @@ public:
 	/**
 	 * Allow documentation health checks: an agent looks for files changed in revision control that may be related to
 	 * existing notes, so the team can see which docs may need updating. Only takes effect while the editor is connected
-	 * to revision control. Not implemented yet (ProtoBoyDocHealth::RunHealthChecks).
+	 * to revision control. Run from the dashboard's Health page (FProtoBoyDocHealthRun).
 	 */
 	UPROPERTY(Config, EditAnywhere, Category = "Documentation Health Checks")
 	bool bEnableDocHealthChecks = false;

@@ -50,7 +50,7 @@ void SProtoBoyDocHealthPanel::Construct(const FArguments& InArgs)
 			.ToolTipText_Lambda([IsConnected]()
 			{
 				return IsConnected()
-					? LOCTEXT("EnableTip", "Shared by the team (saved in DefaultProtoBoy.ini). Health checks don't run yet.")
+					? LOCTEXT("EnableTip", "Shared by the team (saved in DefaultProtoBoy.ini). Run the checks from the Health page.")
 					: LOCTEXT("EnableDisabledTip", "Connect the editor to revision control first (see below).");
 			})
 			[

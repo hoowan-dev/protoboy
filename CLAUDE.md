@@ -49,6 +49,6 @@ There are no tests or lint setup yet.
 | Agents | `FProtoBoyAgentRun` (runs an agent's CLI unattended) |
 | MCP | `FProtoBoyMCPServer`, `FProtoBoyMCPClientConfig`, tool and prompt registries |
 | Sourcing | `ProtoBoyAssetSourcing`, `ProtoBoyFab`, `FProtoBoyAssetSearchRun` (agent-suggested assets) |
-| Health | `ProtoBoyDocHealth` (stub) |
+| Health | `ProtoBoyDocHealth` (setting, revision control check), `ProtoBoyDocHealthChanges` (files changed since each doc was edited, Git only), `FProtoBoyDocHealthRun` (agent flags stale docs), `ProtoBoyDocHealthReport` (last result) |
 | Net | `ProtoBoyHttp` (outgoing HTTP, game-thread callbacks, `RunAfter`) |
 | UI | `SProtoBoyDashboard`, `SProtoBoyDocMapEditor`, `SProtoBoyTasksPage`, the feature windows |

@@ -36,11 +36,6 @@ namespace ProtoBoyDocHealth
 	{
 		ISourceControlModule::Get().ShowLoginDialog(FSourceControlLoginClosed(), ELoginWindowMode::Modeless, EOnLoginWindowStartup::PreserveProvider);
 	}
-
-	void RunHealthChecks()
-	{
-		// TODO: See the header. Nothing runs yet.
-	}
 }
 
 #undef LOCTEXT_NAMESPACE
