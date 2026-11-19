@@ -42,6 +42,11 @@ namespace ProtoBoyDocLayers
 	PROTOBOY_API extern const TCHAR* ParentKey;
 	/** "true" when the doc is a task category (tasks are grouped under it). Removed when it isn't one. */
 	PROTOBOY_API extern const TCHAR* TaskCategoryKey;
+	/**
+	 * When someone last confirmed the doc matches the project (UTC, "2026-11-18T14:03:00Z"), set by the Health page's
+	 * Mark as Up to Date. The documentation health checks ignore project changes older than it.
+	 */
+	PROTOBOY_API extern const TCHAR* ReviewedKey;
 	/** Older versions linked a feature's Tech doc to its Design doc with this. Read as the parent when there's no parent key. */
 	PROTOBOY_API extern const TCHAR* LegacyImplementsKey;
 

@@ -91,7 +91,7 @@ and `PBDocMapMigration.cpp` (merging old Game docs), with shared helpers in Priv
   Moving a doc on the map only changes its frontmatter, never its file.
 - **Task categories:** any doc can be marked one (`protoboy-task-category: true`, removed when unchecked;
   `FProtoBoyDocNode::bTaskCategory`, `SetTaskCategory`, written to the file immediately). `GetTaskCategories` lists them
-  in map order. "Uncategorized" is reserved (`ProtoBoyTasks::UncategorizedName`): `IsAllowedTitle` refuses it in
+  in map order. `protoboy-reviewed` (a UTC date, `MarkReviewed`) is the other optional key: see Health. "Uncategorized" is reserved (`ProtoBoyTasks::UncategorizedName`): `IsAllowedTitle` refuses it in
   `CreateDoc`, `AddToMap` and `ApplyTemplate` (before anything is trashed), and the doc generation prompt tells agents.
 - **Creating docs:** `CreateDoc` (addable kinds: Design, Tech, Content) puts the file where its parent is
   (`MakeNewDocPath`): under the Game doc in the kind's folder (`Design/`, `Tech/`, `Content/`), under any other doc in
@@ -308,8 +308,9 @@ and `PBDocMapMigration.cpp` (merging old Game docs), with shared helpers in Priv
 
 ## Health (Health/)
 
-Documentation health checks: which docs may need updating after changes in revision control. Nothing is written to the
-docs.
+Two kinds of documentation checks: which docs may need updating after changes in revision control (an agent run), and
+structure checks that need neither an agent nor revision control. The only thing either writes to a doc is the
+`protoboy-reviewed` date, when the user marks it as up to date.
 
 - `ProtoBoyDocHealth` (Health/PBDocHealth.h): the setting and the connection check. The team setting
   `bEnableDocHealthChecks` only takes effect while the editor is connected to revision control (`ISourceControlModule`;
@@ -317,7 +318,9 @@ docs.
 - `ProtoBoyDocHealthChanges::Collect` (Health/PBDocHealthChanges.h) is the deterministic half: the project files
   changed since each doc on the map was last edited, and which of them each doc names.
   - A doc's "last edited" is its file's modified date (`FProtoBoyDocInfo::ModifiedUtc`), not its history: docs often
-    live outside the repository (an Obsidian vault).
+    live outside the repository (an Obsidian vault). If the doc was marked as up to date later than that
+    (`protoboy-reviewed` in its frontmatter, `FProtoBoyDocNode::ReviewedUtc`, written by
+    `FProtoBoyDocMap::MarkReviewed`), that date counts instead.
   - **Git only** for now (`IsProviderSupported`): `git` from the PATH, run blocking in the project folder. One
     `git log --since=<oldest doc>` for commits, `git diff HEAD` and `git ls-files --others` for uncommitted and
     untracked files (dated by the file on disk), all limited to Source, Content, Plugins and Config. Other providers
@@ -333,11 +336,30 @@ docs.
   raw output are in `Saved/ProtoBoy/DocHealth/`.
 - `ProtoBoyDocHealthReport` (Health/PBDocHealthReport.h): the last report, per user, in
   `Saved/ProtoBoy/DocHealth/LastReport.json`. A cancelled run saves nothing.
+- `ProtoBoyDocStructure::Check` (Health/PBDocStructure.h) returns `FProtoBoyDocIssue`s from the docs and the project
+  folder alone, warnings (`bWarning`: a broken reference) before notes (something not filled in). It reads every doc,
+  so it isn't for every frame.
+  - Map: no Game doc, split Game docs, a `protoboy-parent` that isn't on the map, unmapped notes.
+  - References: `[[wikilinks]]` whose note doesn't exist, matched by note name against the whole vault when Obsidian
+    is connected (else the docs folder; embeds like `![[image.png]]` are skipped). Project paths that don't exist:
+    tokens starting with `Source/`, `Content/`, `Config/`, `Plugins/` or `/Game/`, checked on disk (a path with no
+    extension also matches a file of that name with any extension). Wikilink targets and paths that match a doc's own
+    path are left out, since docs live in `Content/`, `Design/` and `Tech/` folders too.
+  - Content: `##` sections with nothing under them once hints are stripped. Decisions and the Game doc's Areas are
+    skipped; a Game doc with only the example pillar counts as having no pillars.
+  - Coverage: Design docs with no Design doc below them and no Tech or Content doc anywhere below; `Source/<Module>`
+    and top-level `Content/` folders whose name appears in no doc.
+  - Class and asset names that no longer exist are a TODO (needs an index of the project's types).
 - UI (UI/Health/): `SProtoBoyDocHealthPanel`, the Setup page's optional Documentation Health Checks section;
-  `SProtoBoyHealthPage`, the dashboard's Health page: agent picker and Run Health Checks (Cancel while running), the
-  Agent Log, and Docs That May Need Updating (the last report, also after a restart; one card per doc with Open Doc).
-  It owns the run and polls it from the core ticker, like the Asset Sourcing page. Locked until
-  `ProtoBoyDocHealth::IsEnabled` (the setting is ticked and revision control is connected), not by the general setup.
+  `SProtoBoyHealthPage`, the dashboard's Health page.
+  - Agent picker and Run Health Checks (Cancel while running), the Agent Log, and Docs That May Need Updating (the
+    last report, also after a restart). Each doc's card has Open Doc and **Mark as Up to Date**, which calls
+    `MarkReviewed` and takes the doc off the saved report. The page owns the run and polls it from the core ticker,
+    like the Asset Sourcing page. These three sections are locked until `ProtoBoyDocHealth::IsEnabled` (the setting is
+    ticked and revision control is connected), not by the general setup.
+  - Documentation Structure: one card per issue, with Check Again (refreshes the doc map first). It's outside the
+    lock. A check is requested at construction and on every `FProtoBoyDocMap::OnChanged`, and runs from the page's
+    `Tick`, so only while the page is on screen.
 
 ## Daemon (Daemon/)
 

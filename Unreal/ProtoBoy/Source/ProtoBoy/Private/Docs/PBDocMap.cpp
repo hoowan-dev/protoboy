@@ -99,6 +99,12 @@ void FProtoBoyDocMap::Load() const
 		}
 		Node.Summary = ProtoBoyDocMap::FindSummary(Text, Frontmatter.BodyStart);
 		Node.bTaskCategory = FCString::ToBool(*Frontmatter.Get(ProtoBoyDocLayers::TaskCategoryKey).TrimStartAndEnd());
+		FDateTime Reviewed;
+		// Quoted or not: Obsidian may rewrite the property either way.
+		if (FDateTime::ParseIso8601(*Frontmatter.Get(ProtoBoyDocLayers::ReviewedKey).TrimStartAndEnd().TrimQuotes(), Reviewed))
+		{
+			Node.ReviewedUtc = Reviewed;
+		}
 		Nodes.Add(MoveTemp(Node));
 	}
 
@@ -603,6 +609,17 @@ bool FProtoBoyDocMap::SetTaskCategory(const FString& Id, bool bTaskCategory, FTe
 		return true;
 	}
 	return WriteFrontmatter(Node->Path, { { ProtoBoyDocLayers::TaskCategoryKey, bTaskCategory ? TEXT("true") : FString() } }, OutError);
+}
+
+bool FProtoBoyDocMap::MarkReviewed(const FString& Id, FText& OutError)
+{
+	const FProtoBoyDocNode* Node = Find(Id);
+	if (!Node)
+	{
+		OutError = LOCTEXT("NoDoc", "That doc is no longer on the map. Refresh and try again.");
+		return false;
+	}
+	return WriteFrontmatter(Node->Path, { { ProtoBoyDocLayers::ReviewedKey, FDateTime::UtcNow().ToString(TEXT("%Y-%m-%dT%H:%M:%SZ")) } }, OutError);
 }
 
 bool FProtoBoyDocMap::AddToMap(const FString& Path, EProtoBoyDocLayer Layer, const FString& ParentId, FText& OutError)

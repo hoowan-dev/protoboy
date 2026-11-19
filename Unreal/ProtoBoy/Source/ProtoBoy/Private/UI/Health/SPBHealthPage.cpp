@@ -12,6 +12,7 @@
 #include "Styling/StyleColors.h"
 #include "UI/Agents/SPBAgentPicker.h"
 #include "UI/PBWidgets.h"
+#include "Widgets/Images/SImage.h"
 #include "Widgets/Images/SThrobber.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SBorder.h"
@@ -74,9 +75,23 @@ void SProtoBoyHealthPage::Construct(const FArguments& InArgs)
 				ProtoBoyWidgets::MakeSection(LOCTEXT("ResultsHeader", "Docs That May Need Updating"), MakeResults())
 			]
 		]
+
+		// Needs neither the agent nor revision control, so it isn't behind the lock.
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 12.f, 0.f, 0.f)
+		[
+			ProtoBoyWidgets::MakeSection(LOCTEXT("StructureHeader", "Documentation Structure"), MakeStructure())
+		]
 	];
 
 	ShowReport();
+
+	if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+	{
+		DocMapChangedHandle = Subsystem->GetDocMap().OnChanged.AddSP(this, &SProtoBoyHealthPage::RequestStructureCheck);
+	}
+	RequestStructureCheck();
 }
 
 SProtoBoyHealthPage::~SProtoBoyHealthPage()
@@ -342,7 +357,18 @@ TSharedRef<SWidget> SProtoBoyHealthPage::MakeStaleDoc(const FProtoBoyStaleDoc& D
 				SNew(SButton)
 				.Text(LOCTEXT("OpenDoc", "Open Doc"))
 				.ToolTipText(FText::Format(LOCTEXT("OpenDocTip", "Open {0} to update it."), FText::FromString(Doc.Path)))
-				.OnClicked_Lambda([this, Doc]() { OpenDoc(Doc); return FReply::Handled(); })
+				.OnClicked_Lambda([this, Doc]() { OpenDoc(Doc.DocId, Doc.Path, Doc.Title, ResultStatus); return FReply::Handled(); })
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(4.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("MarkUpToDate", "Mark as Up to Date"))
+				.ToolTipText(LOCTEXT("MarkUpToDateTip", "The doc is fine as it is. Records the date in its frontmatter (protoboy-reviewed) and takes it off this list; only changes made after now will flag it again."))
+				.OnClicked_Lambda([this, Doc]() { MarkUpToDate(Doc); return FReply::Handled(); })
 			]
 		]
 
@@ -484,36 +510,259 @@ bool SProtoBoyHealthPage::PollRun(float DeltaTime)
 	return false;
 }
 
-void SProtoBoyHealthPage::OpenDoc(const FProtoBoyStaleDoc& Stale)
+void SProtoBoyHealthPage::OpenDoc(const FString& DocId, const FString& Path, const FString& Title, FText& OutStatus)
 {
 	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
 	if (!Subsystem)
 	{
 		return;
 	}
-	// The report may be older than the map: the doc may have moved or gone since.
-	const FProtoBoyDocNode* Doc = Subsystem->GetDocMap().Find(Stale.DocId);
+	// A saved report may be older than the map: the doc may have moved or gone since.
+	const FProtoBoyDocNode* Doc = Subsystem->GetDocMap().Find(DocId);
 	if (!Doc)
 	{
-		Doc = Subsystem->GetDocMap().FindByPath(Stale.Path);
+		Doc = Subsystem->GetDocMap().FindByPath(Path);
 	}
 	if (!Doc)
 	{
-		ResultStatus = FText::Format(LOCTEXT("DocGone", "\"{0}\" isn't on the doc map any more."), FText::FromString(Stale.Title));
+		OutStatus = FText::Format(LOCTEXT("DocGone", "\"{0}\" isn't on the doc map any more."), FText::FromString(Title));
 		return;
 	}
-	ResultStatus = FText::GetEmpty();
+	OutStatus = FText::GetEmpty();
 	if (Subsystem->GetObsidianConnector().IsConnected())
 	{
 		FText Error;
 		if (!Subsystem->GetObsidianConnector().OpenInObsidian(Doc->Path, Error))
 		{
-			ResultStatus = Error;
+			OutStatus = Error;
 		}
 		return;
 	}
 	const FString File = FPaths::ConvertRelativePathToFull(Subsystem->GetDocsService().GetDocsRoot() / Doc->Path);
 	FPlatformProcess::LaunchFileInDefaultExternalApplication(*File);
+}
+
+void SProtoBoyHealthPage::MarkUpToDate(const FProtoBoyStaleDoc& Stale)
+{
+	UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	if (!Subsystem)
+	{
+		return;
+	}
+	// Copied: rebuilding the cards below destroys the button that holds Stale.
+	const FString DocId = Stale.DocId;
+	FText Error;
+	if (!Subsystem->GetDocMap().MarkReviewed(DocId, Error))
+	{
+		ResultStatus = Error;
+		return;
+	}
+	Report.Docs.RemoveAll([&DocId](const FProtoBoyStaleDoc& Doc) { return Doc.DocId == DocId; });
+	ProtoBoyDocHealthReport::Save(Report);
+	ShowReport();
+}
+
+// --- Documentation structure ------------------------------------------------------------------------------------------
+
+TSharedRef<SWidget> SProtoBoyHealthPage::MakeStructure()
+{
+	return SNew(SVerticalBox)
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("StructureDesc", "What the docs themselves show, without an agent: links to notes that don't exist, project paths that don't exist, sections nobody has written, Design docs with no Tech or Content doc, and parts of the project no doc mentions."))
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true)
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 8.f, 0.f, 6.f)
+		[
+			SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(0.f, 0.f, 8.f, 0.f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("CheckAgain", "Check Again"))
+				.ToolTipText(LOCTEXT("CheckAgainTip", "Re-read the docs (to pick up edits made outside the editor) and check them again."))
+				.OnClicked_Lambda([this]()
+				{
+					// Refreshing the map fires OnChanged, which asks for a check; ask directly too in case nothing is listening.
+					if (UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get())
+					{
+						Subsystem->GetDocMap().Refresh();
+					}
+					RequestStructureCheck();
+					return FReply::Handled();
+				})
+			]
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this]() { return GetStructureSummary(); })
+				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+				.AutoWrapText(true)
+			]
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SAssignNew(IssueList, SVerticalBox)
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 4.f, 0.f, 0.f)
+		[
+			SNew(STextBlock)
+			.Visibility_Lambda([this]() { return StructureStatus.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible; })
+			.Text_Lambda([this]() { return StructureStatus; })
+			.ColorAndOpacity(FStyleColors::Error)
+			.AutoWrapText(true)
+		];
+}
+
+FText SProtoBoyHealthPage::GetStructureSummary() const
+{
+	const UProtoBoySubsystem* Subsystem = UProtoBoySubsystem::Get();
+	FText WhyNot;
+	if (!Subsystem || !Subsystem->GetDocsProvider().IsReady(WhyNot))
+	{
+		return WhyNot.IsEmpty() ? LOCTEXT("StructureNoDocs", "The docs aren't available.") : WhyNot;
+	}
+	if (!bStructureChecked)
+	{
+		return LOCTEXT("StructureChecking", "Checking...");
+	}
+	const int32 NumDocs = Subsystem->GetDocMap().GetNodes().Num();
+	if (Issues.IsEmpty())
+	{
+		return FText::Format(LOCTEXT("StructureClean", "Nothing found in {0} {0}|plural(one=doc,other=docs)."), NumDocs);
+	}
+	const int32 NumWarnings = Issues.FilterByPredicate([](const FProtoBoyDocIssue& Issue) { return Issue.bWarning; }).Num();
+	return FText::Format(LOCTEXT("StructureSummary", "{0} {0}|plural(one=problem,other=problems) and {1} {1}|plural(one=thing,other=things) to fill in, across {2} {2}|plural(one=doc,other=docs)."),
+		NumWarnings, Issues.Num() - NumWarnings, NumDocs);
+}
+
+void SProtoBoyHealthPage::RequestStructureCheck()
+{
+	bStructureCheckPending = true;
+}
+
+void SProtoBoyHealthPage::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
+{
+	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+
+	// Only ticked while on screen, so a hidden page doesn't re-read every doc after each map change.
+	if (bStructureCheckPending)
+	{
+		bStructureCheckPending = false;
+		Issues = ProtoBoyDocStructure::Check();
+		bStructureChecked = true;
+		ShowStructure();
+	}
+}
+
+void SProtoBoyHealthPage::ShowStructure()
+{
+	IssueList->ClearChildren();
+	StructureStatus = FText::GetEmpty();
+	for (const FProtoBoyDocIssue& Issue : Issues)
+	{
+		IssueList->AddSlot()
+		.AutoHeight()
+		.Padding(0.f, 2.f)
+		[
+			MakeIssue(Issue)
+		];
+	}
+}
+
+TSharedRef<SWidget> SProtoBoyHealthPage::MakeIssue(const FProtoBoyDocIssue& Issue)
+{
+	TSharedRef<SVerticalBox> Text = SNew(SVerticalBox)
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.Text(Issue.DocId.IsEmpty() ? LOCTEXT("IssueAllDocs", "The docs as a whole") : FText::FromString(Issue.DocTitle))
+			.ToolTipText(FText::FromString(Issue.DocPath))
+			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
+			.AutoWrapText(true)
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(0.f, 2.f, 0.f, 0.f)
+		[
+			SNew(STextBlock)
+			.Text(Issue.Message)
+			.AutoWrapText(true)
+		];
+
+	if (!Issue.Details.IsEmpty())
+	{
+		Text->AddSlot()
+		.AutoHeight()
+		.Padding(0.f, 4.f, 0.f, 0.f)
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString(FString::Join(Issue.Details, TEXT("\n"))))
+			.Font(FCoreStyle::GetDefaultFontStyle("Mono", 9))
+			.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+			.AutoWrapText(true)
+		];
+	}
+
+	const FString DocId = Issue.DocId;
+	const FString DocPath = Issue.DocPath;
+	const FString DocTitle = Issue.DocTitle;
+	return SNew(SBorder)
+		.BorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"))
+		.Padding(8.f)
+		[
+			SNew(SHorizontalBox)
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Top)
+			.Padding(0.f, 1.f, 8.f, 0.f)
+			[
+				SNew(SImage)
+				.Image(FAppStyle::Get().GetBrush(Issue.bWarning ? "Icons.WarningWithColor" : "Icons.Info"))
+				.ColorAndOpacity(Issue.bWarning ? FSlateColor(FLinearColor::White) : FSlateColor::UseSubduedForeground())
+				.ToolTipText(Issue.bWarning ? LOCTEXT("IssueWarningTip", "Something the doc refers to isn't there.") : LOCTEXT("IssueNoteTip", "Something that hasn't been filled in yet."))
+			]
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			[
+				Text
+			]
+
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Top)
+			.Padding(8.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SButton)
+				.Visibility(DocId.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible)
+				.Text(LOCTEXT("OpenIssueDoc", "Open Doc"))
+				.ToolTipText(FText::Format(LOCTEXT("OpenIssueDocTip", "Open {0}."), FText::FromString(DocPath)))
+				.OnClicked_Lambda([this, DocId, DocPath, DocTitle]() { OpenDoc(DocId, DocPath, DocTitle, StructureStatus); return FReply::Handled(); })
+			]
+		];
 }
 
 #undef LOCTEXT_NAMESPACE

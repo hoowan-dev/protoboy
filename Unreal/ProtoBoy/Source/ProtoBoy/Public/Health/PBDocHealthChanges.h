@@ -26,7 +26,7 @@ struct FProtoBoyDocChanges
 	FString Path;
 	FString Title;
 	EProtoBoyDocLayer Layer = EProtoBoyDocLayer::Design;
-	/** When the doc's file was last written. */
+	/** When the doc's file was last written, or when it was last marked as up to date (FProtoBoyDocNode::ReviewedUtc) if later. */
 	FDateTime ModifiedUtc;
 	/** How many of FProtoBoyDocHealthChanges::Files changed after ModifiedUtc: the first NumChanged, as they're newest first. */
 	int32 NumChanged = 0;
@@ -50,7 +50,8 @@ struct FProtoBoyDocHealthChanges
  * last edited, and which of them each doc names.
  *
  * A doc's "last edited" is its file's modified date, not its revision control history: docs often live outside the
- * repository (an Obsidian vault). Changes come from Git only for now (`git log` since the oldest doc, plus uncommitted
+ * repository (an Obsidian vault). A doc marked as up to date (FProtoBoyDocMap::MarkReviewed) counts from that date
+ * when it's later. Changes come from Git only for now (`git log` since the oldest doc, plus uncommitted
  * and untracked files), limited to the project's Source, Content, Plugins and Config folders. Git is run from the PATH
  * in the project folder and blocks while it runs.
  *

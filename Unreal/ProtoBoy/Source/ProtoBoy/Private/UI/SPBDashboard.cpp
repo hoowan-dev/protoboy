@@ -953,7 +953,7 @@ TSharedRef<SWidget> SProtoBoyDashboard::MakeHealthSection()
 		.IsUnlocked_Lambda([]() { return ProtoBoyDocHealth::IsEnabled(); })
 		.LockMessage()
 		[
-			MakeSetupLock(LOCTEXT("HealthLocked", "Health checks are off. Turn on {0} on the Setup page."), GetMissing)
+			MakeSetupLock(LOCTEXT("HealthLocked", "Checking the docs against revision control is off. Still needed on the Setup page: {0}."), GetMissing)
 		];
 }
 

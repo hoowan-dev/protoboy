@@ -29,6 +29,8 @@ struct FProtoBoyDocNode
 	FString Summary;
 	/** Marked as a task category ("protoboy-task-category: true"), so tasks can be grouped under it. */
 	bool bTaskCategory = false;
+	/** When the doc was last marked as up to date ("protoboy-reviewed"); unset if it never was. */
+	TOptional<FDateTime> ReviewedUtc;
 };
 
 /** One "### Pillar" under the Game doc's "## Design Pillars". */
@@ -156,6 +158,12 @@ public:
 	bool SetTaskCategory(const FString& Id, bool bTaskCategory, FText& OutError);
 	/** Docs marked as task categories, in map order (depth first from the Game doc). */
 	TArray<const FProtoBoyDocNode*> GetTaskCategories() const;
+
+	/**
+	 * Record in a doc's frontmatter that it matches the project as of now ("protoboy-reviewed"), so the documentation
+	 * health checks stop flagging it for changes made before this. The doc's text is left alone.
+	 */
+	bool MarkReviewed(const FString& Id, FText& OutError);
 
 	/**
 	 * False with a reason for titles no doc may have: "Uncategorized" is the task board's catch-all category

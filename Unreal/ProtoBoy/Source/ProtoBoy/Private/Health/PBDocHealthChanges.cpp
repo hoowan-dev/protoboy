@@ -283,13 +283,21 @@ namespace ProtoBoyDocHealthChanges
 			return false;
 		}
 
-		// Each doc's last edit is its file's date.
+		// Each doc's last edit is its file's date, or when it was last marked as up to date if that's later.
 		TMap<FString, FDateTime> ModifiedByPath;
 		for (const FProtoBoyDocInfo& Info : Subsystem->GetDocsProvider().ListDocs())
 		{
 			ModifiedByPath.Add(Info.Path, Info.ModifiedUtc);
 		}
 		const TArray<FProtoBoyDocNode>& Nodes = Subsystem->GetDocMap().GetNodes();
+		for (const FProtoBoyDocNode& Node : Nodes)
+		{
+			FDateTime* Modified = ModifiedByPath.Find(Node.Path);
+			if (Modified && Node.ReviewedUtc.IsSet())
+			{
+				*Modified = FMath::Max(*Modified, Node.ReviewedUtc.GetValue());
+			}
+		}
 		FDateTime OldestUtc = FDateTime::MaxValue();
 		for (const FProtoBoyDocNode& Node : Nodes)
 		{
